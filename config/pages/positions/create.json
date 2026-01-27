@@ -1,0 +1,133 @@
+{
+  "dataSources": {
+    "departments": { "url": "/api/departments" }
+  },
+  "children": [
+    {
+      "type": "PageHeader",
+      "props": {
+        "title": "New Position",
+        "subtitle": "Create a new position"
+      }
+    },
+    {
+      "type": "Form",
+      "props": {
+        "action": {
+          "type": "submit_form",
+          "url": "/api/positions",
+          "method": "POST",
+          "redirectTo": "/positions"
+        }
+      },
+      "children": [
+        {
+          "type": "DetailSection",
+          "props": {
+            "title": "Position Information"
+          },
+          "children": [
+            {
+              "type": "Grid",
+              "props": {
+                "columns": 2,
+                "gap": "md"
+              },
+              "children": [
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "title",
+                    "label": "Position Title",
+                    "required": true,
+                    "placeholder": "e.g. Senior Software Engineer"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "code",
+                    "label": "Position Code",
+                    "required": true,
+                    "placeholder": "e.g. SSE-01"
+                  }
+                },
+                {
+                  "type": "SelectField",
+                  "props": {
+                    "name": "departmentId",
+                    "label": "Department",
+                    "required": true,
+                    "optionsPath": "departments",
+                    "optionLabel": "name",
+                    "optionValue": "id",
+                    "placeholder": "Select department"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "level",
+                    "label": "Level",
+                    "placeholder": "e.g. Senior, Mid, Junior"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "minSalary",
+                    "label": "Minimum Salary",
+                    "inputType": "number",
+                    "placeholder": "e.g. 50000"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "maxSalary",
+                    "label": "Maximum Salary",
+                    "inputType": "number",
+                    "placeholder": "e.g. 80000"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Divider",
+          "props": {}
+        },
+        {
+          "type": "Stack",
+          "props": {
+            "direction": "horizontal",
+            "justify": "flex-end",
+            "gap": "md"
+          },
+          "children": [
+            {
+              "type": "Button",
+              "props": {
+                "label": "Cancel",
+                "variant": "secondary",
+                "action": {
+                  "type": "navigate",
+                  "to": "/positions"
+                }
+              }
+            },
+            {
+              "type": "Button",
+              "props": {
+                "label": "Create Position",
+                "variant": "primary",
+                "buttonType": "submit"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

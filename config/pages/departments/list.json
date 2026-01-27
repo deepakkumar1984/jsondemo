@@ -1,0 +1,79 @@
+{
+  "dataSources": {
+    "departments": { "url": "/api/departments" }
+  },
+  "children": [
+    {
+      "type": "PageHeader",
+      "props": {
+        "title": "Departments",
+        "actions": [
+          {
+            "label": "Add Department",
+            "variant": "primary",
+            "icon": "plus",
+            "action": {
+              "type": "navigate",
+              "to": "/departments/new"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "DataTable",
+      "props": {
+        "dataPath": "departments",
+        "searchable": true,
+        "searchPlaceholder": "Search departments...",
+        "paginated": true,
+        "pageSize": 20,
+        "rowClickAction": {
+          "type": "navigate",
+          "to": "/departments/:id/edit"
+        },
+        "columns": [
+          {
+            "key": "name",
+            "header": "Name",
+            "sortable": true
+          },
+          {
+            "key": "code",
+            "header": "Code",
+            "sortable": true
+          },
+          {
+            "key": "description",
+            "header": "Description",
+            "sortable": false
+          },
+          {
+            "key": "employeeCount",
+            "header": "Employee Count",
+            "sortable": true
+          },
+          {
+            "key": "active",
+            "header": "Status",
+            "sortable": true,
+            "render": {
+              "type": "Badge",
+              "props": {
+                "valuePath": "active",
+                "colorMap": {
+                  "true": "green",
+                  "false": "gray"
+                },
+                "labelMap": {
+                  "true": "Active",
+                  "false": "Inactive"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

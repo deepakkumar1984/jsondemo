@@ -1,0 +1,131 @@
+{
+  "dataSources": {
+    "stats": { "url": "/api/employees/stats" },
+    "departments": { "url": "/api/departments" },
+    "recentHires": { "url": "/api/employees?limit=5" }
+  },
+  "children": [
+    {
+      "type": "PageHeader",
+      "props": {
+        "title": "HR Dashboard",
+        "subtitle": "Overview of your workforce"
+      }
+    },
+    {
+      "type": "Grid",
+      "props": {
+        "columns": 4,
+        "gap": "md"
+      },
+      "children": [
+        {
+          "type": "StatCard",
+          "props": {
+            "label": "Total Employees",
+            "valuePath": "stats.totalEmployees",
+            "icon": "users",
+            "color": "blue"
+          }
+        },
+        {
+          "type": "StatCard",
+          "props": {
+            "label": "Active",
+            "valuePath": "stats.activeEmployees",
+            "icon": "user-check",
+            "color": "green"
+          }
+        },
+        {
+          "type": "StatCard",
+          "props": {
+            "label": "Departments",
+            "valuePath": "stats.byDepartment.length",
+            "icon": "building",
+            "color": "orange"
+          }
+        },
+        {
+          "type": "StatCard",
+          "props": {
+            "label": "Recent Hires",
+            "valuePath": "stats.recentHires",
+            "icon": "user-plus",
+            "color": "purple"
+          }
+        }
+      ]
+    },
+    {
+      "type": "Grid",
+      "props": {
+        "columns": 2,
+        "gap": "md"
+      },
+      "children": [
+        {
+          "type": "Card",
+          "props": {
+            "title": "Department Breakdown"
+          },
+          "children": [
+            {
+              "type": "DataTable",
+              "props": {
+                "dataPath": "departments",
+                "columns": [
+                  {
+                    "key": "name",
+                    "header": "Department",
+                    "sortable": true
+                  },
+                  {
+                    "key": "code",
+                    "header": "Code",
+                    "sortable": true
+                  },
+                  {
+                    "key": "employeeCount",
+                    "header": "Employees",
+                    "sortable": true
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "Card",
+          "props": {
+            "title": "Recent Hires"
+          },
+          "children": [
+            {
+              "type": "DataTable",
+              "props": {
+                "dataPath": "recentHires",
+                "columns": [
+                  {
+                    "key": "fullName",
+                    "header": "Name",
+                    "template": "{{firstName}} {{lastName}}"
+                  },
+                  {
+                    "key": "departmentName",
+                    "header": "Department"
+                  },
+                  {
+                    "key": "dateOfJoining",
+                    "header": "Join Date",
+                    "format": "date"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

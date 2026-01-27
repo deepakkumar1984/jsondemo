@@ -1,0 +1,140 @@
+{
+  "dataSources": {
+    "position": { "url": "/api/positions/:id" },
+    "departments": { "url": "/api/departments" }
+  },
+  "children": [
+    {
+      "type": "PageHeader",
+      "props": {
+        "title": "Edit Position",
+        "subtitle": "Update position information"
+      }
+    },
+    {
+      "type": "Form",
+      "props": {
+        "action": {
+          "type": "submit_form",
+          "url": "/api/positions/:id",
+          "method": "PUT",
+          "redirectTo": "/positions"
+        }
+      },
+      "children": [
+        {
+          "type": "DetailSection",
+          "props": {
+            "title": "Position Information"
+          },
+          "children": [
+            {
+              "type": "Grid",
+              "props": {
+                "columns": 2,
+                "gap": "md"
+              },
+              "children": [
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "title",
+                    "label": "Position Title",
+                    "required": true,
+                    "valuePath": "position.title",
+                    "placeholder": "e.g. Senior Software Engineer"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "code",
+                    "label": "Position Code",
+                    "required": true,
+                    "valuePath": "position.code",
+                    "placeholder": "e.g. SSE-01"
+                  }
+                },
+                {
+                  "type": "SelectField",
+                  "props": {
+                    "name": "departmentId",
+                    "label": "Department",
+                    "required": true,
+                    "valuePath": "position.departmentId",
+                    "optionsPath": "departments",
+                    "optionLabel": "name",
+                    "optionValue": "id",
+                    "placeholder": "Select department"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "level",
+                    "label": "Level",
+                    "valuePath": "position.level",
+                    "placeholder": "e.g. Senior, Mid, Junior"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "minSalary",
+                    "label": "Minimum Salary",
+                    "inputType": "number",
+                    "valuePath": "position.minSalary",
+                    "placeholder": "e.g. 50000"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "maxSalary",
+                    "label": "Maximum Salary",
+                    "inputType": "number",
+                    "valuePath": "position.maxSalary",
+                    "placeholder": "e.g. 80000"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Divider",
+          "props": {}
+        },
+        {
+          "type": "Stack",
+          "props": {
+            "direction": "horizontal",
+            "justify": "flex-end",
+            "gap": "md"
+          },
+          "children": [
+            {
+              "type": "Button",
+              "props": {
+                "label": "Cancel",
+                "variant": "secondary",
+                "action": {
+                  "type": "navigate",
+                  "to": "/positions"
+                }
+              }
+            },
+            {
+              "type": "Button",
+              "props": {
+                "label": "Save Changes",
+                "variant": "primary",
+                "buttonType": "submit"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

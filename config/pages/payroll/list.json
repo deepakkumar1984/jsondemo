@@ -1,0 +1,74 @@
+{
+  "dataSources": {
+    "runs": { "url": "/api/payroll/runs" }
+  },
+  "children": [
+    {
+      "type": "PageHeader",
+      "props": {
+        "title": "Payroll Runs",
+        "subtitle": "Manage payroll processing cycles"
+      }
+    },
+    {
+      "type": "Alert",
+      "props": {
+        "variant": "warning",
+        "title": "Under Development",
+        "message": "Payroll module is under development. Some features may not be available yet."
+      }
+    },
+    {
+      "type": "DataTable",
+      "props": {
+        "dataPath": "runs",
+        "searchable": true,
+        "searchPlaceholder": "Search payroll runs...",
+        "paginated": true,
+        "pageSize": 20,
+        "emptyMessage": "No payroll runs found.",
+        "columns": [
+          {
+            "key": "period",
+            "header": "Period",
+            "sortable": true
+          },
+          {
+            "key": "status",
+            "header": "Status",
+            "sortable": true,
+            "render": {
+              "type": "Badge",
+              "props": {
+                "valuePath": "status",
+                "colorMap": {
+                  "draft": "gray",
+                  "processing": "blue",
+                  "completed": "green",
+                  "cancelled": "orange"
+                }
+              }
+            }
+          },
+          {
+            "key": "runDate",
+            "header": "Run Date",
+            "format": "date",
+            "sortable": true
+          },
+          {
+            "key": "totalAmount",
+            "header": "Total Amount",
+            "format": "currency",
+            "sortable": true
+          },
+          {
+            "key": "approvedBy",
+            "header": "Approved By",
+            "sortable": true
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,421 @@
+{
+  "dataSources": {
+    "employee": { "url": "/api/employees/:id" },
+    "departments": { "url": "/api/departments" },
+    "positions": { "url": "/api/positions" },
+    "managers": { "url": "/api/employees?status=active" }
+  },
+  "children": [
+    {
+      "type": "PageHeader",
+      "props": {
+        "title": "Edit Employee",
+        "subtitle": "Update employee information"
+      }
+    },
+    {
+      "type": "Form",
+      "props": {
+        "action": {
+          "type": "submit_form",
+          "url": "/api/employees/:id",
+          "method": "PUT",
+          "redirectTo": "/employees/:id"
+        }
+      },
+      "children": [
+        {
+          "type": "DetailSection",
+          "props": {
+            "title": "Personal Information"
+          },
+          "children": [
+            {
+              "type": "Grid",
+              "props": {
+                "columns": 2,
+                "gap": "md"
+              },
+              "children": [
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "firstName",
+                    "label": "First Name",
+                    "required": true,
+                    "valuePath": "employee.firstName",
+                    "placeholder": "Enter first name"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "lastName",
+                    "label": "Last Name",
+                    "required": true,
+                    "valuePath": "employee.lastName",
+                    "placeholder": "Enter last name"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "email",
+                    "label": "Email",
+                    "required": true,
+                    "inputType": "email",
+                    "valuePath": "employee.email",
+                    "placeholder": "employee@company.com"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "phone",
+                    "label": "Phone",
+                    "valuePath": "employee.phone",
+                    "placeholder": "+1 (555) 000-0000"
+                  }
+                },
+                {
+                  "type": "DateField",
+                  "props": {
+                    "name": "dateOfBirth",
+                    "label": "Date of Birth",
+                    "valuePath": "employee.dateOfBirth"
+                  }
+                },
+                {
+                  "type": "SelectField",
+                  "props": {
+                    "name": "gender",
+                    "label": "Gender",
+                    "valuePath": "employee.gender",
+                    "options": [
+                      { "label": "Male", "value": "Male" },
+                      { "label": "Female", "value": "Female" },
+                      { "label": "Other", "value": "Other" }
+                    ]
+                  }
+                },
+                {
+                  "type": "SelectField",
+                  "props": {
+                    "name": "maritalStatus",
+                    "label": "Marital Status",
+                    "valuePath": "employee.maritalStatus",
+                    "options": [
+                      { "label": "Single", "value": "Single" },
+                      { "label": "Married", "value": "Married" },
+                      { "label": "Divorced", "value": "Divorced" },
+                      { "label": "Widowed", "value": "Widowed" }
+                    ]
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "nationality",
+                    "label": "Nationality",
+                    "valuePath": "employee.nationality",
+                    "placeholder": "Enter nationality"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Divider",
+          "props": {}
+        },
+        {
+          "type": "DetailSection",
+          "props": {
+            "title": "Address"
+          },
+          "children": [
+            {
+              "type": "Grid",
+              "props": {
+                "columns": 2,
+                "gap": "md"
+              },
+              "children": [
+                {
+                  "type": "TextArea",
+                  "props": {
+                    "name": "address",
+                    "label": "Address",
+                    "valuePath": "employee.address",
+                    "placeholder": "Enter street address",
+                    "rows": 3,
+                    "colSpan": 2
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "city",
+                    "label": "City",
+                    "valuePath": "employee.city",
+                    "placeholder": "Enter city"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "state",
+                    "label": "State",
+                    "valuePath": "employee.state",
+                    "placeholder": "Enter state"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "country",
+                    "label": "Country",
+                    "valuePath": "employee.country",
+                    "placeholder": "Enter country"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "postalCode",
+                    "label": "Postal Code",
+                    "valuePath": "employee.postalCode",
+                    "placeholder": "Enter postal code"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Divider",
+          "props": {}
+        },
+        {
+          "type": "DetailSection",
+          "props": {
+            "title": "Employment Details"
+          },
+          "children": [
+            {
+              "type": "Grid",
+              "props": {
+                "columns": 2,
+                "gap": "md"
+              },
+              "children": [
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "employeeCode",
+                    "label": "Employee Code",
+                    "required": true,
+                    "valuePath": "employee.employeeCode",
+                    "placeholder": "e.g. EMP-001"
+                  }
+                },
+                {
+                  "type": "SelectField",
+                  "props": {
+                    "name": "departmentId",
+                    "label": "Department",
+                    "required": true,
+                    "valuePath": "employee.departmentId",
+                    "optionsPath": "departments",
+                    "optionLabel": "name",
+                    "optionValue": "id",
+                    "placeholder": "Select department"
+                  }
+                },
+                {
+                  "type": "SelectField",
+                  "props": {
+                    "name": "positionId",
+                    "label": "Position",
+                    "required": true,
+                    "valuePath": "employee.positionId",
+                    "optionsPath": "positions",
+                    "optionLabel": "title",
+                    "optionValue": "id",
+                    "placeholder": "Select position"
+                  }
+                },
+                {
+                  "type": "SelectField",
+                  "props": {
+                    "name": "managerId",
+                    "label": "Reporting Manager",
+                    "valuePath": "employee.managerId",
+                    "optionsPath": "managers",
+                    "optionLabel": "fullName",
+                    "optionValue": "id",
+                    "placeholder": "Select manager"
+                  }
+                },
+                {
+                  "type": "DateField",
+                  "props": {
+                    "name": "dateOfJoining",
+                    "label": "Date of Joining",
+                    "required": true,
+                    "valuePath": "employee.dateOfJoining"
+                  }
+                },
+                {
+                  "type": "SelectField",
+                  "props": {
+                    "name": "employmentType",
+                    "label": "Employment Type",
+                    "required": true,
+                    "valuePath": "employee.employmentType",
+                    "options": [
+                      { "label": "Full Time", "value": "full_time" },
+                      { "label": "Part Time", "value": "part_time" },
+                      { "label": "Contract", "value": "contract" },
+                      { "label": "Intern", "value": "intern" }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Divider",
+          "props": {}
+        },
+        {
+          "type": "DetailSection",
+          "props": {
+            "title": "Emergency Contact"
+          },
+          "children": [
+            {
+              "type": "Grid",
+              "props": {
+                "columns": 2,
+                "gap": "md"
+              },
+              "children": [
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "emergencyContactName",
+                    "label": "Contact Name",
+                    "valuePath": "employee.emergencyContactName",
+                    "placeholder": "Enter contact name"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "emergencyContactPhone",
+                    "label": "Contact Phone",
+                    "valuePath": "employee.emergencyContactPhone",
+                    "placeholder": "+1 (555) 000-0000"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "emergencyContactRelation",
+                    "label": "Relationship",
+                    "valuePath": "employee.emergencyContactRelation",
+                    "placeholder": "e.g. Spouse, Parent, Sibling"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Divider",
+          "props": {}
+        },
+        {
+          "type": "DetailSection",
+          "props": {
+            "title": "Bank Details"
+          },
+          "children": [
+            {
+              "type": "Grid",
+              "props": {
+                "columns": 2,
+                "gap": "md"
+              },
+              "children": [
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "bankName",
+                    "label": "Bank Name",
+                    "valuePath": "employee.bankName",
+                    "placeholder": "Enter bank name"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "bankAccount",
+                    "label": "Account Number",
+                    "valuePath": "employee.bankAccount",
+                    "placeholder": "Enter account number"
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "bankIfsc",
+                    "label": "IFSC Code",
+                    "valuePath": "employee.bankIfsc",
+                    "placeholder": "Enter IFSC code"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Divider",
+          "props": {}
+        },
+        {
+          "type": "Stack",
+          "props": {
+            "direction": "horizontal",
+            "justify": "flex-end",
+            "gap": "md"
+          },
+          "children": [
+            {
+              "type": "Button",
+              "props": {
+                "label": "Cancel",
+                "variant": "secondary",
+                "action": {
+                  "type": "navigate",
+                  "to": "/employees/:id"
+                }
+              }
+            },
+            {
+              "type": "Button",
+              "props": {
+                "label": "Save Changes",
+                "variant": "primary",
+                "buttonType": "submit"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "dataSources": {
+    "positions": { "url": "/api/positions" },
+    "departments": { "url": "/api/departments" }
+  },
+  "children": [
+    {
+      "type": "PageHeader",
+      "props": {
+        "title": "Positions",
+        "actions": [
+          {
+            "label": "Add Position",
+            "variant": "primary",
+            "icon": "plus",
+            "action": {
+              "type": "navigate",
+              "to": "/positions/new"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "DataTable",
+      "props": {
+        "dataPath": "positions",
+        "searchable": true,
+        "searchPlaceholder": "Search positions...",
+        "paginated": true,
+        "pageSize": 20,
+        "rowClickAction": {
+          "type": "navigate",
+          "to": "/positions/:id/edit"
+        },
+        "columns": [
+          {
+            "key": "title",
+            "header": "Title",
+            "sortable": true
+          },
+          {
+            "key": "code",
+            "header": "Code",
+            "sortable": true
+          },
+          {
+            "key": "departmentName",
+            "header": "Department",
+            "sortable": true
+          },
+          {
+            "key": "level",
+            "header": "Level",
+            "sortable": true
+          },
+          {
+            "key": "salaryRange",
+            "header": "Salary Range",
+            "template": "{{minSalary}} - {{maxSalary}}",
+            "format": "currencyRange"
+          },
+          {
+            "key": "active",
+            "header": "Status",
+            "sortable": true,
+            "render": {
+              "type": "Badge",
+              "props": {
+                "valuePath": "active",
+                "colorMap": {
+                  "true": "green",
+                  "false": "gray"
+                },
+                "labelMap": {
+                  "true": "Active",
+                  "false": "Inactive"
+                }
+              }
+            }
+          }
+        ],
+        "filters": [
+          {
+            "key": "departmentId",
+            "label": "Department",
+            "type": "select",
+            "optionsPath": "departments",
+            "optionLabel": "name",
+            "optionValue": "id"
+          }
+        ]
+      }
+    }
+  ]
+}

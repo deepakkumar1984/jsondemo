@@ -1,0 +1,64 @@
+{
+  "dataSources": {
+    "structures": { "url": "/api/payroll/structures" }
+  },
+  "children": [
+    {
+      "type": "PageHeader",
+      "props": {
+        "title": "Salary Structures",
+        "subtitle": "Define and manage salary components"
+      }
+    },
+    {
+      "type": "Alert",
+      "props": {
+        "variant": "warning",
+        "title": "Under Development",
+        "message": "Salary structure management is under development. Some features may not be available yet."
+      }
+    },
+    {
+      "type": "DataTable",
+      "props": {
+        "dataPath": "structures",
+        "searchable": true,
+        "searchPlaceholder": "Search salary structures...",
+        "paginated": true,
+        "pageSize": 20,
+        "emptyMessage": "No salary structures found.",
+        "columns": [
+          {
+            "key": "name",
+            "header": "Name",
+            "sortable": true
+          },
+          {
+            "key": "description",
+            "header": "Description",
+            "sortable": false
+          },
+          {
+            "key": "active",
+            "header": "Status",
+            "sortable": true,
+            "render": {
+              "type": "Badge",
+              "props": {
+                "valuePath": "active",
+                "colorMap": {
+                  "true": "green",
+                  "false": "gray"
+                },
+                "labelMap": {
+                  "true": "Active",
+                  "false": "Inactive"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

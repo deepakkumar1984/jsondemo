@@ -1,0 +1,19 @@
+name = "jsondemo-hrm"
+main = "src/worker.ts"
+compatibility_date = "2025-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "dist/client"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hrm-db"
+database_id = "local"
+migrations_dir = "src/db/migrations"
+
+[vars]
+JWT_SECRET = "hrm-dev-secret-change-in-production"
+
+[dev]
+port = 8787
