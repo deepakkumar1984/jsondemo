@@ -1,0 +1,84 @@
+{
+  "apps": [
+    {
+      "id": "hrm",
+      "name": "HRM System",
+      "subtitle": "Human Resources",
+      "shortName": "HRM",
+      "icon": "Users",
+      "logo": "👥",
+      "description": "Human Resource Management System",
+      "prefix": "/",
+      "demoCredentials": {
+        "email": "admin@hrm.com",
+        "password": "admin123"
+      },
+      "navigation": {
+        "categories": [
+          {
+            "id": "overview",
+            "title": "Overview",
+            "icon": "LayoutDashboard",
+            "order": 1,
+            "items": [
+              { "title": "Dashboard", "path": "/", "page": "dashboard" }
+            ]
+          },
+          {
+            "id": "employee-data",
+            "title": "Employee Data",
+            "icon": "Users",
+            "order": 2,
+            "items": [
+              { "title": "Employees", "path": "/employees", "page": "employees/list" },
+              { "title": "Departments", "path": "/departments", "page": "departments/list" },
+              { "title": "Positions", "path": "/positions", "page": "positions/list" }
+            ]
+          },
+          {
+            "id": "payroll",
+            "title": "Payroll",
+            "icon": "DollarSign",
+            "order": 3,
+            "items": [
+              { "title": "Payroll Runs", "path": "/payroll", "page": "payroll/list" },
+              { "title": "Salary Structures", "path": "/payroll/structures", "page": "payroll/structure" }
+            ]
+          },
+          {
+            "id": "talent",
+            "title": "Talent Management",
+            "icon": "Briefcase",
+            "order": 4,
+            "items": [
+              { "title": "Job Postings", "path": "/talent/jobs", "page": "talent/jobs" },
+              { "title": "Performance Reviews", "path": "/talent/reviews", "page": "talent/reviews" }
+            ]
+          },
+          {
+            "id": "workforce",
+            "title": "Workforce",
+            "icon": "Calendar",
+            "order": 5,
+            "items": [
+              { "title": "Attendance", "path": "/workforce/attendance", "page": "workforce/attendance" },
+              { "title": "Leave Management", "path": "/workforce/leave", "page": "workforce/leave" }
+            ]
+          }
+        ]
+      },
+      "routes": [
+        { "path": "/employees/new", "page": "employees/create" },
+        { "path": "/employees/:id", "page": "employees/detail" },
+        { "path": "/employees/:id/edit", "page": "employees/edit" },
+        { "path": "/departments/new", "page": "departments/create" },
+        { "path": "/departments/:id/edit", "page": "departments/edit" },
+        { "path": "/positions/new", "page": "positions/create" },
+        { "path": "/positions/:id/edit", "page": "positions/edit" }
+      ],
+      "schemaSource": "db/schema.ts",
+      "apiConfigPath": "./api",
+      "pagesConfigPath": "./pages"
+    }
+  ]
+}

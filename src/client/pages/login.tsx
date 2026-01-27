@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Alert, AlertDescription } from '../components/ui/alert';
+import { useAppConfig } from '../lib/app-config';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { app } = useAppConfig();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,11 +30,20 @@ export default function LoginPage() {
     }
   };
 
+  // Pre-fill demo credentials from config
+  useEffect(() => {
+    if (app?.demoCredentials) {
+      setEmail(app.demoCredentials.email);
+    }
+  }, [app]);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/50">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">HRM System</CardTitle>
+          <CardTitle className="text-2xl">
+            {app?.name || 'System'}
+          </CardTitle>
           <CardDescription>Sign in to your account</CardDescription>
         </CardHeader>
         <CardContent>
@@ -47,7 +58,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@hrm.com"
+                placeholder={app?.demoCredentials?.email || 'email@example.com'}
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
@@ -68,9 +79,11 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm text-muted-foreground">
-            Demo: admin@hrm.com / admin123
-          </div>
+          {app?.demoCredentials && (
+            <div className="mt-4 text-center text-sm text-muted-foreground">
+              Demo: {app.demoCredentials.email} / {app.demoCredentials.password}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -1,6 +1,5 @@
 import { Hono } from 'hono';
 import type { ResourceApiConfig } from './types';
-import { schemaRegistry } from './schema-registry';
 import { listHandler } from './list-handler';
 import { getByIdHandler } from './get-handler';
 import { createHandler } from './create-handler';
@@ -9,8 +8,12 @@ import { deleteHandler } from './delete-handler';
 import { customHandlerRegistry } from './custom-handlers';
 
 type Env = { Bindings: { DB: D1Database; JWT_SECRET: string } };
+type SchemaRegistry = Record<string, any>;
 
-export function createResourceRouter(config: ResourceApiConfig): Hono<Env> {
+export function createResourceRouter(
+  config: ResourceApiConfig,
+  schemaRegistry: SchemaRegistry
+): Hono<Env> {
   const router = new Hono<Env>();
   const table = schemaRegistry[config.table];
 
