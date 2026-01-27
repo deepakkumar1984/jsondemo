@@ -1,0 +1,29 @@
+{
+  "resource": "employee documents",
+  "table": "employeeDocuments",
+  "basePath": "/documents",
+  "list": {
+    "enabled": true,
+    "paginated": true,
+    "fields": ["id", "employeeId", "name", "type", "fileUrl", "uploadedAt"],
+    "joins": [
+      {
+        "table": "employees",
+        "on": ["employeeId", "employees.id"],
+        "fields": {
+          "employeeFirstName": "firstName",
+          "employeeLastName": "lastName",
+          "employeeCode": "employeeCode"
+        }
+      }
+    ]
+  },
+  "create": {
+    "enabled": true,
+    "requiredFields": ["employeeId", "name", "type", "fileUrl"],
+    "fields": ["employeeId", "name", "type", "fileUrl"],
+    "referentialChecks": [
+      { "field": "employeeId", "table": "employees", "message": "Employee not found" }
+    ]
+  }
+}

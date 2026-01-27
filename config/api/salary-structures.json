@@ -1,0 +1,16 @@
+{
+  "resource": "salary structures",
+  "table": "salaryStructures",
+  "basePath": "/payroll/structures",
+  "list": {
+    "enabled": true,
+    "paginated": true,
+    "fields": ["id", "name", "description", "active", "createdAt"]
+  },
+  "create": {
+    "enabled": true,
+    "requiredFields": ["name"],
+    "fields": ["name", "description", "active"],
+    "defaults": { "active": 1 }
+  }
+}

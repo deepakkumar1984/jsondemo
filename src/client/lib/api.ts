@@ -31,13 +31,13 @@ class ApiClient {
       body: body ? JSON.stringify(body) : undefined,
     });
 
-    const data = await response.json();
+    const data: any = await response.json();
 
     if (!response.ok) {
       throw new Error(data.error || `Request failed with status ${response.status}`);
     }
 
-    return data;
+    return data as T;
   }
 
   get<T>(endpoint: string) { return this.request<T>(endpoint); }

@@ -1,0 +1,40 @@
+{
+  "resource": "leave requests",
+  "table": "leaveRequests",
+  "basePath": "/workforce/leave-requests",
+  "list": {
+    "enabled": true,
+    "paginated": true,
+    "fields": ["id", "employeeId", "leaveTypeId", "fromDate", "toDate", "days", "reason", "status", "approvedBy"],
+    "joins": [
+      {
+        "table": "employees",
+        "on": ["employeeId", "employees.id"],
+        "fields": {
+          "employeeFirstName": "firstName",
+          "employeeLastName": "lastName",
+          "employeeCode": "employeeCode"
+        }
+      },
+      {
+        "table": "leaveTypes",
+        "on": ["leaveTypeId", "leaveTypes.id"],
+        "fields": { "leaveTypeName": "name" }
+      }
+    ],
+    "filters": [
+      { "param": "employeeId", "field": "employeeId" },
+      { "param": "status", "field": "status", "cast": "enum" }
+    ]
+  },
+  "create": {
+    "enabled": true,
+    "requiredFields": ["employeeId", "leaveTypeId", "fromDate", "toDate", "days"],
+    "fields": ["employeeId", "leaveTypeId", "fromDate", "toDate", "days", "reason", "status", "approvedBy"],
+    "defaults": { "status": "pending" },
+    "referentialChecks": [
+      { "field": "employeeId", "table": "employees", "message": "Employee not found" },
+      { "field": "leaveTypeId", "table": "leaveTypes", "message": "Leave type not found" }
+    ]
+  }
+}

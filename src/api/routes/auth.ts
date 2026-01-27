@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
 import { users } from '../../db/schema';
 import { createJWT, authMiddleware } from '../middleware/auth';
-import { success } from '../utils/response';
+import { success, handleError } from '../utils/response';
 
 type Env = { Bindings: { DB: D1Database; JWT_SECRET: string } };
 const auth = new Hono<Env>();
@@ -53,7 +53,8 @@ auth.post('/login', async (c) => {
       })
     );
   } catch (err) {
-    return c.json({ success: false, error: 'Login failed' }, 500);
+    const e = handleError('Login', err);
+    return c.json(e.body, e.status);
   }
 });
 
@@ -84,17 +85,19 @@ auth.post('/register', async (c) => {
 
     return c.json(success({ id, email, name, role: role || 'employee' }), 201);
   } catch (err) {
-    return c.json({ success: false, error: 'Registration failed' }, 500);
+    const e = handleError('Register', err);
+    return c.json(e.body, e.status);
   }
 });
 
 // GET /api/auth/me
 auth.get('/me', authMiddleware, async (c) => {
   try {
-    const user = c.get('user');
+    const user = (c as any).get('user');
     return c.json(success(user));
   } catch (err) {
-    return c.json({ success: false, error: 'Failed to retrieve user info' }, 500);
+    const e = handleError('Get current user', err);
+    return c.json(e.body, e.status);
   }
 });
 

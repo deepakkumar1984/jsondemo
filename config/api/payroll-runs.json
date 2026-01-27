@@ -1,0 +1,16 @@
+{
+  "resource": "payroll runs",
+  "table": "payrollRuns",
+  "basePath": "/payroll/runs",
+  "list": {
+    "enabled": true,
+    "paginated": true,
+    "fields": ["id", "periodMonth", "periodYear", "status", "runDate", "approvedBy", "totalAmount"]
+  },
+  "create": {
+    "enabled": true,
+    "requiredFields": ["periodMonth", "periodYear"],
+    "fields": ["periodMonth", "periodYear", "status", "runDate", "approvedBy", "totalAmount"],
+    "defaults": { "status": "draft" }
+  }
+}

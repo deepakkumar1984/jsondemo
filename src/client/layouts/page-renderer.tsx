@@ -16,12 +16,18 @@ interface FormContextType {
   values: Record<string, any>;
   setValue: (path: string, value: any) => void;
   getValues: () => Record<string, any>;
+  errors: Record<string, string>;
+  setError: (path: string, message: string) => void;
+  clearError: (path: string) => void;
 }
 
 export const FormContext = createContext<FormContextType>({
   values: {},
   setValue: () => {},
   getValues: () => ({}),
+  errors: {},
+  setError: () => {},
+  clearError: () => {},
 });
 
 // --- Helpers ---
@@ -224,40 +230,48 @@ function RenderComponent({ node, onAction }: { node: any; onAction: (action: any
     }
 
     case 'TextField': {
-      const val = formCtx.values[node.props.bindPath] ?? '';
+      const fieldKey = node.props.bindPath || node.props.name;
+      const val = formCtx.values[fieldKey] ?? '';
+      const fieldError = formCtx.errors[fieldKey];
       return (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <label className="text-sm font-medium">{node.props.label}{node.props.required && <span className="text-destructive ml-1">*</span>}</label>
           <Input
-            type={node.props.type || 'text'}
+            type={node.props.inputType || node.props.type || 'text'}
             placeholder={node.props.placeholder}
             value={val}
-            onChange={e => formCtx.setValue(node.props.bindPath, e.target.value)}
-            required={node.props.required}
+            onChange={e => { formCtx.clearError(fieldKey); formCtx.setValue(fieldKey, e.target.value); }}
             disabled={node.props.disabled}
+            className={fieldError ? 'border-destructive' : ''}
           />
+          {fieldError && <p className="text-xs text-destructive">{fieldError}</p>}
         </div>
       );
     }
 
     case 'TextArea': {
-      const val = formCtx.values[node.props.bindPath] ?? '';
+      const fieldKey = node.props.bindPath || node.props.name;
+      const val = formCtx.values[fieldKey] ?? '';
+      const fieldError = formCtx.errors[fieldKey];
       return (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <label className="text-sm font-medium">{node.props.label}{node.props.required && <span className="text-destructive ml-1">*</span>}</label>
           <Textarea
             placeholder={node.props.placeholder}
             rows={node.props.rows || 3}
             value={val}
-            onChange={e => formCtx.setValue(node.props.bindPath, e.target.value)}
-            required={node.props.required}
+            onChange={e => { formCtx.clearError(fieldKey); formCtx.setValue(fieldKey, e.target.value); }}
+            className={fieldError ? 'border-destructive' : ''}
           />
+          {fieldError && <p className="text-xs text-destructive">{fieldError}</p>}
         </div>
       );
     }
 
     case 'SelectField': {
-      const val = formCtx.values[node.props.bindPath] ?? '';
+      const fieldKey = node.props.bindPath || node.props.name;
+      const val = formCtx.values[fieldKey] ?? '';
+      const fieldError = formCtx.errors[fieldKey];
       let options = node.props.options || [];
       if (node.props.optionsPath) {
         const resolved = resolveDataPath(data, node.props.optionsPath);
@@ -272,10 +286,10 @@ function RenderComponent({ node, onAction }: { node: any; onAction: (action: any
         }
       }
       return (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <label className="text-sm font-medium">{node.props.label}{node.props.required && <span className="text-destructive ml-1">*</span>}</label>
-          <Select value={val} onValueChange={v => formCtx.setValue(node.props.bindPath, v)}>
-            <SelectTrigger>
+          <Select value={val} onValueChange={v => { formCtx.clearError(fieldKey); formCtx.setValue(fieldKey, v); }}>
+            <SelectTrigger className={fieldError ? 'border-destructive' : ''}>
               <SelectValue placeholder={node.props.placeholder || `Select ${node.props.label}`} />
             </SelectTrigger>
             <SelectContent>
@@ -284,21 +298,25 @@ function RenderComponent({ node, onAction }: { node: any; onAction: (action: any
               ))}
             </SelectContent>
           </Select>
+          {fieldError && <p className="text-xs text-destructive">{fieldError}</p>}
         </div>
       );
     }
 
     case 'DateField': {
-      const val = formCtx.values[node.props.bindPath] ?? '';
+      const fieldKey = node.props.bindPath || node.props.name;
+      const val = formCtx.values[fieldKey] ?? '';
+      const fieldError = formCtx.errors[fieldKey];
       return (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <label className="text-sm font-medium">{node.props.label}{node.props.required && <span className="text-destructive ml-1">*</span>}</label>
           <Input
             type="date"
             value={val}
-            onChange={e => formCtx.setValue(node.props.bindPath, e.target.value)}
-            required={node.props.required}
+            onChange={e => { formCtx.clearError(fieldKey); formCtx.setValue(fieldKey, e.target.value); }}
+            className={fieldError ? 'border-destructive' : ''}
           />
+          {fieldError && <p className="text-xs text-destructive">{fieldError}</p>}
         </div>
       );
     }
@@ -705,22 +723,46 @@ function renderCellValue(row: any, col: any): React.ReactNode {
 
 // --- Form Renderer ---
 
+/** Recursively collect required field definitions from the JSON config tree */
+function collectRequiredFields(nodeList: any[]): { key: string; label: string }[] {
+  const fields: { key: string; label: string }[] = [];
+  for (const n of nodeList) {
+    if (!n) continue;
+    const isField = n.type === 'TextField' || n.type === 'TextArea' || n.type === 'SelectField' || n.type === 'DateField';
+    if (isField && n.props?.required) {
+      const key = n.props.bindPath || n.props.name;
+      if (key) fields.push({ key, label: n.props.label || key });
+    }
+    if (n.children && Array.isArray(n.children)) {
+      fields.push(...collectRequiredFields(n.children));
+    }
+  }
+  return fields;
+}
+
 function FormRenderer({ node, children, onAction }: { node: any; children: React.ReactNode; onAction: (action: any, formValues?: any) => void }) {
   const { data } = useContext(DataContext);
   const [values, setValues] = useState<Record<string, any>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [initialized, setInitialized] = useState(false);
 
   // Pre-populate form from data sources (for edit forms)
   useEffect(() => {
     if (!initialized && data) {
       const newValues: Record<string, any> = {};
-      // Try to find the main entity data to pre-populate
       for (const [, val] of Object.entries(data)) {
-        if (val && typeof val === 'object' && !Array.isArray(val) && val.data) {
-          // This is likely the main entity
-          const entity = val.data;
-          if (typeof entity === 'object') {
-            Object.entries(entity).forEach(([k, v]) => {
+        if (val == null) continue;
+        // Handle already-unwrapped entity objects (e.g., employee object directly)
+        if (typeof val === 'object' && !Array.isArray(val)) {
+          // If it has an 'id' field, treat it as an entity to pre-populate from
+          if (val.id) {
+            Object.entries(val).forEach(([k, v]) => {
+              if (v != null) newValues[k] = v;
+            });
+          }
+          // Also handle the wrapped format { data: entity } for paginated responses
+          if (val.data && typeof val.data === 'object' && !Array.isArray(val.data) && val.data.id) {
+            Object.entries(val.data).forEach(([k, v]) => {
               if (v != null) newValues[k] = v;
             });
           }
@@ -739,14 +781,42 @@ function FormRenderer({ node, children, onAction }: { node: any; children: React
 
   const getValues = useCallback(() => values, [values]);
 
+  const setError = useCallback((path: string, message: string) => {
+    setErrors(prev => ({ ...prev, [path]: message }));
+  }, []);
+
+  const clearError = useCallback((path: string) => {
+    setErrors(prev => {
+      const next = { ...prev };
+      delete next[path];
+      return next;
+    });
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Inline validation: check required fields
+    const requiredFields = collectRequiredFields(node.children || []);
+    const newErrors: Record<string, string> = {};
+    for (const { key, label } of requiredFields) {
+      const val = values[key];
+      if (val === undefined || val === null || val === '') {
+        newErrors[key] = `${label} is required`;
+      }
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
     onAction(node.props.action, values);
   };
 
   return (
-    <FormContext.Provider value={{ values, setValue, getValues }}>
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <FormContext.Provider value={{ values, setValue, getValues, errors, setError, clearError }}>
+      <form onSubmit={handleSubmit} noValidate className="space-y-6">
         {children}
         <div className="flex gap-3 pt-4">
           <Button type="submit">Save</Button>

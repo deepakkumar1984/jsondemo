@@ -1,0 +1,62 @@
+{
+  "resource": "departments",
+  "table": "departments",
+  "basePath": "/departments",
+  "list": {
+    "enabled": true,
+    "paginated": false,
+    "orderBy": { "field": "name", "direction": "asc" },
+    "fields": ["id", "name", "code", "description", "headId", "parentId", "active", "createdAt"],
+    "computedFields": [
+      {
+        "name": "employeeCount",
+        "sql": "(SELECT COUNT(*) FROM employees WHERE employees.department_id = departments.id AND employees.status != 'terminated')",
+        "type": "number"
+      }
+    ]
+  },
+  "getById": {
+    "enabled": true,
+    "fields": ["id", "name", "code", "description", "headId", "parentId", "active", "createdAt"],
+    "computedFields": [
+      {
+        "name": "employeeCount",
+        "sql": "(SELECT COUNT(*) FROM employees WHERE employees.department_id = departments.id AND employees.status != 'terminated')",
+        "type": "number"
+      }
+    ],
+    "lookups": [
+      {
+        "name": "headName",
+        "condition": "headId",
+        "table": "employees",
+        "where": { "field": "userId", "value": "$headId" },
+        "select": ["firstName", "lastName"],
+        "format": "{firstName} {lastName}"
+      }
+    ]
+  },
+  "create": {
+    "enabled": true,
+    "requiredFields": ["name", "code"],
+    "fields": ["name", "code", "description", "headId", "parentId", "active"],
+    "defaults": { "active": 1 },
+    "coerce": { "active": "boolean_to_int" }
+  },
+  "update": {
+    "enabled": true,
+    "fields": ["name", "code", "description", "headId", "parentId", "active"],
+    "coerce": { "active": "boolean_to_int" }
+  },
+  "delete": {
+    "enabled": true,
+    "mode": "hard",
+    "referentialChecks": [
+      {
+        "table": "employees",
+        "foreignKey": "departmentId",
+        "message": "Cannot delete department: {count} employee(s) are still assigned to this department"
+      }
+    ]
+  }
+}

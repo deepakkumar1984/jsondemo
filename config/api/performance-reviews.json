@@ -1,0 +1,29 @@
+{
+  "resource": "performance reviews",
+  "table": "performanceReviews",
+  "basePath": "/talent/reviews",
+  "list": {
+    "enabled": true,
+    "paginated": true,
+    "fields": ["id", "employeeId", "reviewerId", "period", "rating", "comments", "status", "reviewDate"],
+    "joins": [
+      {
+        "table": "employees",
+        "on": ["employeeId", "employees.id"],
+        "fields": {
+          "employeeFirstName": "firstName",
+          "employeeLastName": "lastName"
+        }
+      }
+    ],
+    "filters": [
+      { "param": "employeeId", "field": "employeeId" }
+    ]
+  },
+  "create": {
+    "enabled": true,
+    "requiredFields": ["employeeId", "reviewerId", "period"],
+    "fields": ["employeeId", "reviewerId", "period", "rating", "comments", "status", "reviewDate"],
+    "defaults": { "status": "draft" }
+  }
+}

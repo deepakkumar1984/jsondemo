@@ -1,0 +1,35 @@
+{
+  "resource": "attendance",
+  "table": "attendance",
+  "basePath": "/workforce/attendance",
+  "list": {
+    "enabled": true,
+    "paginated": true,
+    "orderBy": { "field": "date", "direction": "desc" },
+    "fields": ["id", "employeeId", "date", "checkIn", "checkOut", "status", "hoursWorked"],
+    "joins": [
+      {
+        "table": "employees",
+        "on": ["employeeId", "employees.id"],
+        "fields": {
+          "employeeFirstName": "firstName",
+          "employeeLastName": "lastName",
+          "employeeCode": "employeeCode"
+        }
+      }
+    ],
+    "filters": [
+      { "param": "employeeId", "field": "employeeId" },
+      { "param": "date", "field": "date" }
+    ]
+  },
+  "create": {
+    "enabled": true,
+    "requiredFields": ["employeeId", "date"],
+    "fields": ["employeeId", "date", "checkIn", "checkOut", "status", "hoursWorked"],
+    "defaults": { "status": "present" },
+    "referentialChecks": [
+      { "field": "employeeId", "table": "employees", "message": "Employee not found" }
+    ]
+  }
+}

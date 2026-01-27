@@ -1,13 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import auth from './routes/auth';
-import employees from './routes/employees';
-import departments from './routes/departments';
-import positions from './routes/positions';
-import documents from './routes/documents';
-import payroll from './routes/payroll';
-import talent from './routes/talent';
-import workforce from './routes/workforce';
+import { loadAllResourceRouters } from './engine';
 import { authMiddleware } from './middleware/auth';
 
 type Env = { Bindings: { DB: D1Database; JWT_SECRET: string } };
@@ -19,16 +13,14 @@ api.use('*', cors());
 // Public routes (no auth required)
 api.route('/auth', auth);
 
-// Protected routes (auth middleware applied)
+// Protected config-driven routes
 const protectedApi = new Hono<Env>();
 protectedApi.use('*', authMiddleware);
-protectedApi.route('/employees', employees);
-protectedApi.route('/departments', departments);
-protectedApi.route('/positions', positions);
-protectedApi.route('/documents', documents);
-protectedApi.route('/payroll', payroll);
-protectedApi.route('/talent', talent);
-protectedApi.route('/workforce', workforce);
+
+const resourceRouters = loadAllResourceRouters();
+for (const { basePath, router } of resourceRouters) {
+  protectedApi.route(basePath, router);
+}
 
 api.route('/', protectedApi);
 

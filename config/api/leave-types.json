@@ -1,0 +1,11 @@
+{
+  "resource": "leave types",
+  "table": "leaveTypes",
+  "basePath": "/workforce/leave-types",
+  "list": {
+    "enabled": true,
+    "paginated": false,
+    "orderBy": { "field": "name", "direction": "asc" },
+    "fields": ["id", "name", "daysPerYear", "carryForward", "active"]
+  }
+}

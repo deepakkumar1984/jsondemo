@@ -1,0 +1,78 @@
+{
+  "resource": "employees",
+  "table": "employees",
+  "basePath": "/employees",
+  "list": {
+    "enabled": true,
+    "paginated": true,
+    "orderBy": { "field": "createdAt", "direction": "desc" },
+    "fields": ["id", "employeeCode", "firstName", "lastName", "email", "phone", "departmentId", "positionId", "managerId", "employmentType", "status", "dateOfJoining", "createdAt", "updatedAt"],
+    "joins": [
+      {
+        "table": "departments",
+        "on": ["departmentId", "departments.id"],
+        "fields": { "departmentName": "name" }
+      },
+      {
+        "table": "positions",
+        "on": ["positionId", "positions.id"],
+        "fields": { "positionTitle": "title" }
+      }
+    ],
+    "filters": [
+      { "param": "departmentId", "field": "departmentId" },
+      { "param": "status", "field": "status", "cast": "enum" },
+      { "param": "employmentType", "field": "employmentType", "cast": "enum" }
+    ],
+    "search": { "param": "search", "fields": ["firstName", "lastName", "employeeCode"] }
+  },
+  "getById": {
+    "enabled": true,
+    "fields": ["id", "userId", "employeeCode", "firstName", "lastName", "email", "phone", "dateOfBirth", "gender", "maritalStatus", "nationality", "address", "city", "state", "country", "postalCode", "departmentId", "positionId", "managerId", "dateOfJoining", "employmentType", "status", "emergencyContactName", "emergencyContactPhone", "emergencyContactRelation", "bankName", "bankAccount", "bankIfsc", "createdAt", "updatedAt"],
+    "joins": [
+      {
+        "table": "departments",
+        "on": ["departmentId", "departments.id"],
+        "fields": { "departmentName": "name" }
+      },
+      {
+        "table": "positions",
+        "on": ["positionId", "positions.id"],
+        "fields": { "positionTitle": "title" }
+      }
+    ],
+    "lookups": [
+      {
+        "name": "managerName",
+        "condition": "managerId",
+        "table": "employees",
+        "where": { "field": "id", "value": "$managerId" },
+        "select": ["firstName", "lastName"],
+        "format": "{firstName} {lastName}"
+      }
+    ]
+  },
+  "create": {
+    "enabled": true,
+    "requiredFields": ["firstName", "lastName", "email", "dateOfJoining", "employmentType"],
+    "fields": ["userId", "firstName", "lastName", "email", "phone", "dateOfBirth", "gender", "maritalStatus", "nationality", "address", "city", "state", "country", "postalCode", "departmentId", "positionId", "managerId", "dateOfJoining", "employmentType", "status", "emergencyContactName", "emergencyContactPhone", "emergencyContactRelation", "bankName", "bankAccount", "bankIfsc"],
+    "defaults": { "status": "active" },
+    "autoGenerate": { "field": "employeeCode", "pattern": "EMP-{seq:4}" }
+  },
+  "update": {
+    "enabled": true,
+    "fields": ["firstName", "lastName", "email", "phone", "dateOfBirth", "gender", "maritalStatus", "nationality", "address", "city", "state", "country", "postalCode", "departmentId", "positionId", "managerId", "dateOfJoining", "employmentType", "status", "employeeCode", "emergencyContactName", "emergencyContactPhone", "emergencyContactRelation", "bankName", "bankAccount", "bankIfsc"],
+    "addTimestamp": true
+  },
+  "delete": {
+    "enabled": true,
+    "mode": "soft",
+    "softDeleteField": "status",
+    "softDeleteValue": "terminated"
+  },
+  "customEndpoints": [
+    { "method": "get", "path": "/stats", "handler": "employees.stats" },
+    { "method": "get", "path": "/:id/documents", "handler": "employees.listDocuments" },
+    { "method": "post", "path": "/:id/documents", "handler": "employees.createDocument" }
+  ]
+}

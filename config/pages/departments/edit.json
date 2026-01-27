@@ -99,8 +99,8 @@
                     "required": true,
                     "valuePath": "department.active",
                     "options": [
-                      { "label": "Yes", "value": "true" },
-                      { "label": "No", "value": "false" }
+                      { "label": "Yes", "value": "1" },
+                      { "label": "No", "value": "0" }
                     ]
                   }
                 }
