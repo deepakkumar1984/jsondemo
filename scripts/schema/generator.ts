@@ -243,7 +243,7 @@ export function regenerateSchema(schemaDir: string, outputFile: string) {
 // CLI usage
 if (import.meta.url === `file://${process.argv[1]}`) {
   const schemaDir = process.argv[2] || join(process.cwd(), 'config/schema');
-  const outputFile = process.argv[3] || join(process.cwd(), 'src/db/schema.generated.ts');
+  const outputFile = process.argv[3] || join(process.cwd(), 'src/db/schema.ts');
 
   regenerateSchema(schemaDir, outputFile);
 }

@@ -1,21 +1,16 @@
 import * as schema from '../../db/schema';
 
-export const schemaRegistry: Record<string, any> = {
-  users: schema.users,
-  departments: schema.departments,
-  positions: schema.positions,
-  employees: schema.employees,
-  employeeDocuments: schema.employeeDocuments,
-  salaryStructures: schema.salaryStructures,
-  payComponents: schema.payComponents,
-  employeeSalaries: schema.employeeSalaries,
-  payrollRuns: schema.payrollRuns,
-  payslips: schema.payslips,
-  jobPostings: schema.jobPostings,
-  applicants: schema.applicants,
-  performanceReviews: schema.performanceReviews,
-  leaveTypes: schema.leaveTypes,
-  leaveBalances: schema.leaveBalances,
-  leaveRequests: schema.leaveRequests,
-  attendance: schema.attendance,
-};
+/**
+ * Dynamically build schema registry from all table exports
+ * Automatically picks up any table defined in schema.ts
+ */
+export const schemaRegistry: Record<string, any> = {};
+
+// Dynamically register all tables from schema
+for (const [key, value] of Object.entries(schema)) {
+  // Only include SQLite tables (they have a getSQL method)
+  if (value && typeof value === 'object' && '_' in value) {
+    schemaRegistry[key] = value;
+    console.log(`✓ Registered table: ${key}`);
+  }
+}

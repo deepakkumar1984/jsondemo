@@ -1,7 +1,7 @@
 {
   "page": "tasks/kanban",
   "dataSources": {
-    "items": "/api/tasks"
+    "items": { "url": "/api/tasks" }
   },
   "children": [
     {

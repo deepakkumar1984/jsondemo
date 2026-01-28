@@ -60,28 +60,20 @@ export function loadAllSchemas(
 
 /**
  * Build a schema registry from a schema module.
- * Maps table names to their Drizzle table objects.
+ * Dynamically maps all table exports to their Drizzle table objects.
  */
 function buildSchemaRegistry(schema: any): Record<string, any> {
-  return {
-    users: schema.users,
-    departments: schema.departments,
-    positions: schema.positions,
-    employees: schema.employees,
-    employeeDocuments: schema.employeeDocuments,
-    salaryStructures: schema.salaryStructures,
-    payComponents: schema.payComponents,
-    employeeSalaries: schema.employeeSalaries,
-    payrollRuns: schema.payrollRuns,
-    payslips: schema.payslips,
-    jobPostings: schema.jobPostings,
-    applicants: schema.applicants,
-    performanceReviews: schema.performanceReviews,
-    leaveTypes: schema.leaveTypes,
-    leaveBalances: schema.leaveBalances,
-    leaveRequests: schema.leaveRequests,
-    attendance: schema.attendance,
-  };
+  const registry: Record<string, any> = {};
+
+  // Dynamically register all tables from schema
+  for (const [key, value] of Object.entries(schema)) {
+    // Only include SQLite tables (they have a _ property)
+    if (value && typeof value === 'object' && '_' in value) {
+      registry[key] = value;
+    }
+  }
+
+  return registry;
 }
 
 /**
