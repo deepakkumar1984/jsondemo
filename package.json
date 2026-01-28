@@ -4,10 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "build": "vite build && wrangler deploy --dry-run",
+    "dev": "npm run api:build-index && wrangler dev",
+    "build": "npm run api:build-index && vite build && wrangler deploy --dry-run",
     "build:client": "vite build",
-    "deploy": "vite build && wrangler deploy",
+    "deploy": "npm run api:build-index && vite build && wrangler deploy",
+    "api:build-index": "tsx scripts/build-api-index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "wrangler d1 migrations apply hrm-db --local",
     "db:seed": "wrangler d1 execute hrm-db --local --file=src/db/seed.sql",
@@ -16,6 +17,10 @@
     "schema:generate": "tsx scripts/schema/generator.ts",
     "schema:diff": "tsx scripts/schema/differ.ts",
     "schema:init": "npm run schema:export && npm run schema:generate",
+    "validate:config": "tsx scripts/validate-config.ts",
+    "validate:all": "tsx scripts/validate-config.ts --all",
+    "ai:dev": "wrangler dev workers/ai-config-generator.ts --port 8787 --config wrangler.ai.toml",
+    "generate": "tsx scripts/generate-config.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

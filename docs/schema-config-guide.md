@@ -510,11 +510,65 @@ Planned features:
 - [ ] Schema validation on startup
 - [ ] Multi-database support (PostgreSQL, MySQL)
 
+## Config Validation
+
+All configuration files can be validated against their JSON Schema definitions to ensure correctness before deployment.
+
+### Available Schemas
+
+The following JSON Schema files define the structure for each config type:
+
+- **`config/schema-format.json`** - Database schema configs
+- **`config/api-format.json`** - API endpoint configs
+- **`config/page-format.json`** - UI page configs
+- **`config/apps-format.json`** - Application configs
+- **`config/requirements-format.json`** - Structured requirements (AI input format)
+
+### Validation Commands
+
+```bash
+# Validate a single config file
+npm run validate:config config/api/employees.json
+
+# Validate all config files
+npm run validate:all
+```
+
+### IDE Integration
+
+Add `$schema` property to config files for IDE autocomplete and validation:
+
+```json
+{
+  "$schema": "../api-format.json",
+  "resource": "employees",
+  ...
+}
+```
+
+This enables:
+- ✅ Autocomplete for property names
+- ✅ Real-time validation in VS Code
+- ✅ Inline documentation
+- ✅ Error detection while editing
+
+### Example Validation
+
+```bash
+$ npm run validate:config config/api/employees.json
+
+🔍 Validating: config/api/employees.json
+   Type: api
+✅ Valid
+```
+
 ## Support
 
 For issues or questions:
 
 1. Check this documentation
 2. Review `config/schema-format.json` for JSON schema spec
-3. Examine generated code in `src/db/schema.generated.ts`
-4. Review schema generator code in `scripts/schema/generator.ts`
+3. Review `config/api-format.json`, `config/page-format.json`, `config/apps-format.json` for other config types
+4. Examine generated code in `src/db/schema.generated.ts`
+5. Review schema generator code in `scripts/schema/generator.ts`
+6. Use `npm run validate:all` to check all configs

@@ -1,0 +1,71 @@
+{
+  "page": "tasks/list",
+  "dataSources": {
+    "items": "/api/tasks"
+  },
+  "children": [
+    {
+      "component": "PageHeader",
+      "props": {
+        "title": "Tasks",
+        "actions": [
+          {
+            "label": "Add New",
+            "action": {
+              "type": "navigate",
+              "path": "/tasks/create"
+            }
+          },
+          {
+            "label": "Kanban Board",
+            "action": {
+              "type": "navigate",
+              "path": "/tasks/kanban"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "component": "DataTable",
+      "props": {
+        "dataSource": "items",
+        "columns": [
+          {
+            "key": "title",
+            "label": "Title"
+          },
+          {
+            "key": "status",
+            "label": "Status",
+            "component": "Badge"
+          },
+          {
+            "key": "priority",
+            "label": "Priority"
+          },
+          {
+            "key": "dueDate",
+            "label": "Due Date"
+          }
+        ],
+        "actions": [
+          {
+            "label": "View",
+            "action": {
+              "type": "navigate",
+              "path": "/tasks/{{id}}"
+            }
+          },
+          {
+            "label": "Edit",
+            "action": {
+              "type": "navigate",
+              "path": "/tasks/{{id}}/edit"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

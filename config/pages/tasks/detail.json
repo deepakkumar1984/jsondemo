@@ -1,0 +1,59 @@
+{
+  "page": "tasks/detail",
+  "dataSources": {
+    "item": "/api/tasks/{{id}}"
+  },
+  "children": [
+    {
+      "component": "PageHeader",
+      "props": {
+        "title": "Task Details",
+        "actions": [
+          {
+            "label": "Edit",
+            "action": {
+              "type": "navigate",
+              "path": "/tasks/{{id}}/edit"
+            }
+          },
+          {
+            "label": "Back to List",
+            "action": {
+              "type": "navigate",
+              "path": "/tasks"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "component": "DescriptionList",
+      "props": {
+        "dataSource": "item",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title"
+          },
+          {
+            "key": "description",
+            "label": "Description"
+          },
+          {
+            "key": "status",
+            "label": "Status",
+            "component": "Badge"
+          },
+          {
+            "key": "priority",
+            "label": "Priority"
+          },
+          {
+            "key": "dueDate",
+            "label": "Due Date"
+          }
+        ]
+      }
+    }
+  ]
+}

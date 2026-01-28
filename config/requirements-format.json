@@ -1,0 +1,334 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Structured Requirements",
+  "description": "JSON schema for defining application requirements that will be converted to database schemas, APIs, and UI configs",
+  "type": "object",
+  "required": ["version", "domain", "entities"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "description": "Requirements format version (e.g., '1.0')"
+    },
+    "domain": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Domain/business area identifier (e.g., 'inventory-management', 'crm')"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of what this application does"
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entity"
+      },
+      "minItems": 1,
+      "description": "Business entities (database tables)"
+    },
+    "workflows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/workflow"
+      },
+      "description": "Business workflows and processes"
+    },
+    "ui": {
+      "$ref": "#/$defs/uiConfig",
+      "description": "UI-specific configuration"
+    }
+  },
+  "$defs": {
+    "entity": {
+      "type": "object",
+      "required": ["name", "label", "fields"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "Entity name in snake_case (becomes table name)"
+        },
+        "label": {
+          "type": "string",
+          "description": "Human-readable label (singular, e.g., 'Product')"
+        },
+        "description": {
+          "type": "string",
+          "description": "What this entity represents"
+        },
+        "displayField": {
+          "type": "string",
+          "description": "Which field to use for display/references (default: 'name')"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/field"
+          },
+          "minItems": 1,
+          "description": "Entity fields (table columns)"
+        },
+        "relationships": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/relationship"
+          },
+          "description": "Relationships to other entities"
+        }
+      }
+    },
+    "field": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-zA-Z0-9]*$",
+          "description": "Field name in camelCase"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["string", "text", "number", "integer", "boolean", "timestamp", "date", "reference", "enum"],
+          "description": "Field data type"
+        },
+        "label": {
+          "type": "string",
+          "description": "Human-readable field label"
+        },
+        "description": {
+          "type": "string",
+          "description": "Field description/purpose"
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Whether this field is required"
+        },
+        "unique": {
+          "type": "boolean",
+          "description": "Whether values must be unique"
+        },
+        "default": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "number" },
+            { "type": "boolean" }
+          ],
+          "description": "Default value for this field"
+        },
+        "reference": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "Referenced entity name (for type='reference')"
+        },
+        "options": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Allowed values (for type='enum')"
+        },
+        "validation": {
+          "$ref": "#/$defs/fieldValidation",
+          "description": "Validation rules for this field"
+        },
+        "autoUpdate": {
+          "type": "boolean",
+          "description": "Auto-update timestamp on record changes (for timestamp fields)"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "reference" } }
+          },
+          "then": {
+            "required": ["reference"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "enum" } }
+          },
+          "then": {
+            "required": ["options"]
+          }
+        }
+      ]
+    },
+    "fieldValidation": {
+      "type": "object",
+      "properties": {
+        "min": {
+          "type": "number",
+          "description": "Minimum value (for numbers)"
+        },
+        "max": {
+          "type": "number",
+          "description": "Maximum value (for numbers)"
+        },
+        "minLength": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Minimum length (for strings)"
+        },
+        "maxLength": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Maximum length (for strings)"
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Regular expression pattern (for strings)"
+        },
+        "custom": {
+          "type": "string",
+          "description": "Custom validation logic reference"
+        }
+      }
+    },
+    "relationship": {
+      "type": "object",
+      "required": ["type", "entity", "foreignKey"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["hasMany", "belongsTo", "hasOne"],
+          "description": "Relationship type"
+        },
+        "entity": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "Related entity name"
+        },
+        "foreignKey": {
+          "type": "string",
+          "pattern": "^[a-z][a-zA-Z0-9]*$",
+          "description": "Foreign key field name in the related entity"
+        }
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "Workflow identifier"
+        },
+        "description": {
+          "type": "string",
+          "description": "What this workflow does"
+        },
+        "trigger": {
+          "type": "string",
+          "enum": ["manual", "automatic", "scheduled"],
+          "description": "How this workflow is triggered"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/workflowStep"
+          },
+          "description": "Workflow steps"
+        }
+      }
+    },
+    "workflowStep": {
+      "type": "object",
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "description": "Action to perform (e.g., 'validate_quantity', 'send_email')"
+        },
+        "entity": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "Entity this step operates on"
+        },
+        "rules": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Business rules for this step"
+        }
+      }
+    },
+    "uiConfig": {
+      "type": "object",
+      "properties": {
+        "navigation": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/navigationSection"
+          },
+          "description": "Navigation menu organization"
+        },
+        "dashboards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dashboard"
+          },
+          "description": "Dashboard definitions"
+        }
+      }
+    },
+    "navigationSection": {
+      "type": "object",
+      "required": ["section", "items"],
+      "properties": {
+        "section": {
+          "type": "string",
+          "description": "Navigation section label"
+        },
+        "items": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "description": "Entity names to include in this section"
+        }
+      }
+    },
+    "dashboard": {
+      "type": "object",
+      "required": ["name", "widgets"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "Dashboard identifier"
+        },
+        "widgets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/widget"
+          },
+          "description": "Dashboard widgets"
+        }
+      }
+    },
+    "widget": {
+      "type": "object",
+      "required": ["type", "label"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["metric", "chart", "table", "list"],
+          "description": "Widget type"
+        },
+        "label": {
+          "type": "string",
+          "description": "Widget title"
+        },
+        "query": {
+          "type": "string",
+          "description": "Data query for this widget (natural language or SQL-like)"
+        },
+        "entity": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "Entity this widget operates on"
+        }
+      }
+    }
+  }
+}

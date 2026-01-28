@@ -1,0 +1,222 @@
+{
+  "apps": [
+    {
+      "id": "hrm",
+      "name": "HRM System",
+      "subtitle": "Human Resources",
+      "shortName": "HRM",
+      "description": "Human Resource Management System",
+      "prefix": "/",
+      "demoCredentials": {
+        "email": "admin@hrm.com",
+        "password": "admin123"
+      },
+      "branding": {
+        "logo": "👥",
+        "logoUrl": null,
+        "faviconUrl": null,
+        "companyName": "Acme Corp",
+        "tagline": "People First",
+        "showPoweredBy": false
+      },
+      "layout": {
+        "type": "sidebar",
+        "sidebarPosition": "left",
+        "sidebarWidth": "280px",
+        "sidebarCollapsible": true,
+        "sidebarDefaultCollapsed": false,
+        "headerPosition": "top",
+        "headerHeight": "56px",
+        "showHeader": true,
+        "showFooter": false,
+        "footerText": "© 2026 Acme Corp. All rights reserved.",
+        "contentMaxWidth": null,
+        "contentPadding": "24px",
+        "showBreadcrumbs": false
+      },
+      "theme": {
+        "mode": "light",
+        "allowModeToggle": true,
+        "colors": {
+          "light": {
+            "primary": "222.2 47.4% 11.2%",
+            "primaryForeground": "210 40% 98%",
+            "secondary": "210 40% 96.1%",
+            "secondaryForeground": "222.2 47.4% 11.2%",
+            "accent": "210 40% 96.1%",
+            "accentForeground": "222.2 47.4% 11.2%",
+            "destructive": "0 84.2% 60.2%",
+            "destructiveForeground": "210 40% 98%",
+            "muted": "210 40% 96.1%",
+            "mutedForeground": "215.4 16.3% 46.9%",
+            "card": "0 0% 100%",
+            "cardForeground": "222.2 84% 4.9%",
+            "popover": "0 0% 100%",
+            "popoverForeground": "222.2 84% 4.9%",
+            "border": "214.3 31.8% 91.4%",
+            "input": "214.3 31.8% 91.4%",
+            "ring": "222.2 84% 4.9%",
+            "background": "0 0% 100%",
+            "foreground": "222.2 84% 4.9%"
+          },
+          "dark": {
+            "primary": "210 40% 98%",
+            "primaryForeground": "222.2 47.4% 11.2%",
+            "secondary": "217.2 32.6% 17.5%",
+            "secondaryForeground": "210 40% 98%",
+            "accent": "217.2 32.6% 17.5%",
+            "accentForeground": "210 40% 98%",
+            "destructive": "0 62.8% 30.6%",
+            "destructiveForeground": "210 40% 98%",
+            "muted": "217.2 32.6% 17.5%",
+            "mutedForeground": "215 20.2% 65.1%",
+            "card": "222.2 84% 4.9%",
+            "cardForeground": "210 40% 98%",
+            "popover": "222.2 84% 4.9%",
+            "popoverForeground": "210 40% 98%",
+            "border": "217.2 32.6% 17.5%",
+            "input": "217.2 32.6% 17.5%",
+            "ring": "212.7 26.8% 83.9%",
+            "background": "222.2 84% 4.9%",
+            "foreground": "210 40% 98%"
+          }
+        },
+        "fonts": {
+          "heading": "Inter, system-ui, sans-serif",
+          "body": "Inter, system-ui, sans-serif",
+          "mono": "JetBrains Mono, Consolas, monospace"
+        },
+        "fontSizes": {
+          "xs": "0.75rem",
+          "sm": "0.875rem",
+          "base": "1rem",
+          "lg": "1.125rem",
+          "xl": "1.25rem",
+          "2xl": "1.5rem",
+          "3xl": "1.875rem",
+          "4xl": "2.25rem"
+        },
+        "spacing": {
+          "scale": 1.0
+        },
+        "radius": {
+          "sm": "0.25rem",
+          "md": "0.5rem",
+          "lg": "0.75rem",
+          "xl": "1rem"
+        },
+        "shadows": {
+          "sm": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+          "md": "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+          "lg": "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+          "xl": "0 20px 25px -5px rgb(0 0 0 / 0.1)"
+        }
+      },
+      "icons": {
+        "library": "lucide",
+        "size": "20px",
+        "strokeWidth": 2
+      },
+      "navigation": {
+        "categories": [
+          {
+            "id": "overview",
+            "title": "Overview",
+            "icon": "LayoutDashboard",
+            "iconLibrary": "lucide",
+            "order": 1,
+            "items": [
+              { "title": "Dashboard", "path": "/", "page": "dashboard", "icon": "House" }
+            ]
+          },
+          {
+            "id": "employee-data",
+            "title": "Employee Data",
+            "icon": "Users",
+            "iconLibrary": "lucide",
+            "order": 2,
+            "items": [
+              { "title": "Employees", "path": "/employees", "page": "employees/list", "icon": "User" },
+              { "title": "Departments", "path": "/departments", "page": "departments/list", "icon": "Building2" },
+              { "title": "Positions", "path": "/positions", "page": "positions/list", "icon": "Briefcase" }
+            ]
+          },
+          {
+            "id": "payroll",
+            "title": "Payroll",
+            "icon": "DollarSign",
+            "iconLibrary": "lucide",
+            "order": 3,
+            "items": [
+              { "title": "Payroll Runs", "path": "/payroll", "page": "payroll/list", "icon": "DollarSign" },
+              { "title": "Salary Structures", "path": "/payroll/structures", "page": "payroll/structure", "icon": "ChartColumn" }
+            ]
+          },
+          {
+            "id": "talent",
+            "title": "Talent Management",
+            "icon": "Briefcase",
+            "iconLibrary": "lucide",
+            "order": 4,
+            "items": [
+              { "title": "Job Postings", "path": "/talent/jobs", "page": "talent/jobs", "icon": "FileText" },
+              { "title": "Performance Reviews", "path": "/talent/reviews", "page": "talent/reviews", "icon": "Star" }
+            ]
+          },
+          {
+            "id": "workforce",
+            "title": "Workforce",
+            "icon": "Calendar",
+            "iconLibrary": "lucide",
+            "order": 5,
+            "items": [
+              { "title": "Attendance", "path": "/workforce/attendance", "page": "workforce/attendance", "icon": "Clock" },
+              { "title": "Leave Management", "path": "/workforce/leave", "page": "workforce/leave", "icon": "Calendar" }
+            ]
+          }
+        ]
+      },
+      "routes": [
+        { "path": "/employees/new", "page": "employees/create" },
+        { "path": "/employees/:id", "page": "employees/detail" },
+        { "path": "/employees/:id/edit", "page": "employees/edit" },
+        { "path": "/departments/new", "page": "departments/create" },
+        { "path": "/departments/:id/edit", "page": "departments/edit" },
+        { "path": "/positions/new", "page": "positions/create" },
+        { "path": "/positions/:id/edit", "page": "positions/edit" }
+      ],
+      "defaults": {
+        "table": {
+          "pageSize": 10,
+          "pageSizes": [10, 25, 50, 100],
+          "showPagination": true,
+          "showSearch": true,
+          "emptyMessage": "No records found"
+        },
+        "form": {
+          "requiredIndicator": "*",
+          "validationMode": "onBlur",
+          "showCancelButton": true,
+          "cancelButtonText": "Cancel",
+          "submitButtonText": "Save"
+        },
+        "notifications": {
+          "position": "top-right",
+          "duration": 5000,
+          "showCloseButton": true
+        },
+        "dateFormat": "MM/dd/yyyy",
+        "timeFormat": "HH:mm",
+        "currency": {
+          "code": "USD",
+          "symbol": "$",
+          "position": "before"
+        },
+        "language": "en-US"
+      },
+      "schemaSource": "db/schema.ts",
+      "apiConfigPath": "./api",
+      "pagesConfigPath": "./pages"
+    }
+  ]
+}

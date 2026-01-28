@@ -1,6 +1,6 @@
 {
-  "table": "users",
-  "description": "Application users",
+  "table": "projects",
+  "description": "Projects grouping tasks",
   "columns": [
     {
       "name": "id",
@@ -14,24 +14,25 @@
       "notNull": true
     },
     {
-      "name": "email",
+      "name": "description",
+      "type": "text"
+    },
+    {
+      "name": "ownerId",
       "type": "text",
       "notNull": true,
-      "unique": true
+      "references": {
+        "table": "users",
+        "column": "id"
+      }
     },
     {
-      "name": "passwordHash",
-      "type": "text",
-      "notNull": true
+      "name": "startDate",
+      "type": "text"
     },
     {
-      "name": "role",
-      "type": "text",
-      "enum": [
-        "admin",
-        "user"
-      ],
-      "default": "user"
+      "name": "endDate",
+      "type": "text"
     },
     {
       "name": "createdAt",

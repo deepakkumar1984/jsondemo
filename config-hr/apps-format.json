@@ -1,0 +1,603 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Application Configuration",
+  "description": "JSON schema for defining complete application configuration including branding, layout, theme, navigation, and defaults",
+  "type": "object",
+  "required": ["apps"],
+  "properties": {
+    "apps": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/appConfiguration"
+      },
+      "description": "Array of application configurations (supports multi-tenant)"
+    }
+  },
+  "$defs": {
+    "appConfiguration": {
+      "type": "object",
+      "required": ["id", "name", "navigation"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "description": "Unique application identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Application display name"
+        },
+        "subtitle": {
+          "type": "string",
+          "description": "Application subtitle"
+        },
+        "shortName": {
+          "type": "string",
+          "description": "Abbreviated application name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Application description"
+        },
+        "prefix": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "URL prefix for the application (e.g., '/' or '/app')"
+        },
+        "demoCredentials": {
+          "type": "object",
+          "properties": {
+            "email": { "type": "string", "format": "email" },
+            "password": { "type": "string" }
+          },
+          "description": "Demo login credentials for testing"
+        },
+        "branding": {
+          "$ref": "#/$defs/branding",
+          "description": "Branding configuration (logo, company info)"
+        },
+        "layout": {
+          "$ref": "#/$defs/layout",
+          "description": "Layout configuration (sidebar, header, footer)"
+        },
+        "theme": {
+          "$ref": "#/$defs/theme",
+          "description": "Theme configuration (colors, fonts, spacing)"
+        },
+        "icons": {
+          "$ref": "#/$defs/icons",
+          "description": "Icon library configuration"
+        },
+        "navigation": {
+          "$ref": "#/$defs/navigation",
+          "description": "Navigation menu configuration"
+        },
+        "routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/route"
+          },
+          "description": "Dynamic route definitions"
+        },
+        "defaults": {
+          "$ref": "#/$defs/defaults",
+          "description": "Default settings for tables, forms, notifications, etc."
+        },
+        "schemaSource": {
+          "type": "string",
+          "description": "Path to database schema source (e.g., 'db/schema.ts' or 'config/schema')"
+        },
+        "apiConfigPath": {
+          "type": "string",
+          "description": "Path to API configuration files (e.g., './api')"
+        },
+        "pagesConfigPath": {
+          "type": "string",
+          "description": "Path to page configuration files (e.g., './pages')"
+        }
+      }
+    },
+    "branding": {
+      "type": "object",
+      "properties": {
+        "logo": {
+          "type": "string",
+          "description": "Logo (emoji or text)"
+        },
+        "logoUrl": {
+          "type": ["string", "null"],
+          "description": "URL to logo image (null if using emoji)"
+        },
+        "faviconUrl": {
+          "type": ["string", "null"],
+          "description": "URL to favicon image"
+        },
+        "companyName": {
+          "type": "string",
+          "description": "Company/organization name"
+        },
+        "tagline": {
+          "type": "string",
+          "description": "Company tagline or slogan"
+        },
+        "showPoweredBy": {
+          "type": "boolean",
+          "description": "Whether to show 'Powered by' attribution"
+        }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["sidebar", "topnav", "horizontal"],
+          "description": "Layout type"
+        },
+        "sidebarPosition": {
+          "type": "string",
+          "enum": ["left", "right"],
+          "description": "Sidebar position"
+        },
+        "sidebarWidth": {
+          "type": "string",
+          "pattern": "^[0-9]+(px|rem|em|%)$",
+          "description": "Sidebar width (CSS value, e.g., '280px')"
+        },
+        "sidebarCollapsible": {
+          "type": "boolean",
+          "description": "Whether sidebar can be collapsed"
+        },
+        "sidebarDefaultCollapsed": {
+          "type": "boolean",
+          "description": "Whether sidebar is collapsed by default"
+        },
+        "headerPosition": {
+          "type": "string",
+          "enum": ["top", "bottom"],
+          "description": "Header position"
+        },
+        "headerHeight": {
+          "type": "string",
+          "pattern": "^[0-9]+(px|rem|em)$",
+          "description": "Header height (CSS value, e.g., '56px')"
+        },
+        "showHeader": {
+          "type": "boolean",
+          "description": "Whether to show header"
+        },
+        "showFooter": {
+          "type": "boolean",
+          "description": "Whether to show footer"
+        },
+        "footerText": {
+          "type": "string",
+          "description": "Footer text content"
+        },
+        "contentMaxWidth": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9]+(px|rem|em|%)$",
+          "description": "Maximum content width (CSS value or null for full width)"
+        },
+        "contentPadding": {
+          "type": "string",
+          "pattern": "^[0-9]+(px|rem|em)$",
+          "description": "Content padding (CSS value, e.g., '24px')"
+        },
+        "showBreadcrumbs": {
+          "type": "boolean",
+          "description": "Whether to show breadcrumb navigation"
+        }
+      }
+    },
+    "theme": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["light", "dark"],
+          "description": "Default theme mode"
+        },
+        "allowModeToggle": {
+          "type": "boolean",
+          "description": "Whether users can toggle between light/dark modes"
+        },
+        "colors": {
+          "type": "object",
+          "required": ["light", "dark"],
+          "properties": {
+            "light": {
+              "$ref": "#/$defs/colorPalette",
+              "description": "Color palette for light mode"
+            },
+            "dark": {
+              "$ref": "#/$defs/colorPalette",
+              "description": "Color palette for dark mode"
+            }
+          }
+        },
+        "fonts": {
+          "type": "object",
+          "properties": {
+            "heading": {
+              "type": "string",
+              "description": "Font family for headings (CSS font-family value)"
+            },
+            "body": {
+              "type": "string",
+              "description": "Font family for body text (CSS font-family value)"
+            },
+            "mono": {
+              "type": "string",
+              "description": "Font family for monospace text (CSS font-family value)"
+            }
+          }
+        },
+        "fontSizes": {
+          "type": "object",
+          "properties": {
+            "xs": { "type": "string", "pattern": "^[0-9]+(rem|px|em)$" },
+            "sm": { "type": "string", "pattern": "^[0-9]+(rem|px|em)$" },
+            "base": { "type": "string", "pattern": "^[0-9]+(rem|px|em)$" },
+            "lg": { "type": "string", "pattern": "^[0-9]+(rem|px|em)$" },
+            "xl": { "type": "string", "pattern": "^[0-9]+(rem|px|em)$" },
+            "2xl": { "type": "string", "pattern": "^[0-9]+(rem|px|em)$" },
+            "3xl": { "type": "string", "pattern": "^[0-9]+(rem|px|em)$" },
+            "4xl": { "type": "string", "pattern": "^[0-9]+(rem|px|em)$" }
+          },
+          "description": "Font size scale"
+        },
+        "spacing": {
+          "type": "object",
+          "properties": {
+            "scale": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Spacing scale multiplier (e.g., 1.0 for default)"
+            }
+          }
+        },
+        "radius": {
+          "type": "object",
+          "properties": {
+            "sm": { "type": "string", "pattern": "^[0-9]+(rem|px|em)$" },
+            "md": { "type": "string", "pattern": "^[0-9]+(rem|px|em)$" },
+            "lg": { "type": "string", "pattern": "^[0-9]+(rem|px|em)$" },
+            "xl": { "type": "string", "pattern": "^[0-9]+(rem|px|em)$" }
+          },
+          "description": "Border radius scale"
+        },
+        "shadows": {
+          "type": "object",
+          "properties": {
+            "sm": { "type": "string", "description": "CSS box-shadow value" },
+            "md": { "type": "string", "description": "CSS box-shadow value" },
+            "lg": { "type": "string", "description": "CSS box-shadow value" },
+            "xl": { "type": "string", "description": "CSS box-shadow value" }
+          },
+          "description": "Box shadow scale"
+        }
+      }
+    },
+    "colorPalette": {
+      "type": "object",
+      "properties": {
+        "primary": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Primary color in HSL format without hsl() wrapper"
+        },
+        "primaryForeground": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Primary foreground color (text on primary background)"
+        },
+        "secondary": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Secondary color"
+        },
+        "secondaryForeground": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Secondary foreground color"
+        },
+        "accent": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Accent color"
+        },
+        "accentForeground": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Accent foreground color"
+        },
+        "destructive": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Destructive/error color"
+        },
+        "destructiveForeground": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Destructive foreground color"
+        },
+        "muted": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Muted color for subtle elements"
+        },
+        "mutedForeground": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Muted foreground color"
+        },
+        "card": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Card background color"
+        },
+        "cardForeground": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Card foreground color"
+        },
+        "popover": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Popover background color"
+        },
+        "popoverForeground": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Popover foreground color"
+        },
+        "border": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Border color"
+        },
+        "input": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Input border color"
+        },
+        "ring": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Focus ring color"
+        },
+        "background": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Page background color"
+        },
+        "foreground": {
+          "type": "string",
+          "pattern": "^[0-9.]+ [0-9.]+% [0-9.]+%$",
+          "description": "Page foreground/text color"
+        }
+      },
+      "description": "Complete color palette with semantic color names"
+    },
+    "icons": {
+      "type": "object",
+      "properties": {
+        "library": {
+          "type": "string",
+          "enum": ["lucide", "feather", "heroicons"],
+          "description": "Icon library to use"
+        },
+        "size": {
+          "type": "string",
+          "pattern": "^[0-9]+(px|rem|em)$",
+          "description": "Default icon size (CSS value)"
+        },
+        "strokeWidth": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Default icon stroke width"
+        }
+      }
+    },
+    "navigation": {
+      "type": "object",
+      "required": ["categories"],
+      "properties": {
+        "categories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/navigationCategory"
+          },
+          "description": "Navigation menu categories"
+        }
+      }
+    },
+    "navigationCategory": {
+      "type": "object",
+      "required": ["id", "title", "items"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "description": "Unique category identifier"
+        },
+        "title": {
+          "type": "string",
+          "description": "Category display title"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Category icon name"
+        },
+        "iconLibrary": {
+          "type": "string",
+          "enum": ["lucide", "feather", "heroicons"],
+          "description": "Icon library for this category"
+        },
+        "order": {
+          "type": "number",
+          "description": "Display order (lower numbers appear first)"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/navigationItem"
+          },
+          "description": "Navigation items in this category"
+        }
+      }
+    },
+    "navigationItem": {
+      "type": "object",
+      "required": ["title", "path"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Navigation item title"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "Navigation path (e.g., '/employees')"
+        },
+        "page": {
+          "type": "string",
+          "description": "Page configuration file reference (e.g., 'employees/list')"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Item icon name"
+        }
+      }
+    },
+    "route": {
+      "type": "object",
+      "required": ["path", "page"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "Route path with optional :id parameters (e.g., '/employees/:id/edit')"
+        },
+        "page": {
+          "type": "string",
+          "description": "Page configuration file reference (e.g., 'employees/edit')"
+        }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "table": {
+          "type": "object",
+          "properties": {
+            "pageSize": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Default page size for tables"
+            },
+            "pageSizes": {
+              "type": "array",
+              "items": { "type": "number", "minimum": 1 },
+              "description": "Available page size options"
+            },
+            "showPagination": {
+              "type": "boolean",
+              "description": "Whether to show pagination by default"
+            },
+            "showSearch": {
+              "type": "boolean",
+              "description": "Whether to show search box by default"
+            },
+            "emptyMessage": {
+              "type": "string",
+              "description": "Default message when table is empty"
+            }
+          },
+          "description": "Default table settings"
+        },
+        "form": {
+          "type": "object",
+          "properties": {
+            "requiredIndicator": {
+              "type": "string",
+              "description": "Indicator for required fields (e.g., '*')"
+            },
+            "validationMode": {
+              "type": "string",
+              "enum": ["onBlur", "onChange", "onSubmit"],
+              "description": "When to validate form fields"
+            },
+            "showCancelButton": {
+              "type": "boolean",
+              "description": "Whether to show cancel button by default"
+            },
+            "cancelButtonText": {
+              "type": "string",
+              "description": "Default cancel button text"
+            },
+            "submitButtonText": {
+              "type": "string",
+              "description": "Default submit button text"
+            }
+          },
+          "description": "Default form settings"
+        },
+        "notifications": {
+          "type": "object",
+          "properties": {
+            "position": {
+              "type": "string",
+              "enum": ["top-right", "top-left", "bottom-right", "bottom-left"],
+              "description": "Default notification position"
+            },
+            "duration": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Default notification duration in milliseconds"
+            },
+            "showCloseButton": {
+              "type": "boolean",
+              "description": "Whether to show close button on notifications"
+            }
+          },
+          "description": "Default notification settings"
+        },
+        "dateFormat": {
+          "type": "string",
+          "description": "Default date format (e.g., 'MM/dd/yyyy')"
+        },
+        "timeFormat": {
+          "type": "string",
+          "description": "Default time format (e.g., 'HH:mm')"
+        },
+        "currency": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "pattern": "^[A-Z]{3}$",
+              "description": "ISO 4217 currency code (e.g., 'USD')"
+            },
+            "symbol": {
+              "type": "string",
+              "description": "Currency symbol (e.g., '$')"
+            },
+            "position": {
+              "type": "string",
+              "enum": ["before", "after"],
+              "description": "Symbol position relative to amount"
+            }
+          },
+          "description": "Default currency settings"
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2}-[A-Z]{2}$",
+          "description": "Default language in BCP 47 format (e.g., 'en-US')"
+        }
+      }
+    }
+  }
+}

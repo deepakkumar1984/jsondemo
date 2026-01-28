@@ -1,0 +1,11 @@
+# Cloudflare Worker Configuration for AI Config Generator
+name = "ai-config-generator"
+main = "workers/ai-config-generator.ts"
+compatibility_date = "2025-01-01"
+
+# AI Binding
+ai = { binding = "AI" }
+
+# Development settings
+[env.development]
+name = "ai-config-generator-dev"

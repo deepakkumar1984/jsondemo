@@ -1,0 +1,48 @@
+{
+  "resource": "users",
+  "table": "users",
+  "basePath": "/api/users",
+  "list": {
+    "enabled": true,
+    "defaultLimit": 50,
+    "filters": [
+      {
+        "param": "role",
+        "field": "role",
+        "cast": "text"
+      }
+    ],
+    "search": {
+      "fields": [
+        "name",
+        "email"
+      ]
+    }
+  },
+  "getById": {
+    "enabled": true,
+    "lookups": []
+  },
+  "create": {
+    "enabled": true
+  },
+  "update": {
+    "enabled": true
+  },
+  "delete": {
+    "enabled": true,
+    "mode": "soft"
+  },
+  "customEndpoints": [
+    {
+      "method": "GET",
+      "path": "/by-role/:role",
+      "handler": "getUsersByRole"
+    },
+    {
+      "method": "GET",
+      "path": "/search",
+      "handler": "searchUsers"
+    }
+  ]
+}

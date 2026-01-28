@@ -1,0 +1,842 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Page Configuration",
+  "description": "JSON schema for defining UI pages with declarative component hierarchies and data binding",
+  "type": "object",
+  "properties": {
+    "dataSources": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/dataSource"
+      },
+      "description": "Named API endpoints for loading data into the page"
+    },
+    "children": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/component"
+      },
+      "description": "Top-level components that make up the page"
+    }
+  },
+  "$defs": {
+    "dataSource": {
+      "type": "object",
+      "required": ["url"],
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "API endpoint URL to fetch data from"
+        }
+      }
+    },
+    "component": {
+      "type": "object",
+      "required": ["type", "props"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "PageHeader", "DataTable", "Form", "Grid", "Stack", "Card", "Tabs", "TabPanel",
+            "TextField", "TextArea", "SelectField", "DateField",
+            "DetailSection", "DetailRow", "Badge", "StatCard", "Button", "Divider", "Alert"
+          ],
+          "description": "Component type identifier"
+        },
+        "props": {
+          "type": "object",
+          "description": "Component-specific properties (validated against component type)"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/component"
+          },
+          "description": "Child components (recursive structure)"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "PageHeader" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/pageHeaderProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "DataTable" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/dataTableProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "Form" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/formProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "Grid" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/gridProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "Stack" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/stackProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "Card" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/cardProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "Tabs" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/tabsProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "TabPanel" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/tabPanelProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "TextField" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/textFieldProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "TextArea" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/textAreaProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "SelectField" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/selectFieldProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "DateField" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/dateFieldProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "DetailSection" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/detailSectionProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "DetailRow" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/detailRowProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "Badge" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/badgeProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "StatCard" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/statCardProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "Button" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/buttonProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "Divider" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/dividerProps" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "Alert" } }
+          },
+          "then": {
+            "properties": {
+              "props": { "$ref": "#/$defs/alertProps" }
+            }
+          }
+        }
+      ]
+    },
+    "pageHeaderProps": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Page title"
+        },
+        "subtitle": {
+          "type": "string",
+          "description": "Page subtitle"
+        },
+        "titleParts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "textPath": { "type": "string" }
+            }
+          },
+          "description": "Dynamic title assembled from parts (text literals and data bindings)"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/buttonProps"
+          },
+          "description": "Action buttons in the header"
+        }
+      }
+    },
+    "dataTableProps": {
+      "type": "object",
+      "required": ["dataPath", "columns"],
+      "properties": {
+        "dataPath": {
+          "type": "string",
+          "description": "Dot notation path to data source (e.g., 'employees' or 'stats.byDepartment')"
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/columnDefinition"
+          },
+          "description": "Table column definitions"
+        },
+        "searchable": {
+          "type": "boolean",
+          "description": "Enable search box"
+        },
+        "searchPlaceholder": {
+          "type": "string",
+          "description": "Placeholder text for search input"
+        },
+        "paginated": {
+          "type": "boolean",
+          "description": "Enable pagination"
+        },
+        "pageSize": {
+          "type": "number",
+          "description": "Number of rows per page"
+        },
+        "emptyMessage": {
+          "type": "string",
+          "description": "Message to show when table is empty"
+        },
+        "rowClickAction": {
+          "$ref": "#/$defs/action",
+          "description": "Action to trigger when clicking a row"
+        },
+        "filters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/tableFilter"
+          },
+          "description": "Filter controls above the table"
+        }
+      }
+    },
+    "columnDefinition": {
+      "type": "object",
+      "required": ["key", "header"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Unique column identifier"
+        },
+        "header": {
+          "type": "string",
+          "description": "Column header text"
+        },
+        "sortable": {
+          "type": "boolean",
+          "description": "Whether this column is sortable"
+        },
+        "template": {
+          "type": "string",
+          "description": "Mustache template for cell content (e.g., '{{firstName}} {{lastName}}')"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["date", "datetime", "currency", "number"],
+          "description": "Formatting to apply to cell values"
+        },
+        "render": {
+          "$ref": "#/$defs/component",
+          "description": "Custom component to render in cells"
+        }
+      }
+    },
+    "tableFilter": {
+      "type": "object",
+      "required": ["key", "label", "type"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Field name to filter on"
+        },
+        "label": {
+          "type": "string",
+          "description": "Filter label"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["select", "text", "date"],
+          "description": "Filter input type"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "value"],
+            "properties": {
+              "label": { "type": "string" },
+              "value": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }] }
+            }
+          },
+          "description": "Static options for select filter"
+        },
+        "optionsPath": {
+          "type": "string",
+          "description": "Data source path for dynamic options"
+        },
+        "optionLabel": {
+          "type": "string",
+          "description": "Field name for option labels in dynamic options"
+        },
+        "optionValue": {
+          "type": "string",
+          "description": "Field name for option values in dynamic options"
+        }
+      }
+    },
+    "formProps": {
+      "type": "object",
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "$ref": "#/$defs/submitFormAction",
+          "description": "Submit action configuration"
+        }
+      }
+    },
+    "gridProps": {
+      "type": "object",
+      "required": ["columns"],
+      "properties": {
+        "columns": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "Number of grid columns"
+        },
+        "gap": {
+          "type": "string",
+          "enum": ["xs", "sm", "md", "lg", "xl"],
+          "description": "Gap between grid items"
+        }
+      }
+    },
+    "stackProps": {
+      "type": "object",
+      "properties": {
+        "direction": {
+          "type": "string",
+          "enum": ["horizontal", "vertical"],
+          "description": "Stack direction"
+        },
+        "justify": {
+          "type": "string",
+          "enum": ["flex-start", "flex-end", "center", "space-between", "space-around"],
+          "description": "Justify content alignment"
+        },
+        "gap": {
+          "type": "string",
+          "enum": ["xs", "sm", "md", "lg", "xl"],
+          "description": "Gap between stack items"
+        }
+      }
+    },
+    "cardProps": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Card title"
+        }
+      }
+    },
+    "tabsProps": {
+      "type": "object",
+      "properties": {
+        "defaultTab": {
+          "type": "string",
+          "description": "ID of the default tab to show"
+        }
+      }
+    },
+    "tabPanelProps": {
+      "type": "object",
+      "required": ["id", "label"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique tab identifier"
+        },
+        "label": {
+          "type": "string",
+          "description": "Tab label"
+        }
+      }
+    },
+    "textFieldProps": {
+      "type": "object",
+      "required": ["name", "label"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Form field name"
+        },
+        "label": {
+          "type": "string",
+          "description": "Field label"
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Whether field is required"
+        },
+        "placeholder": {
+          "type": "string",
+          "description": "Placeholder text"
+        },
+        "inputType": {
+          "type": "string",
+          "enum": ["text", "email", "password", "number"],
+          "description": "HTML input type"
+        },
+        "colSpan": {
+          "type": "number",
+          "description": "Grid column span for layout"
+        }
+      }
+    },
+    "textAreaProps": {
+      "type": "object",
+      "required": ["name", "label"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Form field name"
+        },
+        "label": {
+          "type": "string",
+          "description": "Field label"
+        },
+        "placeholder": {
+          "type": "string",
+          "description": "Placeholder text"
+        },
+        "rows": {
+          "type": "number",
+          "description": "Number of visible text rows"
+        },
+        "colSpan": {
+          "type": "number",
+          "description": "Grid column span for layout"
+        }
+      }
+    },
+    "selectFieldProps": {
+      "type": "object",
+      "required": ["name", "label"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Form field name"
+        },
+        "label": {
+          "type": "string",
+          "description": "Field label"
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Whether field is required"
+        },
+        "placeholder": {
+          "type": "string",
+          "description": "Placeholder text"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "value"],
+            "properties": {
+              "label": { "type": "string" },
+              "value": { "oneOf": [{ "type": "string" }, { "type": "number" }] }
+            }
+          },
+          "description": "Static options"
+        },
+        "optionsPath": {
+          "type": "string",
+          "description": "Data source path for dynamic options"
+        },
+        "optionLabel": {
+          "type": "string",
+          "description": "Field name for option labels"
+        },
+        "optionValue": {
+          "type": "string",
+          "description": "Field name for option values"
+        }
+      }
+    },
+    "dateFieldProps": {
+      "type": "object",
+      "required": ["name", "label"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Form field name"
+        },
+        "label": {
+          "type": "string",
+          "description": "Field label"
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Whether field is required"
+        }
+      }
+    },
+    "detailSectionProps": {
+      "type": "object",
+      "required": ["title"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Section title"
+        }
+      }
+    },
+    "detailRowProps": {
+      "type": "object",
+      "required": ["label"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Row label"
+        },
+        "valuePath": {
+          "type": "string",
+          "description": "Dot notation path to value in data"
+        },
+        "template": {
+          "type": "string",
+          "description": "Mustache template for value"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["date", "datetime", "currency"],
+          "description": "Value formatting"
+        },
+        "render": {
+          "$ref": "#/$defs/component",
+          "description": "Custom component to render value"
+        }
+      }
+    },
+    "badgeProps": {
+      "type": "object",
+      "required": ["valuePath"],
+      "properties": {
+        "valuePath": {
+          "type": "string",
+          "description": "Dot notation path to badge value"
+        },
+        "colorMap": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "enum": ["blue", "green", "orange", "purple", "red", "gray", "yellow"]
+          },
+          "description": "Mapping from values to badge colors"
+        },
+        "labelMap": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Optional mapping from values to display labels"
+        }
+      }
+    },
+    "statCardProps": {
+      "type": "object",
+      "required": ["label", "valuePath"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Stat label"
+        },
+        "valuePath": {
+          "type": "string",
+          "description": "Dot notation path to stat value"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Icon name"
+        },
+        "color": {
+          "type": "string",
+          "enum": ["blue", "green", "orange", "purple", "red", "gray"],
+          "description": "Stat card color theme"
+        }
+      }
+    },
+    "buttonProps": {
+      "type": "object",
+      "required": ["label"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Button text"
+        },
+        "variant": {
+          "type": "string",
+          "enum": ["primary", "secondary", "ghost", "ghost-danger", "danger"],
+          "description": "Button style variant"
+        },
+        "size": {
+          "type": "string",
+          "enum": ["sm", "md", "lg"],
+          "description": "Button size"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Icon name to show in button"
+        },
+        "buttonType": {
+          "type": "string",
+          "enum": ["button", "submit"],
+          "description": "HTML button type"
+        },
+        "action": {
+          "$ref": "#/$defs/action",
+          "description": "Action to trigger on click"
+        }
+      }
+    },
+    "dividerProps": {
+      "type": "object",
+      "description": "Divider has no configurable props"
+    },
+    "alertProps": {
+      "type": "object",
+      "required": ["variant", "title"],
+      "properties": {
+        "variant": {
+          "type": "string",
+          "enum": ["warning", "error", "success", "info"],
+          "description": "Alert severity level"
+        },
+        "title": {
+          "type": "string",
+          "description": "Alert title"
+        },
+        "message": {
+          "type": "string",
+          "description": "Alert message"
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["navigate", "submit_form", "delete_confirm", "api_call"],
+          "description": "Action type"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "navigate" } }
+          },
+          "then": {
+            "properties": {
+              "to": {
+                "type": "string",
+                "description": "Navigation path (can include :id parameters)"
+              }
+            },
+            "required": ["to"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "submit_form" } }
+          },
+          "then": {
+            "$ref": "#/$defs/submitFormAction"
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "delete_confirm" } }
+          },
+          "then": {
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "API endpoint to call for deletion"
+              },
+              "message": {
+                "type": "string",
+                "description": "Confirmation message"
+              },
+              "redirectTo": {
+                "type": "string",
+                "description": "Where to navigate after deletion"
+              }
+            },
+            "required": ["url"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "api_call" } }
+          },
+          "then": {
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+                "description": "HTTP method"
+              },
+              "url": {
+                "type": "string",
+                "description": "API endpoint (can use {{row.field}} for row data)"
+              }
+            },
+            "required": ["method", "url"]
+          }
+        }
+      ]
+    },
+    "submitFormAction": {
+      "type": "object",
+      "required": ["type", "url", "method"],
+      "properties": {
+        "type": {
+          "const": "submit_form"
+        },
+        "url": {
+          "type": "string",
+          "description": "API endpoint to submit form to"
+        },
+        "method": {
+          "type": "string",
+          "enum": ["POST", "PUT", "PATCH"],
+          "description": "HTTP method for submission"
+        },
+        "redirectTo": {
+          "type": "string",
+          "description": "Where to navigate after successful submission"
+        }
+      }
+    }
+  }
+}

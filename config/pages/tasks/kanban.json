@@ -1,0 +1,62 @@
+{
+  "page": "tasks/kanban",
+  "dataSources": {
+    "items": "/api/tasks"
+  },
+  "children": [
+    {
+      "component": "PageHeader",
+      "props": {
+        "title": "Task Kanban Board",
+        "actions": [
+          {
+            "label": "Add New",
+            "action": {
+              "type": "navigate",
+              "path": "/tasks/create"
+            }
+          },
+          {
+            "label": "List View",
+            "action": {
+              "type": "navigate",
+              "path": "/tasks"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "component": "KanbanBoard",
+      "props": {
+        "dataSource": "items",
+        "groupBy": "status",
+        "columns": [
+          {
+            "key": "Todo",
+            "label": "To Do"
+          },
+          {
+            "key": "In Progress",
+            "label": "In Progress"
+          },
+          {
+            "key": "Done",
+            "label": "Done"
+          }
+        ],
+        "card": {
+          "titleField": "title",
+          "subtitleFields": [
+            "priority",
+            "dueDate"
+          ]
+        },
+        "onCardClick": {
+          "type": "navigate",
+          "path": "/tasks/{{id}}"
+        }
+      }
+    }
+  ]
+}

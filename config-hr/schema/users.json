@@ -1,6 +1,6 @@
 {
   "table": "users",
-  "description": "Application users",
+  "description": "User accounts with authentication",
   "columns": [
     {
       "name": "id",
@@ -9,18 +9,18 @@
       "defaultFn": "uuid"
     },
     {
-      "name": "name",
+      "name": "email",
+      "type": "text",
+      "unique": true,
+      "notNull": true
+    },
+    {
+      "name": "passwordHash",
       "type": "text",
       "notNull": true
     },
     {
-      "name": "email",
-      "type": "text",
-      "notNull": true,
-      "unique": true
-    },
-    {
-      "name": "passwordHash",
+      "name": "name",
       "type": "text",
       "notNull": true
     },
@@ -29,9 +29,16 @@
       "type": "text",
       "enum": [
         "admin",
-        "user"
+        "hr",
+        "manager",
+        "employee"
       ],
-      "default": "user"
+      "notNull": true
+    },
+    {
+      "name": "active",
+      "type": "integer",
+      "default": 1
     },
     {
       "name": "createdAt",

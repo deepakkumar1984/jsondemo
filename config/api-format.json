@@ -1,0 +1,401 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "API Endpoint Configuration",
+  "description": "JSON schema for defining REST API endpoints with CRUD operations, joins, filters, and custom logic",
+  "type": "object",
+  "required": ["resource", "table", "basePath"],
+  "properties": {
+    "resource": {
+      "type": "string",
+      "description": "Human-readable resource name (e.g., 'employees')"
+    },
+    "table": {
+      "type": "string",
+      "description": "Database table name this endpoint operates on"
+    },
+    "basePath": {
+      "type": "string",
+      "pattern": "^/[a-z0-9-_/]*$",
+      "description": "Base URL path for this resource (e.g., '/employees')"
+    },
+    "list": {
+      "$ref": "#/$defs/listOperation",
+      "description": "Configuration for list/index endpoint (GET /resource)"
+    },
+    "getById": {
+      "$ref": "#/$defs/getByIdOperation",
+      "description": "Configuration for get single record endpoint (GET /resource/:id)"
+    },
+    "create": {
+      "$ref": "#/$defs/createOperation",
+      "description": "Configuration for create endpoint (POST /resource)"
+    },
+    "update": {
+      "$ref": "#/$defs/updateOperation",
+      "description": "Configuration for update endpoint (PUT /resource/:id)"
+    },
+    "delete": {
+      "$ref": "#/$defs/deleteOperation",
+      "description": "Configuration for delete endpoint (DELETE /resource/:id)"
+    },
+    "customEndpoints": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/customEndpoint"
+      },
+      "description": "Array of custom endpoint definitions beyond standard CRUD"
+    }
+  },
+  "$defs": {
+    "listOperation": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this endpoint is enabled"
+        },
+        "paginated": {
+          "type": "boolean",
+          "description": "Whether to paginate results"
+        },
+        "orderBy": {
+          "type": "object",
+          "properties": {
+            "field": {
+              "type": "string",
+              "description": "Field to sort by"
+            },
+            "direction": {
+              "type": "string",
+              "enum": ["asc", "desc"],
+              "description": "Sort direction"
+            }
+          },
+          "required": ["field", "direction"],
+          "description": "Default sorting configuration"
+        },
+        "fields": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Fields to include in list results"
+        },
+        "computedFields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/computedField"
+          },
+          "description": "Virtual/computed columns from SQL subqueries"
+        },
+        "joins": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/join"
+          },
+          "description": "Table joins to include related data"
+        },
+        "filters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/filter"
+          },
+          "description": "Query parameter filters for filtering results"
+        },
+        "search": {
+          "$ref": "#/$defs/search",
+          "description": "Full-text search configuration"
+        }
+      }
+    },
+    "getByIdOperation": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this endpoint is enabled"
+        },
+        "fields": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Fields to include in single record results"
+        },
+        "joins": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/join"
+          },
+          "description": "Table joins to include related data"
+        },
+        "lookups": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/lookup"
+          },
+          "description": "Related record lookups with formatting"
+        }
+      }
+    },
+    "createOperation": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this endpoint is enabled"
+        },
+        "requiredFields": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Fields that must be provided in create request"
+        },
+        "fields": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Fields allowed for creation (whitelist)"
+        },
+        "defaults": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Default values for fields not provided"
+        },
+        "autoGenerate": {
+          "$ref": "#/$defs/autoGenerate",
+          "description": "Auto-generation configuration for specific fields"
+        },
+        "coerce": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Type coercion for specific fields"
+        }
+      }
+    },
+    "updateOperation": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this endpoint is enabled"
+        },
+        "fields": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Fields allowed for update (whitelist)"
+        },
+        "addTimestamp": {
+          "type": "boolean",
+          "description": "Whether to automatically update updatedAt timestamp"
+        },
+        "coerce": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Type coercion for specific fields"
+        }
+      }
+    },
+    "deleteOperation": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this endpoint is enabled"
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["soft", "hard"],
+          "description": "Delete mode: 'soft' updates a field, 'hard' removes record"
+        },
+        "softDeleteField": {
+          "type": "string",
+          "description": "Field to update for soft deletes (e.g., 'status')"
+        },
+        "softDeleteValue": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "number" },
+            { "type": "boolean" }
+          ],
+          "description": "Value to set for soft delete field (e.g., 'deleted' or 'terminated')"
+        },
+        "referentialChecks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/referentialCheck"
+          },
+          "description": "Foreign key checks to prevent orphan records"
+        }
+      }
+    },
+    "join": {
+      "type": "object",
+      "required": ["table", "on", "fields"],
+      "properties": {
+        "table": {
+          "type": "string",
+          "description": "Name of the table to join"
+        },
+        "on": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Join condition as [localField, 'otherTable.otherField']"
+        },
+        "fields": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Field mappings from joined table as {alias: 'columnName'}"
+        }
+      }
+    },
+    "filter": {
+      "type": "object",
+      "required": ["param", "field"],
+      "properties": {
+        "param": {
+          "type": "string",
+          "description": "Query parameter name (e.g., 'status' for ?status=active)"
+        },
+        "field": {
+          "type": "string",
+          "description": "Database field to filter on"
+        },
+        "cast": {
+          "type": "string",
+          "enum": ["enum", "number", "boolean", "integer"],
+          "description": "Type casting for the filter value"
+        }
+      }
+    },
+    "search": {
+      "type": "object",
+      "required": ["param", "fields"],
+      "properties": {
+        "param": {
+          "type": "string",
+          "description": "Query parameter name for search (e.g., 'search' for ?search=John)"
+        },
+        "fields": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Database fields to search across (uses LIKE %term%)"
+        }
+      }
+    },
+    "computedField": {
+      "type": "object",
+      "required": ["name", "sql", "type"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name for the computed field in response"
+        },
+        "sql": {
+          "type": "string",
+          "description": "SQL subquery to compute the value"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["number", "string", "date", "boolean"],
+          "description": "Data type of the computed value"
+        }
+      }
+    },
+    "lookup": {
+      "type": "object",
+      "required": ["name", "condition", "table", "where", "select"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Field name for the lookup result"
+        },
+        "condition": {
+          "type": "string",
+          "description": "Field that must be non-null to trigger lookup"
+        },
+        "table": {
+          "type": "string",
+          "description": "Table to lookup data from"
+        },
+        "where": {
+          "type": "object",
+          "required": ["field", "value"],
+          "properties": {
+            "field": {
+              "type": "string",
+              "description": "Field in lookup table to match against"
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^\\$",
+              "description": "Value to match, using $ prefix for current record fields (e.g., '$managerId')"
+            }
+          },
+          "description": "WHERE condition for the lookup query"
+        },
+        "select": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Fields to select from lookup table"
+        },
+        "format": {
+          "type": "string",
+          "description": "Template for formatting result using {fieldName} syntax (e.g., '{firstName} {lastName}')"
+        }
+      }
+    },
+    "autoGenerate": {
+      "type": "object",
+      "required": ["field", "pattern"],
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "Field to auto-generate value for"
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Generation pattern using {seq:N} for sequence numbers (e.g., 'EMP-{seq:4}' -> EMP-0001)"
+        }
+      }
+    },
+    "referentialCheck": {
+      "type": "object",
+      "required": ["table", "foreignKey", "message"],
+      "properties": {
+        "table": {
+          "type": "string",
+          "description": "Table that references this record"
+        },
+        "foreignKey": {
+          "type": "string",
+          "description": "Foreign key field in the referencing table"
+        },
+        "message": {
+          "type": "string",
+          "description": "Error message template, can use {count} for number of dependent records"
+        }
+      }
+    },
+    "customEndpoint": {
+      "type": "object",
+      "required": ["method", "path", "handler"],
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["get", "post", "put", "patch", "delete"],
+          "description": "HTTP method for this endpoint"
+        },
+        "path": {
+          "type": "string",
+          "description": "Relative path from basePath (e.g., '/stats' or '/:id/documents')"
+        },
+        "handler": {
+          "type": "string",
+          "description": "Handler function reference (e.g., 'employees.stats')"
+        }
+      }
+    }
+  }
+}
