@@ -1,0 +1,54 @@
+{
+  "table": "users",
+  "description": "User accounts with authentication",
+  "columns": [
+    {
+      "name": "id",
+      "type": "text",
+      "primaryKey": true,
+      "defaultFn": "uuid"
+    },
+    {
+      "name": "email",
+      "type": "text",
+      "unique": true,
+      "notNull": true
+    },
+    {
+      "name": "passwordHash",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "role",
+      "type": "text",
+      "enum": [
+        "admin",
+        "hr",
+        "manager",
+        "employee"
+      ],
+      "notNull": true
+    },
+    {
+      "name": "active",
+      "type": "integer",
+      "default": 1
+    },
+    {
+      "name": "createdAt",
+      "type": "text",
+      "default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "name": "updatedAt",
+      "type": "text",
+      "default": "CURRENT_TIMESTAMP"
+    }
+  ]
+}

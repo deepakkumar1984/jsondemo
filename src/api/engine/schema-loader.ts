@@ -2,8 +2,10 @@
  * Dynamic Schema Loader
  *
  * Loads database schema from a configurable source.
- * Currently supports loading from the default db/schema.ts module.
- * Future: Could load from JSON configs, remote sources, or multiple schema files.
+ * Supports loading from:
+ * - Default TypeScript schema (db/schema.ts)
+ * - Generated schema from JSON configs (db/schema.generated.ts)
+ * - JSON configs directly (future)
  */
 
 import * as defaultSchema from '../../db/schema';
@@ -30,8 +32,13 @@ export function loadSchemaForApp(
     throw new Error(`App "${appId}" not found in configuration`);
   }
 
-  // For now, all apps share the same schema
-  // In the future, each app could have its own schema
+  // Check if app specifies a custom schema source
+  if (app.schemaSource === 'config/schema') {
+    // Load from generated schema (JSON configs converted to TypeScript)
+    return loadGeneratedSchema();
+  }
+
+  // Default: use the standard schema
   return buildSchemaRegistry(defaultSchema);
 }
 
@@ -82,4 +89,21 @@ function buildSchemaRegistry(schema: any): Record<string, any> {
  */
 export function getDefaultSchema(): Record<string, any> {
   return buildSchemaRegistry(defaultSchema);
+}
+
+/**
+ * Load schema generated from JSON configs.
+ * This function attempts to import schema.generated.ts if it exists.
+ */
+function loadGeneratedSchema(): Record<string, any> {
+  try {
+    // Try to dynamically import the generated schema
+    // In production, you would run `npm run schema:generate` first
+    const generatedSchema = require('../../db/schema.generated');
+    return buildSchemaRegistry(generatedSchema);
+  } catch (error) {
+    console.warn('Generated schema not found. Run `npm run schema:generate` to create it.');
+    console.warn('Falling back to default schema.');
+    return buildSchemaRegistry(defaultSchema);
+  }
 }

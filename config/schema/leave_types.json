@@ -1,0 +1,32 @@
+{
+  "table": "leave_types",
+  "description": "Types of leave available",
+  "columns": [
+    {
+      "name": "id",
+      "type": "text",
+      "primaryKey": true,
+      "defaultFn": "uuid"
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "daysPerYear",
+      "type": "integer",
+      "notNull": true
+    },
+    {
+      "name": "carryForward",
+      "type": "integer",
+      "default": 0
+    },
+    {
+      "name": "active",
+      "type": "integer",
+      "default": 1
+    }
+  ]
+}

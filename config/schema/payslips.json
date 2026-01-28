@@ -1,0 +1,54 @@
+{
+  "table": "payslips",
+  "description": "Individual employee payslips",
+  "columns": [
+    {
+      "name": "id",
+      "type": "text",
+      "primaryKey": true,
+      "defaultFn": "uuid"
+    },
+    {
+      "name": "runId",
+      "type": "text",
+      "references": {
+        "table": "payroll_runs",
+        "column": "id"
+      },
+      "notNull": true
+    },
+    {
+      "name": "employeeId",
+      "type": "text",
+      "references": {
+        "table": "employees",
+        "column": "id"
+      },
+      "notNull": true
+    },
+    {
+      "name": "gross",
+      "type": "real",
+      "notNull": true
+    },
+    {
+      "name": "deductions",
+      "type": "real",
+      "notNull": true
+    },
+    {
+      "name": "net",
+      "type": "real",
+      "notNull": true
+    },
+    {
+      "name": "status",
+      "type": "text"
+    },
+    {
+      "name": "generatedAt",
+      "type": "text",
+      "default": "CURRENT_TIMESTAMP"
+    }
+  ]
+}

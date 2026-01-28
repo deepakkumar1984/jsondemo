@@ -1,0 +1,41 @@
+{
+  "table": "employee_documents",
+  "description": "Documents uploaded for employees",
+  "columns": [
+    {
+      "name": "id",
+      "type": "text",
+      "primaryKey": true,
+      "defaultFn": "uuid"
+    },
+    {
+      "name": "employeeId",
+      "type": "text",
+      "references": {
+        "table": "employees",
+        "column": "id"
+      },
+      "notNull": true
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "type",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "fileUrl",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "uploadedAt",
+      "type": "text",
+      "default": "CURRENT_TIMESTAMP"
+    }
+  ]
+}

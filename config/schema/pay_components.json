@@ -1,0 +1,62 @@
+{
+  "table": "pay_components",
+  "description": "Pay components within salary structures",
+  "columns": [
+    {
+      "name": "id",
+      "type": "text",
+      "primaryKey": true,
+      "defaultFn": "uuid"
+    },
+    {
+      "name": "structureId",
+      "type": "text",
+      "references": {
+        "table": "salary_structures",
+        "column": "id"
+      },
+      "notNull": true
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "type",
+      "type": "text",
+      "enum": [
+        "earning",
+        "deduction"
+      ],
+      "notNull": true
+    },
+    {
+      "name": "calcType",
+      "type": "text",
+      "enum": [
+        "fixed",
+        "percentage"
+      ],
+      "notNull": true
+    },
+    {
+      "name": "amount",
+      "type": "real"
+    },
+    {
+      "name": "percentageOf",
+      "type": "text"
+    },
+    {
+      "name": "taxable",
+      "type": "integer",
+      "default": 1
+    },
+    {
+      "name": "active",
+      "type": "integer",
+      "default": 1
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "table": "leave_requests",
+  "description": "Employee leave requests",
+  "columns": [
+    {
+      "name": "id",
+      "type": "text",
+      "primaryKey": true,
+      "defaultFn": "uuid"
+    },
+    {
+      "name": "employeeId",
+      "type": "text",
+      "references": {
+        "table": "employees",
+        "column": "id"
+      },
+      "notNull": true
+    },
+    {
+      "name": "leaveTypeId",
+      "type": "text",
+      "references": {
+        "table": "leave_types",
+        "column": "id"
+      },
+      "notNull": true
+    },
+    {
+      "name": "fromDate",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "toDate",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "days",
+      "type": "integer",
+      "notNull": true
+    },
+    {
+      "name": "reason",
+      "type": "text"
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending"
+    },
+    {
+      "name": "approvedBy",
+      "type": "text",
+      "references": {
+        "table": "users",
+        "column": "id"
+      }
+    }
+  ]
+}

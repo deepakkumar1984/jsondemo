@@ -1,0 +1,31 @@
+{
+  "table": "salary_structures",
+  "description": "Salary structure templates",
+  "columns": [
+    {
+      "name": "id",
+      "type": "text",
+      "primaryKey": true,
+      "defaultFn": "uuid"
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "description",
+      "type": "text"
+    },
+    {
+      "name": "active",
+      "type": "integer",
+      "default": 1
+    },
+    {
+      "name": "createdAt",
+      "type": "text",
+      "default": "CURRENT_TIMESTAMP"
+    }
+  ]
+}

@@ -1,0 +1,166 @@
+{
+  "table": "employees",
+  "description": "Employee records with personal and employment information",
+  "columns": [
+    {
+      "name": "id",
+      "type": "text",
+      "primaryKey": true,
+      "defaultFn": "uuid"
+    },
+    {
+      "name": "userId",
+      "type": "text",
+      "references": {
+        "table": "users",
+        "column": "id"
+      }
+    },
+    {
+      "name": "employeeCode",
+      "type": "text",
+      "unique": true,
+      "notNull": true
+    },
+    {
+      "name": "firstName",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "lastName",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "email",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "phone",
+      "type": "text"
+    },
+    {
+      "name": "dateOfBirth",
+      "type": "text"
+    },
+    {
+      "name": "gender",
+      "type": "text"
+    },
+    {
+      "name": "maritalStatus",
+      "type": "text"
+    },
+    {
+      "name": "nationality",
+      "type": "text"
+    },
+    {
+      "name": "address",
+      "type": "text"
+    },
+    {
+      "name": "city",
+      "type": "text"
+    },
+    {
+      "name": "state",
+      "type": "text"
+    },
+    {
+      "name": "country",
+      "type": "text"
+    },
+    {
+      "name": "postalCode",
+      "type": "text"
+    },
+    {
+      "name": "departmentId",
+      "type": "text",
+      "references": {
+        "table": "departments",
+        "column": "id"
+      }
+    },
+    {
+      "name": "positionId",
+      "type": "text",
+      "references": {
+        "table": "positions",
+        "column": "id"
+      }
+    },
+    {
+      "name": "managerId",
+      "type": "text",
+      "references": {
+        "table": "employees",
+        "column": "id"
+      }
+    },
+    {
+      "name": "dateOfJoining",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "employmentType",
+      "type": "text",
+      "enum": [
+        "full_time",
+        "part_time",
+        "contract",
+        "intern"
+      ],
+      "notNull": true
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "enum": [
+        "active",
+        "on_leave",
+        "terminated",
+        "resigned"
+      ],
+      "default": "active"
+    },
+    {
+      "name": "emergencyContactName",
+      "type": "text"
+    },
+    {
+      "name": "emergencyContactPhone",
+      "type": "text"
+    },
+    {
+      "name": "emergencyContactRelation",
+      "type": "text"
+    },
+    {
+      "name": "bankName",
+      "type": "text"
+    },
+    {
+      "name": "bankAccount",
+      "type": "text"
+    },
+    {
+      "name": "bankIfsc",
+      "type": "text"
+    },
+    {
+      "name": "createdAt",
+      "type": "text",
+      "default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "name": "updatedAt",
+      "type": "text",
+      "default": "CURRENT_TIMESTAMP"
+    }
+  ]
+}
