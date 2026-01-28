@@ -1,0 +1,63 @@
+{
+  "table": "todos",
+  "description": "Individual todo items",
+  "columns": [
+    {
+      "name": "id",
+      "type": "text",
+      "primaryKey": true,
+      "defaultFn": "uuid"
+    },
+    {
+      "name": "listId",
+      "type": "text",
+      "notNull": true,
+      "references": {
+        "table": "todo_lists",
+        "column": "id"
+      }
+    },
+    {
+      "name": "title",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "description",
+      "type": "text"
+    },
+    {
+      "name": "dueDate",
+      "type": "text"
+    },
+    {
+      "name": "completed",
+      "type": "integer",
+      "notNull": true,
+      "default": 0
+    },
+    {
+      "name": "priority",
+      "type": "text",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    {
+      "name": "order",
+      "type": "integer"
+    },
+    {
+      "name": "createdAt",
+      "type": "text",
+      "default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "name": "updatedAt",
+      "type": "text",
+      "default": "CURRENT_TIMESTAMP"
+    }
+  ]
+}

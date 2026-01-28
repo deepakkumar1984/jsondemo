@@ -1,0 +1,63 @@
+{
+  "page": "todo/list",
+  "dataSources": {
+    "items": {
+      "url": "/api/todos"
+    }
+  },
+  "children": [
+    {
+      "type": "PageHeader",
+      "props": {
+        "title": "Todo List",
+        "actions": [
+          {
+            "label": "Add New",
+            "action": {
+              "type": "navigate",
+              "to": "/todo/create"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "DataTable",
+      "props": {
+        "dataPath": "items",
+        "columns": [
+          {
+            "key": "title",
+            "header": "Title"
+          },
+          {
+            "key": "status",
+            "header": "Status",
+            "render": {
+              "type": "Badge",
+              "props": {
+                "colorMap": {
+                  "pending": "warning",
+                  "completed": "success"
+                }
+              }
+            }
+          },
+          {
+            "key": "dueDate",
+            "header": "Due Date"
+          }
+        ],
+        "actions": [
+          {
+            "label": "View",
+            "action": {
+              "type": "navigate",
+              "to": "/todo/:id"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

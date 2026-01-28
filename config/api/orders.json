@@ -1,0 +1,467 @@
+{
+  "resource": "orders",
+  "basePath": "/api/orders",
+  "description": "Orders API with complex validation and multi-step workflows",
+  "table": "orders",
+  "auth": {
+    "required": true
+  },
+  "operations": {
+    "list": {
+      "enabled": true,
+      "filters": [
+        {
+          "field": "status",
+          "operator": "equals"
+        },
+        {
+          "field": "userId",
+          "operator": "equals"
+        }
+      ],
+      "sort": {
+        "default": "createdAt",
+        "defaultOrder": "desc",
+        "allowed": ["createdAt", "total", "status"]
+      },
+      "pagination": {
+        "enabled": true,
+        "defaultLimit": 20,
+        "maxLimit": 50
+      }
+    },
+    "getById": {
+      "enabled": true,
+      "relations": [
+        {
+          "name": "user",
+          "table": "users",
+          "foreignKey": "userId",
+          "referencedKey": "id",
+          "type": "one"
+        }
+      ]
+    },
+    "create": {
+      "enabled": true,
+      "beforeExecute": {
+        "steps": [
+          {
+            "type": "validate",
+            "validate": {
+              "data": "body",
+              "rules": {
+                "required": ["items", "userId"],
+                "fields": {
+                  "items": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "check_exists",
+            "check_exists": {
+              "table": "users",
+              "where": {
+                "id": "{{body.userId}}"
+              },
+              "onNotExists": "return_error",
+              "error": {
+                "message": "User not found",
+                "code": 404
+              }
+            }
+          },
+          {
+            "type": "db_query",
+            "db_query": {
+              "action": "select",
+              "table": "users",
+              "where": {
+                "id": "{{body.userId}}"
+              },
+              "limit": 1,
+              "storeAs": "user"
+            }
+          },
+          {
+            "type": "conditional",
+            "conditional": {
+              "condition": {
+                "field": "user.status",
+                "operator": "equals",
+                "value": "suspended"
+              },
+              "then": [
+                {
+                  "type": "return_error",
+                  "return_error": {
+                    "message": "Cannot create order: User account is suspended",
+                    "code": 403
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "set_variable",
+            "set_variable": {
+              "name": "totalAmount",
+              "value": 0
+            }
+          },
+          {
+            "type": "foreach",
+            "foreach": {
+              "items": "body.items",
+              "as": "item",
+              "steps": [
+                {
+                  "type": "check_exists",
+                  "check_exists": {
+                    "table": "products",
+                    "where": {
+                      "id": "{{item.productId}}"
+                    },
+                    "onNotExists": "return_error",
+                    "error": {
+                      "message": "Product {{item.productId}} not found",
+                      "code": 404
+                    }
+                  }
+                },
+                {
+                  "type": "db_query",
+                  "db_query": {
+                    "action": "select",
+                    "table": "products",
+                    "where": {
+                      "id": "{{item.productId}}"
+                    },
+                    "limit": 1,
+                    "storeAs": "product"
+                  }
+                },
+                {
+                  "type": "conditional",
+                  "conditional": {
+                    "condition": "product.stock < item.quantity",
+                    "then": [
+                      {
+                        "type": "return_error",
+                        "return_error": {
+                          "message": "Insufficient stock for {{product.name}}. Available: {{product.stock}}, Requested: {{item.quantity}}",
+                          "code": 400
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "set_variable",
+                  "set_variable": {
+                    "name": "itemTotal",
+                    "value": "{{product.price * item.quantity}}"
+                  }
+                },
+                {
+                  "type": "set_variable",
+                  "set_variable": {
+                    "name": "totalAmount",
+                    "value": "{{totalAmount + itemTotal}}"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "conditional",
+            "conditional": {
+              "condition": "totalAmount > 1000 AND user.membershipTier == premium",
+              "then": [
+                {
+                  "type": "set_variable",
+                  "set_variable": {
+                    "name": "discount",
+                    "value": "{{totalAmount * 0.15}}"
+                  }
+                },
+                {
+                  "type": "set_variable",
+                  "set_variable": {
+                    "name": "totalAmount",
+                    "value": "{{totalAmount - discount}}"
+                  }
+                },
+                {
+                  "type": "log",
+                  "message": "Applied 15% premium discount: {{discount}}"
+                }
+              ],
+              "elif": [
+                {
+                  "condition": "totalAmount > 500",
+                  "then": [
+                    {
+                      "type": "set_variable",
+                      "set_variable": {
+                        "name": "discount",
+                        "value": "{{totalAmount * 0.10}}"
+                      }
+                    },
+                    {
+                      "type": "set_variable",
+                      "set_variable": {
+                        "name": "totalAmount",
+                        "value": "{{totalAmount - discount}}"
+                      }
+                    },
+                    {
+                      "type": "log",
+                      "message": "Applied 10% bulk discount: {{discount}}"
+                    }
+                  ]
+                }
+              ],
+              "else": [
+                {
+                  "type": "set_variable",
+                  "set_variable": {
+                    "name": "discount",
+                    "value": 0
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "set_variable",
+            "set_variable": {
+              "name": "orderData",
+              "value": {
+                "id": "{{crypto.randomUUID()}}",
+                "userId": "{{body.userId}}",
+                "total": "{{totalAmount}}",
+                "discount": "{{discount}}",
+                "status": "pending",
+                "createdAt": "{{new Date().toISOString()}}",
+                "updatedAt": "{{new Date().toISOString()}}"
+              }
+            }
+          },
+          {
+            "type": "return_response",
+            "return_response": {
+              "data": "orderData"
+            }
+          }
+        ]
+      },
+      "afterExecute": {
+        "steps": [
+          {
+            "type": "foreach",
+            "foreach": {
+              "items": "body.items",
+              "as": "item",
+              "steps": [
+                {
+                  "type": "db_query",
+                  "db_query": {
+                    "action": "insert",
+                    "table": "order_items",
+                    "data": {
+                      "id": "{{crypto.randomUUID()}}",
+                      "orderId": "{{record.id}}",
+                      "productId": "{{item.productId}}",
+                      "quantity": "{{item.quantity}}",
+                      "price": "{{item.price}}",
+                      "createdAt": "{{new Date().toISOString()}}"
+                    }
+                  }
+                },
+                {
+                  "type": "db_query",
+                  "db_query": {
+                    "action": "select",
+                    "table": "products",
+                    "where": {
+                      "id": "{{item.productId}}"
+                    },
+                    "limit": 1,
+                    "storeAs": "product"
+                  }
+                },
+                {
+                  "type": "set_variable",
+                  "set_variable": {
+                    "name": "newStock",
+                    "value": "{{product.stock - item.quantity}}"
+                  }
+                },
+                {
+                  "type": "db_query",
+                  "db_query": {
+                    "action": "update",
+                    "table": "products",
+                    "where": {
+                      "id": "{{item.productId}}"
+                    },
+                    "data": {
+                      "stock": "{{newStock}}",
+                      "updatedAt": "{{new Date().toISOString()}}"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "update": {
+      "enabled": false
+    },
+    "delete": {
+      "enabled": false
+    },
+    "custom": [
+      {
+        "path": "/:id/cancel",
+        "method": "POST",
+        "description": "Cancel an order and restore product stock",
+        "workflow": {
+          "steps": [
+            {
+              "type": "db_query",
+              "db_query": {
+                "action": "select",
+                "table": "orders",
+                "where": {
+                  "id": "{{params.id}}"
+                },
+                "limit": 1,
+                "storeAs": "order"
+              }
+            },
+            {
+              "type": "conditional",
+              "conditional": {
+                "condition": {
+                  "field": "order",
+                  "operator": "equals",
+                  "value": null
+                },
+                "then": [
+                  {
+                    "type": "return_error",
+                    "return_error": {
+                      "message": "Order not found",
+                      "code": 404
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "conditional",
+              "conditional": {
+                "condition": {
+                  "field": "order.status",
+                  "operator": "in",
+                  "value": ["cancelled", "completed", "shipped"]
+                },
+                "then": [
+                  {
+                    "type": "return_error",
+                    "return_error": {
+                      "message": "Cannot cancel order in {{order.status}} status",
+                      "code": 400
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "db_query",
+              "db_query": {
+                "action": "select",
+                "table": "order_items",
+                "where": {
+                  "orderId": "{{params.id}}"
+                },
+                "storeAs": "orderItems"
+              }
+            },
+            {
+              "type": "foreach",
+              "foreach": {
+                "items": "orderItems",
+                "as": "item",
+                "steps": [
+                  {
+                    "type": "db_query",
+                    "db_query": {
+                      "action": "select",
+                      "table": "products",
+                      "where": {
+                        "id": "{{item.productId}}"
+                      },
+                      "limit": 1,
+                      "storeAs": "product"
+                    }
+                  },
+                  {
+                    "type": "set_variable",
+                    "set_variable": {
+                      "name": "restoredStock",
+                      "value": "{{product.stock + item.quantity}}"
+                    }
+                  },
+                  {
+                    "type": "db_query",
+                    "db_query": {
+                      "action": "update",
+                      "table": "products",
+                      "where": {
+                        "id": "{{item.productId}}"
+                      },
+                      "data": {
+                        "stock": "{{restoredStock}}",
+                        "updatedAt": "{{new Date().toISOString()}}"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "db_query",
+              "db_query": {
+                "action": "update",
+                "table": "orders",
+                "where": {
+                  "id": "{{params.id}}"
+                },
+                "data": {
+                  "status": "cancelled",
+                  "cancelledAt": "{{new Date().toISOString()}}",
+                  "updatedAt": "{{new Date().toISOString()}}"
+                },
+                "storeAs": "cancelledOrder"
+              }
+            },
+            {
+              "type": "return_response",
+              "return_response": {
+                "data": "cancelledOrder"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

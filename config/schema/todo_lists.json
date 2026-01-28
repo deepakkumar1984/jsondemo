@@ -1,0 +1,40 @@
+{
+  "table": "todo_lists",
+  "description": "Lists of todos belonging to a user",
+  "columns": [
+    {
+      "name": "id",
+      "type": "text",
+      "primaryKey": true,
+      "defaultFn": "uuid"
+    },
+    {
+      "name": "userId",
+      "type": "text",
+      "notNull": true,
+      "references": {
+        "table": "users",
+        "column": "id"
+      }
+    },
+    {
+      "name": "title",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "description",
+      "type": "text"
+    },
+    {
+      "name": "createdAt",
+      "type": "text",
+      "default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "name": "updatedAt",
+      "type": "text",
+      "default": "CURRENT_TIMESTAMP"
+    }
+  ]
+}

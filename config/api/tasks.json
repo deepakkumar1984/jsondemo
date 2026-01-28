@@ -1,0 +1,318 @@
+{
+  "resource": "tasks",
+  "basePath": "/api/tasks",
+  "description": "Task management API (uses todos table)",
+  "table": "todos",
+  "auth": {
+    "required": true
+  },
+  "operations": {
+    "list": {
+      "enabled": true,
+      "filters": [
+        {
+          "field": "listId",
+          "operator": "equals",
+          "queryParam": "listId"
+        },
+        {
+          "field": "completed",
+          "operator": "equals",
+          "queryParam": "completed"
+        },
+        {
+          "field": "priority",
+          "operator": "equals",
+          "queryParam": "priority"
+        }
+      ],
+      "search": {
+        "enabled": true,
+        "fields": ["title", "description"]
+      },
+      "sort": {
+        "default": "order",
+        "defaultOrder": "asc",
+        "allowed": ["order", "createdAt", "updatedAt", "title", "dueDate", "priority"]
+      },
+      "pagination": {
+        "enabled": true,
+        "defaultLimit": 100,
+        "maxLimit": 500
+      },
+      "relations": [
+        {
+          "name": "list",
+          "table": "todo_lists",
+          "foreignKey": "listId",
+          "referencedKey": "id",
+          "type": "one"
+        }
+      ]
+    },
+    "getById": {
+      "enabled": true,
+      "idField": "id",
+      "relations": [
+        {
+          "name": "list",
+          "table": "todo_lists",
+          "foreignKey": "listId",
+          "referencedKey": "id",
+          "type": "one"
+        }
+      ]
+    },
+    "create": {
+      "enabled": true,
+      "validation": {
+        "required": ["title", "listId"],
+        "fields": {
+          "title": {
+            "type": "string",
+            "min": 1,
+            "max": 500
+          },
+          "description": {
+            "type": "string",
+            "max": 5000
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "medium", "high"]
+          },
+          "completed": {
+            "type": "number"
+          },
+          "order": {
+            "type": "number"
+          }
+        }
+      },
+      "defaults": {
+        "completed": 0,
+        "priority": "medium"
+      },
+      "beforeExecute": {
+        "steps": [
+          {
+            "type": "check_exists",
+            "check_exists": {
+              "table": "todo_lists",
+              "where": {
+                "id": "{{body.listId}}"
+              },
+              "onNotExists": "return_error",
+              "error": {
+                "message": "Todo list not found",
+                "code": 404
+              }
+            }
+          }
+        ]
+      }
+    },
+    "update": {
+      "enabled": true,
+      "idField": "id",
+      "validation": {
+        "fields": {
+          "title": {
+            "type": "string",
+            "min": 1,
+            "max": 500
+          },
+          "description": {
+            "type": "string",
+            "max": 5000
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "medium", "high"]
+          },
+          "completed": {
+            "type": "number"
+          },
+          "order": {
+            "type": "number"
+          }
+        }
+      },
+      "beforeExecute": {
+        "steps": [
+          {
+            "type": "conditional",
+            "conditional": {
+              "condition": {
+                "field": "body.listId",
+                "operator": "not_equals",
+                "value": null
+              },
+              "then": [
+                {
+                  "type": "check_exists",
+                  "check_exists": {
+                    "table": "todo_lists",
+                    "where": {
+                      "id": "{{body.listId}}"
+                    },
+                    "onNotExists": "return_error",
+                    "error": {
+                      "message": "Todo list not found",
+                      "code": 404
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "delete": {
+      "enabled": true,
+      "idField": "id"
+    },
+    "custom": [
+      {
+        "path": "/:id/complete",
+        "method": "POST",
+        "description": "Mark a task as completed",
+        "workflow": {
+          "steps": [
+            {
+              "type": "check_exists",
+              "check_exists": {
+                "table": "todos",
+                "where": {
+                  "id": "{{params.id}}"
+                },
+                "onNotExists": "return_error",
+                "error": {
+                  "message": "Task not found",
+                  "code": 404
+                }
+              }
+            },
+            {
+              "type": "db_query",
+              "db_query": {
+                "action": "update",
+                "table": "todos",
+                "where": {
+                  "id": "{{params.id}}"
+                },
+                "data": {
+                  "completed": 1,
+                  "updatedAt": "{{new Date().toISOString()}}"
+                },
+                "storeAs": "updatedTask"
+              }
+            },
+            {
+              "type": "return_response",
+              "return_response": {
+                "data": "updatedTask",
+                "status": 200
+              }
+            }
+          ]
+        }
+      },
+      {
+        "path": "/:id/uncomplete",
+        "method": "POST",
+        "description": "Mark a task as not completed",
+        "workflow": {
+          "steps": [
+            {
+              "type": "check_exists",
+              "check_exists": {
+                "table": "todos",
+                "where": {
+                  "id": "{{params.id}}"
+                },
+                "onNotExists": "return_error",
+                "error": {
+                  "message": "Task not found",
+                  "code": 404
+                }
+              }
+            },
+            {
+              "type": "db_query",
+              "db_query": {
+                "action": "update",
+                "table": "todos",
+                "where": {
+                  "id": "{{params.id}}"
+                },
+                "data": {
+                  "completed": 0,
+                  "updatedAt": "{{new Date().toISOString()}}"
+                },
+                "storeAs": "updatedTask"
+              }
+            },
+            {
+              "type": "return_response",
+              "return_response": {
+                "data": "updatedTask",
+                "status": 200
+              }
+            }
+          ]
+        }
+      },
+      {
+        "path": "/reorder",
+        "method": "POST",
+        "description": "Reorder tasks",
+        "validation": {
+          "required": ["tasks"],
+          "fields": {
+            "tasks": {
+              "type": "array"
+            }
+          }
+        },
+        "workflow": {
+          "steps": [
+            {
+              "type": "foreach",
+              "foreach": {
+                "items": "body.tasks",
+                "as": "task",
+                "steps": [
+                  {
+                    "type": "db_query",
+                    "db_query": {
+                      "action": "update",
+                      "table": "todos",
+                      "where": {
+                        "id": "{{task.id}}"
+                      },
+                      "data": {
+                        "order": "{{task.order}}",
+                        "updatedAt": "{{new Date().toISOString()}}"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "return_response",
+              "return_response": {
+                "data": {
+                  "message": "Tasks reordered successfully",
+                  "count": "{{body.tasks.length}}"
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

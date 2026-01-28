@@ -1,16 +1,142 @@
 {
-  "resource": "payroll runs",
+  "resource": "payrollRuns",
+  "basePath": "/api/payroll-runs",
+  "description": "Payroll run management API",
   "table": "payrollRuns",
-  "basePath": "/payroll/runs",
-  "list": {
-    "enabled": true,
-    "paginated": true,
-    "fields": ["id", "periodMonth", "periodYear", "status", "runDate", "approvedBy", "totalAmount"]
+  "auth": {
+    "required": true
   },
-  "create": {
-    "enabled": true,
-    "requiredFields": ["periodMonth", "periodYear"],
-    "fields": ["periodMonth", "periodYear", "status", "runDate", "approvedBy", "totalAmount"],
-    "defaults": { "status": "draft" }
+  "operations": {
+    "list": {
+      "enabled": true,
+      "filters": [
+        {
+          "field": "status",
+          "operator": "equals",
+          "queryParam": "status"
+        },
+        {
+          "field": "periodMonth",
+          "operator": "equals",
+          "queryParam": "periodMonth"
+        },
+        {
+          "field": "periodYear",
+          "operator": "equals",
+          "queryParam": "periodYear"
+        }
+      ],
+      "sort": {
+        "default": "runDate",
+        "defaultOrder": "desc",
+        "allowed": ["runDate", "periodYear", "periodMonth", "status", "totalAmount"]
+      },
+      "pagination": {
+        "enabled": true,
+        "defaultLimit": 50,
+        "maxLimit": 100
+      }
+    },
+    "getById": {
+      "enabled": true,
+      "idField": "id"
+    },
+    "create": {
+      "enabled": true,
+      "validation": {
+        "required": ["periodMonth", "periodYear"],
+        "fields": {
+          "periodMonth": {
+            "type": "number",
+            "min": 1,
+            "max": 12
+          },
+          "periodYear": {
+            "type": "number",
+            "min": 2000,
+            "max": 2100
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "processing", "completed", "failed"]
+          },
+          "totalAmount": {
+            "type": "number",
+            "min": 0
+          }
+        }
+      },
+      "defaults": {
+        "status": "draft"
+      }
+    },
+    "update": {
+      "enabled": true,
+      "idField": "id",
+      "validation": {
+        "fields": {
+          "periodMonth": {
+            "type": "number",
+            "min": 1,
+            "max": 12
+          },
+          "periodYear": {
+            "type": "number",
+            "min": 2000,
+            "max": 2100
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "processing", "completed", "failed"]
+          },
+          "totalAmount": {
+            "type": "number",
+            "min": 0
+          }
+        }
+      }
+    },
+    "delete": {
+      "enabled": true,
+      "idField": "id",
+      "softDelete": {
+        "enabled": false
+      },
+      "beforeExecute": {
+        "steps": [
+          {
+            "type": "db_query",
+            "db_query": {
+              "action": "select",
+              "table": "payrollRuns",
+              "where": {
+                "id": "{{params.id}}"
+              },
+              "limit": 1,
+              "storeAs": "payrollRun"
+            }
+          },
+          {
+            "type": "conditional",
+            "conditional": {
+              "condition": {
+                "field": "payrollRun.status",
+                "operator": "equals",
+                "value": "completed"
+              },
+              "then": [
+                {
+                  "type": "return_error",
+                  "return_error": {
+                    "message": "Cannot delete a completed payroll run",
+                    "code": 400
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
   }
 }

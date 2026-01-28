@@ -1,11 +1,71 @@
 {
-  "resource": "leave types",
+  "resource": "leaveTypes",
+  "basePath": "/api/leave-types",
+  "description": "Leave type management API with CRUD operations",
   "table": "leaveTypes",
-  "basePath": "/workforce/leave-types",
-  "list": {
-    "enabled": true,
-    "paginated": false,
-    "orderBy": { "field": "name", "direction": "asc" },
-    "fields": ["id", "name", "daysPerYear", "carryForward", "active"]
+  "auth": {
+    "required": true
+  },
+  "operations": {
+    "list": {
+      "enabled": true,
+      "sort": {
+        "default": "name",
+        "defaultOrder": "asc",
+        "allowed": ["name", "daysPerYear"]
+      },
+      "pagination": {
+        "enabled": false
+      }
+    },
+    "getById": {
+      "enabled": true,
+      "idField": "id"
+    },
+    "create": {
+      "enabled": true,
+      "validation": {
+        "required": ["name", "daysPerYear"],
+        "fields": {
+          "name": {
+            "type": "string",
+            "min": 2,
+            "max": 100
+          },
+          "daysPerYear": {
+            "type": "number",
+            "min": 0
+          }
+        }
+      },
+      "defaults": {
+        "carryForward": 0,
+        "active": 1
+      }
+    },
+    "update": {
+      "enabled": true,
+      "idField": "id",
+      "validation": {
+        "fields": {
+          "name": {
+            "type": "string",
+            "min": 2,
+            "max": 100
+          },
+          "daysPerYear": {
+            "type": "number",
+            "min": 0
+          }
+        }
+      }
+    },
+    "delete": {
+      "enabled": true,
+      "idField": "id",
+      "softDelete": {
+        "enabled": false
+      }
+    }
   }
 }

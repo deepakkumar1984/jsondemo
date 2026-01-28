@@ -72,6 +72,69 @@
           "page": "tasks/edit"
         }
       ]
+    },
+    {
+      "id": "todo-app",
+      "name": "Todo App",
+      "subtitle": "Simple todo management",
+      "shortName": "Todo",
+      "description": "A minimal todo application with API endpoints.",
+      "prefix": "/",
+      "branding": {
+        "logo": "✅",
+        "companyName": "MyCompany",
+        "tagline": "Stay on top of everything"
+      },
+      "theme": {
+        "mode": "light",
+        "allowModeToggle": true
+      },
+      "icons": {
+        "library": "lucide",
+        "size": "20px"
+      },
+      "navigation": {
+        "categories": [
+          {
+            "id": "category-todo",
+            "title": "Todo",
+            "icon": "CheckSquare",
+            "order": 2,
+            "items": [
+              {
+                "title": "All Todos",
+                "path": "/todos",
+                "page": "todo/list",
+                "icon": "List"
+              },
+              {
+                "title": "Create Todo",
+                "path": "/todos/new",
+                "page": "todo/create",
+                "icon": "PlusCircle"
+              }
+            ]
+          }
+        ]
+      },
+      "routes": [
+        {
+          "path": "/todos",
+          "page": "todo/list"
+        },
+        {
+          "path": "/todos/new",
+          "page": "todo/create"
+        },
+        {
+          "path": "/todos/:id",
+          "page": "todo/detail"
+        },
+        {
+          "path": "/todos/:id/edit",
+          "page": "todo/edit"
+        }
+      ]
     }
   ]
 }

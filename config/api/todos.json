@@ -1,0 +1,150 @@
+{
+  "resource": "todos",
+  "basePath": "/api/todos",
+  "description": "Todo items API with CRUD operations",
+  "table": "todos",
+  "auth": {
+    "required": true
+  },
+  "operations": {
+    "list": {
+      "enabled": true,
+      "filters": [
+        {
+          "field": "status",
+          "operator": "equals",
+          "queryParam": "status"
+        },
+        {
+          "field": "priority",
+          "operator": "equals",
+          "queryParam": "priority"
+        },
+        {
+          "field": "listId",
+          "operator": "equals",
+          "queryParam": "listId"
+        }
+      ],
+      "search": {
+        "enabled": true,
+        "fields": ["title", "description"]
+      },
+      "sort": {
+        "default": "createdAt",
+        "defaultOrder": "desc",
+        "allowed": ["createdAt", "updatedAt", "title", "priority", "dueDate"]
+      },
+      "pagination": {
+        "enabled": true,
+        "defaultLimit": 50,
+        "maxLimit": 100
+      }
+    },
+    "getById": {
+      "enabled": true,
+      "idField": "id"
+    },
+    "create": {
+      "enabled": true,
+      "validation": {
+        "required": ["title", "listId"],
+        "fields": {
+          "title": {
+            "type": "string",
+            "min": 1,
+            "max": 255
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "medium", "high"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "completed", "cancelled"]
+          }
+        }
+      },
+      "defaults": {
+        "status": "pending",
+        "priority": "medium"
+      }
+    },
+    "update": {
+      "enabled": true,
+      "idField": "id",
+      "validation": {
+        "fields": {
+          "title": {
+            "type": "string",
+            "min": 1,
+            "max": 255
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "medium", "high"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "completed", "cancelled"]
+          }
+        }
+      }
+    },
+    "delete": {
+      "enabled": true,
+      "idField": "id",
+      "softDelete": {
+        "enabled": false
+      }
+    },
+    "custom": [
+      {
+        "path": "/:id/complete",
+        "method": "POST",
+        "description": "Mark a todo as completed",
+        "workflow": {
+          "steps": [
+            {
+              "type": "check_exists",
+              "check_exists": {
+                "table": "todos",
+                "where": {
+                  "id": "{{params.id}}"
+                },
+                "onNotExists": "return_error",
+                "error": {
+                  "message": "Todo not found",
+                  "code": 404
+                }
+              }
+            },
+            {
+              "type": "db_query",
+              "db_query": {
+                "action": "update",
+                "table": "todos",
+                "where": {
+                  "id": "{{params.id}}"
+                },
+                "data": {
+                  "status": "completed",
+                  "completedAt": "{{new Date().toISOString()}}",
+                  "updatedAt": "{{new Date().toISOString()}}"
+                },
+                "storeAs": "updatedTodo"
+              }
+            },
+            {
+              "type": "return_response",
+              "return_response": {
+                "data": "updatedTodo",
+                "status": 200
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

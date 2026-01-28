@@ -1,62 +1,102 @@
 {
   "resource": "departments",
+  "basePath": "/api/departments",
+  "description": "Department management API with CRUD operations",
   "table": "departments",
-  "basePath": "/departments",
-  "list": {
-    "enabled": true,
-    "paginated": false,
-    "orderBy": { "field": "name", "direction": "asc" },
-    "fields": ["id", "name", "code", "description", "headId", "parentId", "active", "createdAt"],
-    "computedFields": [
-      {
-        "name": "employeeCount",
-        "sql": "(SELECT COUNT(*) FROM employees WHERE employees.department_id = departments.id AND employees.status != 'terminated')",
-        "type": "number"
-      }
-    ]
+  "auth": {
+    "required": true
   },
-  "getById": {
-    "enabled": true,
-    "fields": ["id", "name", "code", "description", "headId", "parentId", "active", "createdAt"],
-    "computedFields": [
-      {
-        "name": "employeeCount",
-        "sql": "(SELECT COUNT(*) FROM employees WHERE employees.department_id = departments.id AND employees.status != 'terminated')",
-        "type": "number"
+  "operations": {
+    "list": {
+      "enabled": true,
+      "sort": {
+        "default": "name",
+        "defaultOrder": "asc",
+        "allowed": ["name", "code", "createdAt"]
+      },
+      "pagination": {
+        "enabled": false
       }
-    ],
-    "lookups": [
-      {
-        "name": "headName",
-        "condition": "headId",
-        "table": "employees",
-        "where": { "field": "userId", "value": "$headId" },
-        "select": ["firstName", "lastName"],
-        "format": "{firstName} {lastName}"
+    },
+    "getById": {
+      "enabled": true,
+      "idField": "id"
+    },
+    "create": {
+      "enabled": true,
+      "validation": {
+        "required": ["name", "code"],
+        "fields": {
+          "name": {
+            "type": "string",
+            "min": 2,
+            "max": 255
+          },
+          "code": {
+            "type": "string",
+            "min": 2,
+            "max": 50
+          }
+        }
+      },
+      "defaults": {
+        "active": 1
       }
-    ]
-  },
-  "create": {
-    "enabled": true,
-    "requiredFields": ["name", "code"],
-    "fields": ["name", "code", "description", "headId", "parentId", "active"],
-    "defaults": { "active": 1 },
-    "coerce": { "active": "boolean_to_int" }
-  },
-  "update": {
-    "enabled": true,
-    "fields": ["name", "code", "description", "headId", "parentId", "active"],
-    "coerce": { "active": "boolean_to_int" }
-  },
-  "delete": {
-    "enabled": true,
-    "mode": "hard",
-    "referentialChecks": [
-      {
-        "table": "employees",
-        "foreignKey": "departmentId",
-        "message": "Cannot delete department: {count} employee(s) are still assigned to this department"
+    },
+    "update": {
+      "enabled": true,
+      "idField": "id",
+      "validation": {
+        "fields": {
+          "name": {
+            "type": "string",
+            "min": 2,
+            "max": 255
+          },
+          "code": {
+            "type": "string",
+            "min": 2,
+            "max": 50
+          }
+        }
       }
-    ]
+    },
+    "delete": {
+      "enabled": true,
+      "idField": "id",
+      "softDelete": {
+        "enabled": false
+      },
+      "beforeExecute": {
+        "steps": [
+          {
+            "type": "db_query",
+            "db_query": {
+              "action": "count",
+              "table": "employees",
+              "where": {
+                "departmentId": "{{params.id}}"
+              },
+              "storeAs": "employeeCount"
+            }
+          },
+          {
+            "type": "conditional",
+            "conditional": {
+              "condition": "employeeCount > 0",
+              "then": [
+                {
+                  "type": "return_error",
+                  "return_error": {
+                    "message": "Cannot delete department: {{employeeCount}} employee(s) are still assigned to this department",
+                    "code": 400
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
   }
 }

@@ -1,0 +1,70 @@
+{
+  "page": "todo/detail",
+  "dataSources": {
+    "item": {
+      "url": "/api/todos/:id"
+    }
+  },
+  "children": [
+    {
+      "type": "PageHeader",
+      "props": {
+        "title": "Todo Details",
+        "actions": [
+          {
+            "label": "Edit",
+            "action": {
+              "type": "navigate",
+              "to": "/todo/:id/edit"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Card",
+      "props": {
+        "title": "Information"
+      },
+      "children": [
+        {
+          "type": "DetailRow",
+          "props": {
+            "label": "Title",
+            "valuePath": "item.title"
+          }
+        },
+        {
+          "type": "DetailRow",
+          "props": {
+            "label": "Description",
+            "valuePath": "item.description"
+          }
+        },
+        {
+          "type": "DetailRow",
+          "props": {
+            "label": "Due Date",
+            "valuePath": "item.dueDate"
+          }
+        },
+        {
+          "type": "DetailRow",
+          "props": {
+            "label": "Status",
+            "valuePath": "item.status",
+            "render": {
+              "type": "Badge",
+              "props": {
+                "colorMap": {
+                  "pending": "warning",
+                  "completed": "success"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

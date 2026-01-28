@@ -7,6 +7,10 @@
 
 interface Env {
   AI: any;
+  // AI Gateway credentials (optional, but recommended for longer timeouts)
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  CLOUDFLARE_API_TOKEN?: string;
+  AI_GATEWAY_ID?: string;
 }
 
 interface GenerateRequest {
@@ -576,6 +580,56 @@ function enhanceSchemas(schemas: any[]): any[] {
   });
 }
 
+// Call AI via AI Gateway (supports longer timeouts)
+async function callAIViaGateway(
+  env: Env,
+  messages: Array<{ role: string; content: string }>,
+  maxTokens: number
+): Promise<any> {
+  const { CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, AI_GATEWAY_ID } = env;
+
+  if (!CLOUDFLARE_ACCOUNT_ID || !CLOUDFLARE_API_TOKEN || !AI_GATEWAY_ID) {
+    throw new Error('AI Gateway credentials not configured');
+  }
+
+  const gatewayUrl = `https://gateway.ai.cloudflare.com/v1/${CLOUDFLARE_ACCOUNT_ID}/${AI_GATEWAY_ID}/workers-ai/@cf/openai/gpt-oss-120b`;
+
+  const response = await fetch(gatewayUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
+      'Content-Type': 'application/json',
+      // Extended timeout: 5 minutes (300000ms)
+      'cf-aig-request-timeout': '300000'
+    },
+    body: JSON.stringify({
+      messages,
+      max_tokens: maxTokens,
+      temperature: 0.1
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`AI Gateway error: ${response.status} - ${errorText}`);
+  }
+
+  return await response.json();
+}
+
+// Call AI via Workers AI binding (direct, but subject to Worker timeouts)
+async function callAIViaDirect(
+  env: Env,
+  messages: Array<{ role: string; content: string }>,
+  maxTokens: number
+): Promise<any> {
+  return await env.AI.run('@cf/openai/gpt-oss-120b', {
+    messages,
+    max_tokens: maxTokens,
+    temperature: 0.1
+  });
+}
+
 // Main worker handler
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -614,16 +668,33 @@ export default {
       const userPrompt = generateUserPrompt(type, description, context);
 
       // Call AI with appropriate token limit based on type
-      const maxTokens = type === 'api' ? 16384 : type === 'pages' ? 6144 : 8192;
+      // When using AI Gateway, we can use higher limits since timeout is 5 minutes
+      const useGateway = env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_API_TOKEN && env.AI_GATEWAY_ID;
+      const maxTokens = type === 'api'
+        ? (useGateway ? 16384 : 8192)
+        : type === 'pages'
+        ? (useGateway ? 6144 : 4096)
+        : (useGateway ? 8192 : 4096);
 
-      const aiResponse = await env.AI.run('@cf/openai/gpt-oss-120b', {
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        max_tokens: maxTokens,
-        temperature: 0.1
-      });
+      console.log(`Using ${useGateway ? 'AI Gateway (5min timeout)' : 'Workers AI (limited timeout)'}`);
+      console.log(`Max tokens: ${maxTokens}`);
+
+      const messages = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ];
+
+      let aiResponse;
+      try {
+        if (useGateway) {
+          aiResponse = await callAIViaGateway(env, messages, maxTokens);
+        } else {
+          aiResponse = await callAIViaDirect(env, messages, maxTokens);
+        }
+      } catch (aiError: any) {
+        console.error('AI call failed:', aiError.message);
+        throw new Error(`AI generation failed: ${aiError.message}`);
+      }
 
       // Parse response - OpenAI chat completion format
       let responseText: string = '';

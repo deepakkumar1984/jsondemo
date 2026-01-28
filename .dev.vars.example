@@ -1,0 +1,14 @@
+# Development environment variables for AI Worker
+# Copy this file to .dev.vars and fill in your credentials
+
+# Required for AI Gateway (extended timeout support)
+# Get these from your Cloudflare dashboard:
+# 1. CLOUDFLARE_ACCOUNT_ID: Found in Workers & Pages > Overview
+# 2. CLOUDFLARE_API_TOKEN: Create at My Profile > API Tokens
+#    - Need "AI Gateway:Read" permission
+# 3. AI_GATEWAY_ID: Create at AI > AI Gateway > Create Gateway
+#    - Use the gateway slug/ID you create
+
+CLOUDFLARE_ACCOUNT_ID=your_account_id_here
+CLOUDFLARE_API_TOKEN=your_api_token_here
+AI_GATEWAY_ID=your_gateway_id_here
