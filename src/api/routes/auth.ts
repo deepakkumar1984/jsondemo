@@ -37,9 +37,9 @@ auth.post('/login', async (c) => {
       return c.json({ success: false, error: 'Invalid credentials' }, 401);
     }
 
-    if (!user.active) {
-      return c.json({ success: false, error: 'Account disabled' }, 403);
-    }
+    // if (!user.active) {
+    //   return c.json({ success: false, error: 'Account disabled' }, 403);
+    // }
 
     const token = await createJWT(
       { sub: user.id, email: user.email, name: user.name, role: user.role },

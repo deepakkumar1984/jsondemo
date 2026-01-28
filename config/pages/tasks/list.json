@@ -5,7 +5,7 @@
   },
   "children": [
     {
-      "component": "PageHeader",
+      "type": "PageHeader",
       "props": {
         "title": "Tasks",
         "actions": [
@@ -13,40 +13,41 @@
             "label": "Add New",
             "action": {
               "type": "navigate",
-              "path": "/tasks/create"
+              "to": "/tasks/create"
             }
           },
           {
             "label": "Kanban Board",
             "action": {
               "type": "navigate",
-              "path": "/tasks/kanban"
+              "to": "/tasks/kanban"
             }
           }
         ]
       }
     },
     {
-      "component": "DataTable",
+      "type": "DataTable",
       "props": {
-        "dataSource": "items",
+        "dataPath": "items",
         "columns": [
           {
             "key": "title",
-            "label": "Title"
+            "header": "Title"
           },
           {
             "key": "status",
-            "label": "Status",
-            "component": "Badge"
+            "header": "Status",
+            "render": { "type": "Badge", "props": { "colorMap": { "todo": "secondary", "in_progress": "default", "done": "outline" } } }
           },
           {
             "key": "priority",
-            "label": "Priority"
+            "header": "Priority"
           },
           {
             "key": "dueDate",
-            "label": "Due Date"
+            "header": "Due Date",
+            "format": "date"
           }
         ],
         "actions": [
@@ -54,14 +55,14 @@
             "label": "View",
             "action": {
               "type": "navigate",
-              "path": "/tasks/{{id}}"
+              "to": "/tasks/:id"
             }
           },
           {
             "label": "Edit",
             "action": {
               "type": "navigate",
-              "path": "/tasks/{{id}}/edit"
+              "to": "/tasks/:id/edit"
             }
           }
         ]

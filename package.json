@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx scripts/build-api-index.ts && wrangler dev",
-    "build": "tsx scripts/build-api-index.ts && vite build && wrangler deploy --dry-run",
+    "dev": "wrangler dev",
+    "build": "vite build && wrangler deploy --dry-run",
     "build:client": "vite build",
-    "deploy": "tsx scripts/build-api-index.ts && vite build && wrangler deploy",
+    "deploy": "vite build && wrangler deploy",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "wrangler d1 migrations apply hrm-db --local",
     "db:seed": "wrangler d1 execute hrm-db --local --file=src/db/seed.sql",

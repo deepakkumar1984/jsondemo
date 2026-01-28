@@ -1,16 +1,26 @@
-import * as schema from '../../db/schema';
+import { getDefaultSchema as loadDefaultSchema } from './schema-loader';
 
 /**
- * Dynamically build schema registry from all table exports
- * Automatically picks up any table defined in schema.ts
+ * Get the schema registry
+ * Uses the same registry as the route-engine to ensure consistency
  */
-export const schemaRegistry: Record<string, any> = {};
-
-// Dynamically register all tables from schema
-for (const [key, value] of Object.entries(schema)) {
-  // Only include SQLite tables (they have a getSQL method)
-  if (value && typeof value === 'object' && '_' in value) {
-    schemaRegistry[key] = value;
-    console.log(`✓ Registered table: ${key}`);
-  }
+export function getSchemaRegistry(): Record<string, any> {
+  return loadDefaultSchema();
 }
+
+// Re-export as a named constant for backwards compatibility
+// Note: This is now a function getter via Proxy, not a static object
+export const schemaRegistry = new Proxy({} as Record<string, any>, {
+  get(target, prop) {
+    const registry = loadDefaultSchema();
+    return registry[prop as string];
+  },
+  has(target, prop) {
+    const registry = loadDefaultSchema();
+    return prop in registry;
+  },
+  ownDescriptors(target) {
+    const registry = loadDefaultSchema();
+    return Object.getOwnPropertyDescriptors(registry);
+  }
+});
