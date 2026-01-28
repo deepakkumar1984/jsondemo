@@ -18,32 +18,7 @@ export const users = sqliteTable('users', {
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
-// Projects grouping tasks
-export const projects = sqliteTable('projects', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  name: text('name').notNull(),
-  description: text('description'),
-  ownerId: text('owner_id').notNull().references(() => users.id),
-  startDate: text('start_date'),
-  endDate: text('end_date'),
-  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
-});
 
-// Individual tasks within projects
-export const tasks = sqliteTable('tasks', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  title: text('title').notNull(),
-  description: text('description'),
-  status: text('status', { enum: ['todo', 'in_progress', 'done'] }).default('todo'),
-  priority: integer('priority').default(0),
-  dueDate: text('due_date'),
-  projectId: text('project_id').notNull().references(() => projects.id),
-  assigneeId: text('assignee_id').references(() => users.id),
-  createdById: text('created_by_id').notNull().references(() => users.id),
-  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
-});
 
 // ===========================================================================
 //  TYPE EXPORTS
@@ -51,10 +26,4 @@ export const tasks = sqliteTable('tasks', {
 
 export type Users = typeof users.$inferSelect;
 export type NewUsers = typeof users.$inferInsert;
-
-export type Projects = typeof projects.$inferSelect;
-export type NewProjects = typeof projects.$inferInsert;
-
-export type Tasks = typeof tasks.$inferSelect;
-export type NewTasks = typeof tasks.$inferInsert;
 

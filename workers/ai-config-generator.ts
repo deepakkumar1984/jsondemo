@@ -183,58 +183,106 @@ Return JSON array now.`;
 
 ## Output Format
 
-Return a JSON array of page configs (list, create, detail for each entity):
+Return a JSON array of page configs (list, create, detail for each entity).
+
+**LIST PAGE:**
 {
   "page": "entity/list",
   "dataSources": {
-    "items": "/api/entity"
+    "items": { "url": "/api/entity" }
   },
   "children": [
     {
-      "component": "PageHeader",
+      "type": "PageHeader",
       "props": {
         "title": "Entity List",
         "actions": [
-          {
-            "label": "Add New",
-            "action": {
-              "type": "navigate",
-              "path": "/entity/new"
-            }
-          }
+          { "label": "Add New", "action": { "type": "navigate", "to": "/entity/create" } }
         ]
       }
     },
     {
-      "component": "DataTable",
+      "type": "DataTable",
       "props": {
-        "dataSource": "items",
+        "dataPath": "items",
         "columns": [
-          { "key": "name", "label": "Name" },
-          { "key": "status", "label": "Status", "component": "Badge" }
+          { "key": "name", "header": "Name" },
+          { "key": "status", "header": "Status", "render": { "type": "Badge", "props": { "colorMap": { "active": "default" } } } }
         ],
         "actions": [
-          {
-            "label": "View",
-            "action": { "type": "navigate", "path": "/entity/{{id}}" }
-          },
-          {
-            "label": "Edit",
-            "action": { "type": "navigate", "path": "/entity/{{id}}/edit" }
-          }
+          { "label": "View", "action": { "type": "navigate", "to": "/entity/:id" } }
         ]
       }
     }
   ]
 }
+
+**CREATE PAGE:**
+{
+  "page": "entity/create",
+  "dataSources": {},
+  "children": [
+    {
+      "type": "PageHeader",
+      "props": { "title": "Create Entity" }
+    },
+    {
+      "type": "Form",
+      "props": {
+        "action": {
+          "type": "submit_form",
+          "url": "/api/entity",
+          "method": "POST",
+          "redirectTo": "/entity"
+        }
+      },
+      "children": [
+        { "type": "TextField", "props": { "name": "name", "label": "Name", "required": true } },
+        { "type": "TextArea", "props": { "name": "description", "label": "Description" } },
+        { "type": "SelectField", "props": { "name": "status", "label": "Status", "options": [{ "label": "Active", "value": "active" }, { "label": "Inactive", "value": "inactive" }] } }
+      ]
+    }
+  ]
+}
+
+**DETAIL PAGE:**
+{
+  "page": "entity/detail",
+  "dataSources": {
+    "item": { "url": "/api/entity/:id" }
+  },
+  "children": [
+    {
+      "type": "PageHeader",
+      "props": {
+        "title": "Entity Details",
+        "actions": [
+          { "label": "Edit", "action": { "type": "navigate", "to": "/entity/:id/edit" } }
+        ]
+      }
+    },
+    {
+      "type": "Card",
+      "props": { "title": "Information" },
+      "children": [
+        { "type": "DetailRow", "props": { "label": "Name", "valuePath": "item.name" } },
+        { "type": "DetailRow", "props": { "label": "Status", "valuePath": "item.status", "render": { "type": "Badge" } } }
+      ]
+    }
+  ]
+}
 ${contextInfo}
 
-## Rules
+## CRITICAL Rules
 
-1. **Output ONLY valid JSON array**
-2. **Use existing API paths** from resources above
-3. **Create 3 pages per entity**: list, create, detail
-4. **Keep it simple** - essential fields only
+1. **Component property is "type"** - NEVER use "component"
+2. **dataSources format**: { "items": { "url": "/api/entity" } } - nested object with url
+3. **DataTable uses "dataPath"** - references the data key (e.g., "items")
+4. **Column property is "header"** - NOT "label"
+5. **Action property is "to"** - NOT "path"
+6. **Badge render format**: { "type": "Badge", "props": { "colorMap": {...} } }
+7. **Form fields use "name"** - not "field" or "key"
+8. **DetailRow uses "valuePath"** - path to data (e.g., "item.name")
 
 Return JSON array now.`;
   }
