@@ -17,12 +17,15 @@ export interface NavItem {
   title: string;
   path: string;
   page: string;
+  icon?: string;
+  iconLibrary?: string;
 }
 
 export interface NavCategory {
   id: string;
   title: string;
   icon: string;
+  iconLibrary?: string;
   order: number;
   items: NavItem[];
 }
@@ -32,22 +35,128 @@ export interface RouteDef {
   page: string;
 }
 
+export interface BrandingConfig {
+  logo: string;
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
+  companyName: string;
+  tagline?: string;
+  showPoweredBy?: boolean;
+}
+
+export interface LayoutConfig {
+  type: 'sidebar' | 'topnav' | 'hybrid';
+  sidebarPosition?: 'left' | 'right';
+  sidebarWidth?: string;
+  sidebarCollapsible?: boolean;
+  sidebarDefaultCollapsed?: boolean;
+  headerPosition?: 'top' | 'none';
+  headerHeight?: string;
+  showHeader?: boolean;
+  showFooter?: boolean;
+  footerText?: string;
+  contentMaxWidth?: string | null;
+  contentPadding?: string;
+  showBreadcrumbs?: boolean;
+}
+
+export interface ThemeColors {
+  primary: string;
+  primaryForeground: string;
+  secondary: string;
+  secondaryForeground: string;
+  accent: string;
+  accentForeground: string;
+  destructive: string;
+  destructiveForeground: string;
+  muted: string;
+  mutedForeground: string;
+  card: string;
+  cardForeground: string;
+  popover: string;
+  popoverForeground: string;
+  border: string;
+  input: string;
+  ring: string;
+  background: string;
+  foreground: string;
+}
+
+export interface ThemeConfig {
+  mode: 'light' | 'dark';
+  allowModeToggle?: boolean;
+  colors?: {
+    light?: ThemeColors;
+    dark?: ThemeColors;
+  };
+  fonts?: {
+    heading?: string;
+    body?: string;
+    mono?: string;
+  };
+  fontSizes?: Record<string, string>;
+  spacing?: {
+    scale?: number;
+  };
+  radius?: Record<string, string>;
+  shadows?: Record<string, string>;
+}
+
+export interface IconConfig {
+  library: 'lucide' | 'heroicons' | 'fontawesome';
+  size?: string;
+  strokeWidth?: number;
+}
+
+export interface DefaultsConfig {
+  table?: {
+    pageSize?: number;
+    pageSizes?: number[];
+    showPagination?: boolean;
+    showSearch?: boolean;
+    emptyMessage?: string;
+  };
+  form?: {
+    requiredIndicator?: string;
+    validationMode?: 'onChange' | 'onBlur' | 'onSubmit';
+    showCancelButton?: boolean;
+    cancelButtonText?: string;
+    submitButtonText?: string;
+  };
+  notifications?: {
+    position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+    duration?: number;
+    showCloseButton?: boolean;
+  };
+  dateFormat?: string;
+  timeFormat?: string;
+  currency?: {
+    code: string;
+    symbol: string;
+    position: 'before' | 'after';
+  };
+  language?: string;
+}
+
 export interface AppConfig {
   id: string;
   name: string;
   subtitle?: string;
   shortName?: string;
-  icon?: string;
-  logo?: string;
   description?: string;
   prefix: string;
   schemaSource?: string;
   apiConfigPath: string;
   pagesConfigPath: string;
+  branding?: BrandingConfig;
+  layout?: LayoutConfig;
+  theme?: ThemeConfig;
+  icons?: IconConfig;
   navigation?: {
     categories: NavCategory[];
   };
   routes?: RouteDef[];
+  defaults?: DefaultsConfig;
   demoCredentials?: {
     email: string;
     password: string;

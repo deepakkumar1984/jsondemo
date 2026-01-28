@@ -1,6 +1,6 @@
 name = "jsondemo-hrm"
 main = "src/worker.ts"
-compatibility_date = "2025-01-15"
+compatibility_date = "2026-01-15"
 compatibility_flags = ["nodejs_compat"]
 
 [assets]

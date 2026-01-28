@@ -1,78 +1,25 @@
 /**
  * App Config Hook
  *
- * Provides access to the current app configuration from config/apps.json
- * For now, we only support a single app, but this is designed to be multi-app ready.
+ * Provides access to the current app configuration from config/apps.json.
+ * For now, we support a single app, but this is designed to be multi-app ready.
  */
 
 import { useState, useEffect } from 'react';
-import {
-  Users,
-  Building,
-  Briefcase,
-  DollarSign,
-  FileText,
-  Star,
-  Clock,
-  Calendar,
-  Settings,
-  LayoutDashboard,
-} from 'lucide-react';
-import type { AppsConfig } from './config-loader';
-
-export interface AppInfo {
-  id: string;
-  name: string;
-  subtitle: string;
-  shortName: string;
-  icon: string;
-  logo: string;
-  description: string;
-  prefix: string;
-  demoCredentials: {
-    email: string;
-    password: string;
-  };
-  navigation: {
-    categories: Array<{
-      id: string;
-      title: string;
-      paths?: string[];
-      order: number;
-    }>;
-  };
-}
-
-// Icon mapping for navigation icons
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  Users,
-  Building,
-  Briefcase,
-  DollarSign,
-  FileText,
-  Star,
-  Clock,
-  Calendar,
-  Settings,
-  LayoutDashboard,
-};
-
-export function getAppIcon(iconName: string): React.ComponentType<{ className?: string }> {
-  return iconMap[iconName] || Users;
-}
+import type { AppConfig, AppsConfig } from './config-loader';
 
 /**
  * Hook to load and access the current app configuration.
  * For now, returns the first (and only) app from the config.
  */
-export function useAppConfig(): { app: AppInfo | null; loading: boolean } {
-  const [app, setApp] = useState<AppInfo | null>(null);
+export function useAppConfig(): { app: AppConfig | null; loading: boolean } {
+  const [app, setApp] = useState<AppConfig | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadAppsConfig().then((config) => {
       if (config.apps && config.apps.length > 0) {
-        setApp(config.apps[0] as unknown as AppInfo);
+        setApp(config.apps[0]);
       }
       setLoading(false);
     });
