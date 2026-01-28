@@ -95,75 +95,158 @@ Return JSON array now.`;
     if (context?.schemas?.length) {
       schemasInfo = '\n## Available Schemas\n\n' + context.schemas.map((s: any) => {
         const cols = s.columns.map((c: any) => {
-          let str = c.name;
-          if (c.references) str += `→${c.references.table}`;
+          let str = `${c.name}: ${c.type}`;
+          if (c.references) str += ` → ${c.references.table}.${c.references.column}`;
           return str;
         });
         return `- ${s.table}: ${cols.join(', ')}`;
       }).join('\n');
     }
 
-    return `You are an API config generator. Create REST API endpoint configs based on database schemas.
+    return `You are a TypeScript API route generator. Create Hono-based REST API routes based on database schemas.
 
 ## Output Format
 
-Return a JSON array of API configs:
-{
-  "resource": "entity_name",
-  "table": "table_name",
-  "basePath": "/api/entity",
-  "list": {
-    "enabled": true,
-    "defaultLimit": 50,
-    "filters": [
-      { "param": "status", "field": "status", "cast": "text" }
-    ],
-    "search": {
-      "fields": ["name", "description"]
+Return a JSON array with file path and code content:
+[
+  {
+    "file": "src/api/routes/entities.ts",
+    "code": "import { Hono } from 'hono';\\nimport { drizzle } from 'drizzle-orm/d1';\\nimport { eq, like, and, or, desc } from 'drizzle-orm';\\nimport { entities, users } from '../../db/schema';\\nimport { authMiddleware } from '../middleware/auth';\\nimport { success, handleError } from '../utils/response';\\n\\ntype Env = { Bindings: { DB: D1Database; JWT_SECRET: string } };\\n\\nconst app = new Hono<Env>();\\napp.use('*', authMiddleware);\\n\\n// GET /api/entities - List all entities\\napp.get('/', async (c) => { ... });\\n\\n// GET /api/entities/:id - Get single entity\\napp.get('/:id', async (c) => { ... });\\n\\n// POST /api/entities - Create entity\\napp.post('/', async (c) => { ... });\\n\\n// PUT /api/entities/:id - Update entity\\napp.put('/:id', async (c) => { ... });\\n\\n// DELETE /api/entities/:id - Delete entity\\napp.delete('/:id', async (c) => { ... });\\n\\nexport default app;"
+  },
+  {
+    "file": "src/api/index.ts",
+    "action": "append",
+    "content": "import entitiesRoutes from './routes/entities';\\napi.route('/entities', entitiesRoutes);"
+  }
+]
+
+## Route Template Pattern
+
+\`\`\`typescript
+import { Hono } from 'hono';
+import { drizzle } from 'drizzle-orm/d1';
+import { eq, and, or, like, desc, asc } from 'drizzle-orm';
+import { entities, users } from '../../db/schema';
+import { authMiddleware } from '../middleware/auth';
+import { success, handleError } from '../utils/response';
+
+type Env = { Bindings: { DB: D1Database; JWT_SECRET: string } };
+
+const app = new Hono<Env>();
+app.use('*', authMiddleware);
+
+// GET /api/entities - List all with filters/search
+app.get('/', async (c) => {
+  try {
+    const db = drizzle(c.env.DB);
+    const { status, search } = c.req.query();
+
+    let conditions = [];
+    if (status) conditions.push(eq(entities.status, status));
+    if (search) {
+      conditions.push(or(
+        like(entities.name, \`%\${search}%\`),
+        like(entities.description || '', \`%\${search}%\`)
+      ));
     }
-  },
-  "getById": {
-    "enabled": true,
-    "lookups": [
-      {
-        "name": "owner",
-        "condition": "ownerId IS NOT NULL",
-        "table": "users",
-        "where": { "id": "{{ownerId}}" },
-        "select": ["id", "name", "email"],
-        "format": "single"
-      }
-    ]
-  },
-  "create": {
-    "enabled": true
-  },
-  "update": {
-    "enabled": true
-  },
-  "delete": {
-    "enabled": true,
-    "mode": "soft"
-  },
-  "customEndpoints": [
-    {
-      "method": "GET",
-      "path": "/by-status/:status",
-      "handler": "getByStatus"
-    }
-  ]
-}
-${schemasInfo}
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const results = await db.select().from(entities).where(whereClause).orderBy(desc(entities.createdAt));
+
+    return c.json(success(results));
+  } catch (err) {
+    const e = handleError('Fetch entities', err);
+    return c.json(e.body, e.status);
+  }
+});
+
+// GET /api/entities/:id - Get single with relations
+app.get('/:id', async (c) => {
+  try {
+    const db = drizzle(c.env.DB);
+    const id = c.req.param('id');
+
+    const [entity] = await db.select().from(entities).where(eq(entities.id, id)).limit(1);
+    if (!entity) return c.json({ success: false, error: 'Not found' }, 404);
+
+    return c.json(success(entity));
+  } catch (err) {
+    const e = handleError('Fetch entity', err);
+    return c.json(e.body, e.status);
+  }
+});
+
+// POST /api/entities - Create
+app.post('/', async (c) => {
+  try {
+    const db = drizzle(c.env.DB);
+    const body = await c.req.json();
+    const user = (c as any).get('user');
+
+    const [newEntity] = await db.insert(entities).values({
+      id: crypto.randomUUID(),
+      ...body,
+      createdById: user.id,
+    }).returning();
+
+    return c.json(success(newEntity), 201);
+  } catch (err) {
+    const e = handleError('Create entity', err);
+    return c.json(e.body, e.status);
+  }
+});
+
+// PUT /api/entities/:id - Update
+app.put('/:id', async (c) => {
+  try {
+    const db = drizzle(c.env.DB);
+    const id = c.req.param('id');
+    const body = await c.req.json();
+
+    const [updated] = await db.update(entities)
+      .set({ ...body, updatedAt: new Date().toISOString() })
+      .where(eq(entities.id, id))
+      .returning();
+
+    if (!updated) return c.json({ success: false, error: 'Not found' }, 404);
+    return c.json(success(updated));
+  } catch (err) {
+    const e = handleError('Update entity', err);
+    return c.json(e.body, e.status);
+  }
+});
+
+// DELETE /api/entities/:id - Delete
+app.delete('/:id', async (c) => {
+  try {
+    const db = drizzle(c.env.DB);
+    const id = c.req.param('id');
+
+    const [deleted] = await db.delete(entities).where(eq(entities.id, id)).returning();
+    if (!deleted) return c.json({ success: false, error: 'Not found' }, 404);
+
+    return c.json(success({ message: 'Deleted successfully' }));
+  } catch (err) {
+    const e = handleError('Delete entity', err);
+    return c.json(e.body, e.status);
+  }
+});
+
+export default app;
+\`\`\`
 
 ## Rules
 
-1. **Output ONLY valid JSON array**
-2. **Match table names from schemas**
-3. **Add filters for enum columns**
-4. **Add search for text columns**
-5. **Add lookups for foreign key relationships**
-6. **Add custom endpoints for common queries** (by name, by status, search, etc)
-7. **Use soft delete** by default
+1. **Output ONLY valid JSON array** with file objects
+2. **Route file path**: \`src/api/routes/{plural}.ts\`
+3. **Use table name** from schemas to generate routes
+4. **Add filters** for enum/status columns in list endpoint
+5. **Add search** for text columns (name, title, description)
+6. **Handle relations**: for foreign keys, fetch related data in getById
+7. **Use authMiddleware** on all routes
+8. **Return proper errors** with 404/400 status codes
+9. **Import from** \`../../db/schema\` using the table name
+${schemasInfo}
 
 Return JSON array now.`;
   }
@@ -377,20 +460,21 @@ Output JSON array:`;
   }
 
   if (type === 'api') {
-    let instruction = `Generate API endpoint configs for: ${description}\n\n`;
+    let instruction = `Generate TypeScript API route files for: ${description}\n\n`;
 
     if (context?.schemas?.length) {
-      instruction += `Use the schemas listed above. `;
+      instruction += `Use the schemas listed above to generate complete route files.\n\n`;
     }
 
-    instruction += `For each table, create:
-- CRUD operations (list, getById, create, update, delete)
-- Filters for enum/status columns
-- Search for text columns (name, title, description)
-- Lookups for foreign key relationships
-- Custom endpoints for common queries (e.g., /by-status/:status, /search)
+    instruction += `For each table:
+1. Generate a complete TypeScript route file at src/api/routes/{table}.ts
+2. Include: list, getById, create, update, delete endpoints
+3. Add filters for enum/status columns
+4. Add search for text columns
+5. Handle foreign key relations in getById
+6. Provide the import statements to add to src/api/index.ts
 
-Output JSON array:`;
+Output JSON array with file objects:`;
 
     return instruction;
   }
@@ -529,8 +613,8 @@ export default {
       const systemPrompt = generateSystemPrompt(type, context);
       const userPrompt = generateUserPrompt(type, description, context);
 
-      // Call AI with reduced token limit for faster response
-      const maxTokens = type === 'pages' ? 4096 : 8192;
+      // Call AI with appropriate token limit based on type
+      const maxTokens = type === 'api' ? 16384 : type === 'pages' ? 6144 : 8192;
 
       const aiResponse = await env.AI.run('@cf/openai/gpt-oss-120b', {
         messages: [
@@ -575,21 +659,28 @@ export default {
         }
       }
 
-      const count = type === 'apps' ? (result.apps?.length || 0) : result.length;
-      console.log(`Generated ${count} ${type} config(s)`);
-
-      // Return format depends on type
-      const responseData: any = {
+      let count = 0;
+      let responseData: any = {
         success: true,
         type,
-        generated: count
+        generated: 0
       };
 
       if (type === 'apps') {
-        responseData.config = result; // Return the apps object
+        count = result.apps?.length || 0;
+        responseData.config = result;
+      } else if (type === 'api') {
+        // APIs return file objects
+        count = result.length;
+        responseData.files = result;
+        responseData.instructions = 'Copy the code to the specified files and add the imports to src/api/index.ts';
       } else {
-        responseData.configs = result; // Return array of configs
+        // Schema, Pages return configs
+        count = result.length;
+        responseData.configs = result;
       }
+
+      console.log(`Generated ${count} ${type} config(s)`);
 
       return new Response(JSON.stringify(responseData, null, 2), {
         headers: {
