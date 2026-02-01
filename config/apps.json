@@ -127,7 +127,7 @@
         },
         {
           "path": "/projects/:id/edit",
-          "page": "new-project"
+          "page": "edit-project"
         },
         {
           "path": "/projects/:id/time-entries/new",

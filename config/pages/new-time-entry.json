@@ -81,6 +81,26 @@
               "method": "POST",
               "successMessage": "Time entry logged successfully!",
               "redirectTo": "/projects/:id"
+            },
+            "actions": {
+              "buttons": [
+                {
+                  "label": "Cancel",
+                  "variant": "ghost",
+                  "action": {
+                    "type": "navigate",
+                    "to": "/projects/:id"
+                  }
+                },
+                {
+                  "label": "Log Time",
+                  "variant": "primary",
+                  "buttonType": "submit",
+                  "icon": "Clock"
+                }
+              ],
+              "align": "end",
+              "gap": "md"
             }
           },
           "children": [
@@ -119,36 +139,6 @@
                     "rows": 4,
                     "colSpan": 2
                   }
-                },
-                {
-                  "type": "Stack",
-                  "props": {
-                    "direction": "horizontal",
-                    "justify": "flex-end",
-                    "gap": "md"
-                  },
-                  "children": [
-                    {
-                      "type": "Button",
-                      "props": {
-                        "label": "Cancel",
-                        "variant": "ghost",
-                        "action": {
-                          "type": "navigate",
-                          "to": "/projects/{{id}}"
-                        }
-                      }
-                    },
-                    {
-                      "type": "Button",
-                      "props": {
-                        "label": "Log Time",
-                        "variant": "primary",
-                        "buttonType": "submit",
-                        "icon": "Clock"
-                      }
-                    }
-                  ]
                 }
               ]
             }

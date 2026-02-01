@@ -408,6 +408,76 @@
         "action": {
           "$ref": "#/$defs/submitFormAction",
           "description": "Submit action configuration"
+        },
+        "actions": {
+          "type": "object",
+          "description": "Form action buttons configuration",
+          "properties": {
+            "buttons": {
+              "type": "array",
+              "description": "Array of button configurations",
+              "items": {
+                "type": "object",
+                "required": ["label"],
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "description": "Button label text"
+                  },
+                  "variant": {
+                    "type": "string",
+                    "enum": ["primary", "secondary", "ghost", "outline", "danger"],
+                    "description": "Button visual style"
+                  },
+                  "buttonType": {
+                    "type": "string",
+                    "enum": ["submit", "button", "reset"],
+                    "description": "HTML button type (default: button)"
+                  },
+                  "icon": {
+                    "type": "string",
+                    "description": "Icon name from icon registry"
+                  },
+                  "action": {
+                    "type": "object",
+                    "description": "Action to perform on click (not needed for submit buttons)",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": ["navigate", "api_call", "delete_confirm"],
+                        "description": "Action type"
+                      },
+                      "to": {
+                        "type": "string",
+                        "description": "Navigation target (for navigate action)"
+                      },
+                      "url": {
+                        "type": "string",
+                        "description": "API URL (for api_call action)"
+                      },
+                      "method": {
+                        "type": "string",
+                        "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+                        "description": "HTTP method (for api_call action)"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "align": {
+              "type": "string",
+              "enum": ["start", "center", "end", "between", "around"],
+              "description": "Horizontal alignment of button group (default: end)",
+              "default": "end"
+            },
+            "gap": {
+              "type": "string",
+              "enum": ["xs", "sm", "md", "lg", "xl"],
+              "description": "Spacing between buttons (default: md)",
+              "default": "md"
+            }
+          }
         }
       }
     },

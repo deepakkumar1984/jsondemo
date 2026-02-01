@@ -1031,22 +1031,55 @@ function FormRenderer({ node, children, onAction }: { node: any; children: React
     onAction(node.props.action, values);
   };
 
-  // Check if form already has buttons defined in children (avoid duplicate buttons)
-  const hasButtons = (node.children || []).some((child: any) =>
-    child?.type === 'Button' || child?.type === 'Stack' &&
-    (child.children || []).some((c: any) => c?.type === 'Button')
-  );
+  // Render form actions if defined in config
+  const formActions = node.props.actions;
+  const renderActions = () => {
+    if (!formActions || !formActions.buttons || formActions.buttons.length === 0) {
+      return null;
+    }
+
+    const alignMap: Record<string, string> = {
+      start: 'justify-start',
+      center: 'justify-center',
+      end: 'justify-end',
+      between: 'justify-between',
+      around: 'justify-around',
+    };
+
+    const gapMap: Record<string, string> = {
+      xs: 'gap-1',
+      sm: 'gap-2',
+      md: 'gap-3',
+      lg: 'gap-4',
+      xl: 'gap-6',
+    };
+
+    const align = alignMap[formActions.align || 'end'] || 'justify-end';
+    const gap = gapMap[formActions.gap || 'md'] || 'gap-3';
+
+    return (
+      <div className={`flex ${align} ${gap} pt-4`}>
+        {formActions.buttons.map((btn: any, i: number) => (
+          <Button
+            key={i}
+            type={btn.buttonType || 'button'}
+            variant={btn.variant === 'primary' ? 'default' : btn.variant === 'danger' ? 'destructive' : btn.variant || 'outline'}
+            onClick={btn.buttonType === 'submit' ? undefined : () => onAction(btn.action)}
+          >
+            {btn.icon && ICON_MAP[btn.icon]}
+            {btn.icon && btn.label && <span className="ml-1">{btn.label}</span>}
+            {!btn.icon && btn.label}
+          </Button>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <FormContext.Provider value={{ values, setValue, getValues, errors, setError, clearError }}>
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
         {children}
-        {!hasButtons && (
-          <div className="flex gap-3 pt-4">
-            <Button type="submit">Save</Button>
-            <Button type="button" variant="outline" onClick={() => window.history.back()}>Cancel</Button>
-          </div>
-        )}
+        {renderActions()}
       </form>
     </FormContext.Provider>
   );

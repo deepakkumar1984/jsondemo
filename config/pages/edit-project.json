@@ -1,11 +1,15 @@
 {
-  "dataSources": {},
+  "dataSources": {
+    "project": {
+      "url": "/api/projects/:id"
+    }
+  },
   "children": [
     {
       "type": "PageHeader",
       "props": {
-        "title": "New Project",
-        "subtitle": "Create a new project with budget and timeline"
+        "title": "Edit Project",
+        "subtitle": "Update project details and budget"
       }
     },
     {
@@ -17,10 +21,10 @@
           "props": {
             "action": {
               "type": "submit_form",
-              "url": "/api/projects",
-              "method": "POST",
-              "successMessage": "Project created successfully!",
-              "redirectTo": "/projects/{{response.data.id}}"
+              "url": "/api/projects/:id",
+              "method": "PUT",
+              "successMessage": "Project updated successfully!",
+              "redirectTo": "/projects/:id"
             },
             "actions": {
               "buttons": [
@@ -29,11 +33,11 @@
                   "variant": "ghost",
                   "action": {
                     "type": "navigate",
-                    "to": "/projects"
+                    "to": "/projects/:id"
                   }
                 },
                 {
-                  "label": "Create Project",
+                  "label": "Update Project",
                   "variant": "primary",
                   "buttonType": "submit",
                   "icon": "Check"
@@ -91,6 +95,21 @@
                       { "label": "Medium", "value": "medium" },
                       { "label": "High", "value": "high" },
                       { "label": "Urgent", "value": "urgent" }
+                    ]
+                  }
+                },
+                {
+                  "type": "SelectField",
+                  "props": {
+                    "name": "status",
+                    "label": "Status",
+                    "required": false,
+                    "options": [
+                      { "label": "Planning", "value": "planning" },
+                      { "label": "In Progress", "value": "in-progress" },
+                      { "label": "Completed", "value": "completed" },
+                      { "label": "On Hold", "value": "on-hold" },
+                      { "label": "Cancelled", "value": "cancelled" }
                     ]
                   }
                 },
