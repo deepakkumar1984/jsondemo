@@ -1,0 +1,160 @@
+{
+  "dataSources": {
+    "project": {
+      "url": "/api/projects/:id"
+    }
+  },
+  "children": [
+    {
+      "type": "PageHeader",
+      "props": {
+        "titleParts": [
+          { "text": "Log Time: " },
+          { "textPath": "project.name" }
+        ],
+        "subtitle": "Add a new time entry to this project"
+      }
+    },
+    {
+      "type": "Grid",
+      "props": {
+        "columns": 3,
+        "gap": "md"
+      },
+      "children": [
+        {
+          "type": "Card",
+          "props": {},
+          "children": [
+            {
+              "type": "Stack",
+              "props": {
+                "direction": "vertical",
+                "gap": "sm"
+              },
+              "children": [
+                {
+                  "type": "DetailRow",
+                  "props": {
+                    "label": "Budget Hours",
+                    "valuePath": "project.budgetHours"
+                  }
+                },
+                {
+                  "type": "DetailRow",
+                  "props": {
+                    "label": "Used",
+                    "valuePath": "project.totalHours"
+                  }
+                },
+                {
+                  "type": "DetailRow",
+                  "props": {
+                    "label": "Remaining",
+                    "valuePath": "project.remainingHours"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Alert",
+      "props": {
+        "variant": "info",
+        "title": "Budget Information",
+        "message": "This project has {{project.remainingHours}} hours remaining out of {{project.budgetHours}} total budget hours."
+      }
+    },
+    {
+      "type": "Card",
+      "props": {},
+      "children": [
+        {
+          "type": "Form",
+          "props": {
+            "action": {
+              "type": "submit_form",
+              "url": "/api/projects/:id/time-entries",
+              "method": "POST",
+              "successMessage": "Time entry logged successfully!",
+              "redirectTo": "/projects/:id"
+            }
+          },
+          "children": [
+            {
+              "type": "Grid",
+              "props": {
+                "columns": 2,
+                "gap": "lg"
+              },
+              "children": [
+                {
+                  "type": "DateField",
+                  "props": {
+                    "name": "date",
+                    "label": "Date",
+                    "required": true
+                  }
+                },
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "hours",
+                    "label": "Hours Worked",
+                    "required": true,
+                    "inputType": "number",
+                    "placeholder": "8.5"
+                  }
+                },
+                {
+                  "type": "TextArea",
+                  "props": {
+                    "name": "description",
+                    "label": "Description",
+                    "required": true,
+                    "placeholder": "Describe what you worked on...",
+                    "rows": 4,
+                    "colSpan": 2
+                  }
+                },
+                {
+                  "type": "Stack",
+                  "props": {
+                    "direction": "horizontal",
+                    "justify": "flex-end",
+                    "gap": "md"
+                  },
+                  "children": [
+                    {
+                      "type": "Button",
+                      "props": {
+                        "label": "Cancel",
+                        "variant": "ghost",
+                        "action": {
+                          "type": "navigate",
+                          "to": "/projects/{{id}}"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Button",
+                      "props": {
+                        "label": "Log Time",
+                        "variant": "primary",
+                        "buttonType": "submit",
+                        "icon": "Clock"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -12,6 +12,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -45,6 +46,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(userData);
   }, []);
 
+  const register = useCallback(async (name: string, email: string, password: string) => {
+    // First register the user
+    await api.post<{ success: boolean; data: { id: string; email: string; name: string; role: string } }>('/auth/register', { name, email, password });
+    // Then log them in automatically
+    await login(email, password);
+  }, [login]);
+
   const logout = useCallback(() => {
     localStorage.removeItem('hrm_token');
     api.setToken(null);
@@ -53,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, token, login, register, logout, isLoading, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

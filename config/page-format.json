@@ -385,7 +385,7 @@
               "value": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }] }
             }
           },
-          "description": "Static options for select filter"
+          "description": "Static options for select filter. Use the special value '__all__' for 'All' options - the UI will recognize this and skip filtering when this value is selected (e.g., { \"label\": \"All Statuses\", \"value\": \"__all__\" })"
         },
         "optionsPath": {
           "type": "string",

@@ -9,8 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const CONFIG_DIRS = [
-  'config/api',
-  'config-hr/api'
+  'config/api'
 ];
 
 interface ConfigFile {

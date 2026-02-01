@@ -1,0 +1,161 @@
+{
+  "dataSources": {
+    "stats": {
+      "url": "/api/projects/dashboard/stats"
+    },
+    "recentProjects": {
+      "url": "/api/projects?limit=5&sortBy=updatedAt&sortOrder=desc"
+    }
+  },
+  "children": [
+    {
+      "type": "PageHeader",
+      "props": {
+        "title": "Dashboard",
+        "subtitle": "Project & Time Tracking Overview",
+        "actions": [
+          {
+            "label": "New Project",
+            "variant": "primary",
+            "icon": "Plus",
+            "action": {
+              "type": "navigate",
+              "to": "/projects/new"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Grid",
+      "props": {
+        "columns": 4,
+        "gap": "lg"
+      },
+      "children": [
+        {
+          "type": "StatCard",
+          "props": {
+            "label": "Total Projects",
+            "valuePath": "stats.projects.total",
+            "icon": "Briefcase",
+            "color": "blue"
+          }
+        },
+        {
+          "type": "StatCard",
+          "props": {
+            "label": "Active Projects",
+            "valuePath": "stats.projects.active",
+            "icon": "Activity",
+            "color": "green"
+          }
+        },
+        {
+          "type": "StatCard",
+          "props": {
+            "label": "Total Hours",
+            "valuePath": "stats.timeTracking.totalHours",
+            "icon": "Clock",
+            "color": "orange"
+          }
+        },
+        {
+          "type": "StatCard",
+          "props": {
+            "label": "Total Revenue",
+            "valuePath": "stats.timeTracking.totalRevenue",
+            "icon": "DollarSign",
+            "color": "purple"
+          }
+        }
+      ]
+    },
+    {
+      "type": "Card",
+      "props": {},
+      "children": [
+        {
+          "type": "Stack",
+          "props": {
+            "direction": "vertical",
+            "gap": "md"
+          },
+          "children": [
+            {
+              "type": "PageHeader",
+              "props": {
+                "title": "Recent Projects",
+                "actions": [
+                  {
+                    "label": "View All",
+                    "variant": "ghost",
+                    "action": {
+                      "type": "navigate",
+                      "to": "/projects"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "DataTable",
+              "props": {
+                "dataPath": "recentProjects",
+                "columns": [
+                  {
+                    "key": "name",
+                    "header": "Project Name",
+                    "sortable": true
+                  },
+                  {
+                    "key": "clientName",
+                    "header": "Client",
+                    "sortable": true
+                  },
+                  {
+                    "key": "status",
+                    "header": "Status",
+                    "sortable": true,
+                    "render": {
+                      "type": "Badge",
+                      "props": {
+                        "labelPath": "status",
+                        "colorMap": {
+                          "planning": "secondary",
+                          "in-progress": "default",
+                          "in_progress": "default",
+                          "completed": "default",
+                          "on-hold": "outline",
+                          "on_hold": "outline",
+                          "cancelled": "destructive"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "key": "budgetHours",
+                    "header": "Budget (hrs)",
+                    "sortable": true,
+                    "format": "number"
+                  },
+                  {
+                    "key": "deadline",
+                    "header": "Deadline",
+                    "sortable": true,
+                    "format": "date"
+                  }
+                ],
+                "rowClickAction": {
+                  "type": "navigate",
+                  "to": "/projects/{{id}}"
+                },
+                "emptyMessage": "No projects yet. Create your first project to get started!"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

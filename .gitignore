@@ -5,7 +5,3 @@ dist
 
 # Environment variables (contains secrets)
 .dev.vars
-
-# Generated files (auto-regenerated during build)
-src/db/schema.generated.ts
-src/api/configs.generated.ts

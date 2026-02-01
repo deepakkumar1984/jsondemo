@@ -6,11 +6,12 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export interface StatCardProps {
   label: string;
-  value: string | number;
+  value?: string | number;
   change?: string;
   changeType?: "positive" | "negative" | "neutral";
   icon?: React.ReactNode;
   className?: string;
+  loading?: boolean;
 }
 
 function StatCard({
@@ -20,6 +21,7 @@ function StatCard({
   changeType = "neutral",
   icon,
   className,
+  loading = false,
 }: StatCardProps) {
   const changeColorClass = {
     positive: "text-emerald-600 dark:text-emerald-400",
@@ -45,9 +47,13 @@ function StatCard({
           )}
         </div>
         <div className="mt-2">
-          <p className="text-2xl font-bold tracking-tight">{value}</p>
+          {loading ? (
+            <div className="h-8 w-20 animate-pulse rounded bg-muted" />
+          ) : (
+            <p className="text-2xl font-bold tracking-tight">{value ?? '—'}</p>
+          )}
         </div>
-        {change && (
+        {change && !loading && (
           <div className={cn("mt-2 flex items-center gap-1 text-xs", changeColorClass)}>
             <ChangeIcon className="h-3 w-3" />
             <span>{change}</span>

@@ -1,0 +1,45 @@
+{
+  "table": "employee_salaries",
+  "description": "Employee salary assignments",
+  "columns": [
+    {
+      "name": "id",
+      "type": "text",
+      "primaryKey": true,
+      "defaultFn": "uuid"
+    },
+    {
+      "name": "employeeId",
+      "type": "text",
+      "references": {
+        "table": "employees",
+        "column": "id"
+      },
+      "notNull": true
+    },
+    {
+      "name": "structureId",
+      "type": "text",
+      "references": {
+        "table": "salary_structures",
+        "column": "id"
+      },
+      "notNull": true
+    },
+    {
+      "name": "baseSalary",
+      "type": "real",
+      "notNull": true
+    },
+    {
+      "name": "effectiveFrom",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "active",
+      "type": "boolean",
+      "default": true
+    }
+  ]
+}

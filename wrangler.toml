@@ -12,14 +12,22 @@ fallthrough = true
 [assets]
 directory = "dist/client"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "hrm-db"
-database_id = "local"
-migrations_dir = "src/db/migrations"
+# D1 Database (commented out - using Data API instead)
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "hrm-db"
+# database_id = "local"
+# migrations_dir = "src/db/migrations"
 
 [vars]
 JWT_SECRET = "hrm-dev-secret-change-in-production"
+
+# Blazorly Data API Configuration
+# These should be overridden in production via wrangler secrets or .dev.vars
+DATA_API_URL = "http://localhost:8789"
+DATA_API_KEY = "blz_67b7762b55e87c614348e3de2811f7df"
+DATA_TENANT_ID = "623f60c7-c36c-4c93-b95b-f350c9e1b659"
+DATA_DATABASE = "bdk_prod"
 
 [dev]
 port = 8787

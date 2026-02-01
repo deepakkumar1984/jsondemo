@@ -1,6 +1,6 @@
 {
-  "table": "users",
-  "description": "User accounts with authentication",
+  "table": "positions",
+  "description": "Job positions within the organization",
   "columns": [
     {
       "name": "id",
@@ -9,31 +9,35 @@
       "defaultFn": "uuid"
     },
     {
-      "name": "email",
+      "name": "title",
+      "type": "text",
+      "notNull": true
+    },
+    {
+      "name": "code",
       "type": "text",
       "unique": true,
       "notNull": true
     },
     {
-      "name": "passwordHash",
+      "name": "departmentId",
       "type": "text",
-      "notNull": true
+      "references": {
+        "table": "departments",
+        "column": "id"
+      }
     },
     {
-      "name": "name",
-      "type": "text",
-      "notNull": true
+      "name": "level",
+      "type": "integer"
     },
     {
-      "name": "role",
-      "type": "text",
-      "enum": [
-        "admin",
-        "hr",
-        "manager",
-        "employee"
-      ],
-      "notNull": true
+      "name": "minSalary",
+      "type": "real"
+    },
+    {
+      "name": "maxSalary",
+      "type": "real"
     },
     {
       "name": "active",
@@ -42,11 +46,6 @@
     },
     {
       "name": "createdAt",
-      "type": "text",
-      "default": "CURRENT_TIMESTAMP"
-    },
-    {
-      "name": "updatedAt",
       "type": "text",
       "default": "CURRENT_TIMESTAMP"
     }

@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import auth from './routes/auth';
-import { loadApiConfigs } from './config-loader';
-import { createRouterFromConfig } from './engine/route-engine';
+import { apiConfigs } from './configs.generated';
+import { createRouterFromConfig, ApiConfig } from './engine/route-engine';
 
 type Env = { Bindings: { DB: D1Database; JWT_SECRET: string } };
 
@@ -14,22 +14,15 @@ api.use('*', cors());
 // Public routes (no auth required)
 api.route('/auth', auth);
 
-// Auto-register config-driven API routes
-// This runs at module initialization time
-(async () => {
-  try {
-    const apiConfigs = await loadApiConfigs();
+// Auto-register config-driven API routes (synchronous - runs at module load time)
+for (const [resource, config] of Object.entries(apiConfigs)) {
+  // Strip /api prefix from basePath since this router is already mounted at /api
+  const routePath = (config as ApiConfig).basePath.replace(/^\/api/, '') || '/';
+  console.log(`[API] Registering config-driven route: ${routePath} (from ${(config as ApiConfig).basePath})`);
+  const router = createRouterFromConfig(config as ApiConfig);
+  api.route(routePath, router);
+}
 
-    for (const [resource, config] of Object.entries(apiConfigs)) {
-      console.log(`[API] Registering config-driven route: ${config.basePath}`);
-      const router = createRouterFromConfig(config);
-      api.route(config.basePath, router);
-    }
-
-    console.log(`[API] Registered ${Object.keys(apiConfigs).length} config-driven API routes`);
-  } catch (error) {
-    console.error('[API] Error loading config-driven routes:', error);
-  }
-})();
+console.log(`[API] Registered ${Object.keys(apiConfigs).length} config-driven API routes`);
 
 export default api;

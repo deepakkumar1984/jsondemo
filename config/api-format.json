@@ -1,573 +1,123 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "API Configuration Format",
-  "description": "Config-driven API endpoints with support for CRUD operations, workflows, validations, and complex logic",
+  "title": "API Configuration Format (Operation-Based)",
+  "description": "Config-driven API with operation-based architecture supporting typed action blocks",
   "type": "object",
-  "required": ["resource", "basePath"],
+  "required": ["name", "basePath", "operations"],
   "properties": {
-    "resource": {
+    "name": {
       "type": "string",
-      "description": "Resource name (e.g., 'tasks', 'users')"
+      "description": "API name (e.g., 'Projects API', 'Orders API')"
+    },
+    "version": {
+      "type": "string",
+      "description": "API version (e.g., 'v1', 'v2')"
     },
     "basePath": {
       "type": "string",
-      "description": "Base API path (e.g., '/api/tasks')",
+      "description": "Base API path (e.g., '/api/projects')",
       "pattern": "^/api/"
     },
     "description": {
-      "type": "string",
-      "description": "Description of what this API provides"
-    },
-    "table": {
-      "type": "string",
-      "description": "Primary database table for this resource"
+      "type": "string"
     },
     "auth": {
       "type": "object",
-      "description": "Authentication configuration",
       "properties": {
-        "required": {
-          "type": "boolean",
-          "description": "Whether authentication is required (default: true)"
+        "required": { "type": "boolean", "default": true },
+        "type": {
+          "type": "string",
+          "enum": ["ApiKey", "OAuth", "JWT"]
         },
-        "permissions": {
+        "roles": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "Required permissions for access"
+          "items": { "type": "string" }
         }
+      }
+    },
+    "rateLimit": {
+      "type": "object",
+      "properties": {
+        "requestsPerMinute": { "type": "number" }
       }
     },
     "operations": {
-      "type": "object",
-      "description": "Enabled CRUD operations and their configurations",
-      "properties": {
-        "list": { "$ref": "#/definitions/listOperation" },
-        "getById": { "$ref": "#/definitions/getByIdOperation" },
-        "create": { "$ref": "#/definitions/createOperation" },
-        "update": { "$ref": "#/definitions/updateOperation" },
-        "delete": { "$ref": "#/definitions/deleteOperation" },
-        "custom": {
-          "type": "array",
-          "description": "Custom endpoints beyond standard CRUD",
-          "items": { "$ref": "#/definitions/customOperation" }
-        }
-      }
+      "type": "array",
+      "description": "Array of API operations (endpoints)",
+      "items": { "$ref": "#/definitions/operation" }
     }
   },
   "definitions": {
-    "listOperation": {
+    "operation": {
       "type": "object",
+      "required": ["id", "method", "path", "actions"],
       "properties": {
-        "enabled": {
-          "type": "boolean",
-          "description": "Enable this operation (default: true)"
-        },
-        "filters": {
-          "type": "array",
-          "description": "Allowed filter fields",
-          "items": {
-            "type": "object",
-            "required": ["field"],
-            "properties": {
-              "field": { "type": "string" },
-              "operator": {
-                "type": "string",
-                "enum": ["equals", "like", "in", "gt", "gte", "lt", "lte", "between"],
-                "default": "equals"
-              },
-              "queryParam": { "type": "string", "description": "Query parameter name (defaults to field name)" }
-            }
-          }
-        },
-        "search": {
-          "type": "object",
-          "description": "Search configuration",
-          "properties": {
-            "enabled": { "type": "boolean" },
-            "fields": {
-              "type": "array",
-              "items": { "type": "string" },
-              "description": "Fields to search in"
-            }
-          }
-        },
-        "sort": {
-          "type": "object",
-          "properties": {
-            "default": { "type": "string", "description": "Default sort field" },
-            "defaultOrder": {
-              "type": "string",
-              "enum": ["asc", "desc"],
-              "default": "desc"
-            },
-            "allowed": {
-              "type": "array",
-              "items": { "type": "string" },
-              "description": "Fields that can be sorted"
-            }
-          }
-        },
-        "pagination": {
-          "type": "object",
-          "properties": {
-            "enabled": { "type": "boolean", "default": true },
-            "defaultLimit": { "type": "number", "default": 50 },
-            "maxLimit": { "type": "number", "default": 100 }
-          }
-        },
-        "relations": {
-          "type": "array",
-          "description": "Related data to include",
-          "items": { "$ref": "#/definitions/relation" }
-        },
-        "beforeExecute": { "$ref": "#/definitions/workflow" },
-        "afterExecute": { "$ref": "#/definitions/workflow" }
-      }
-    },
-    "getByIdOperation": {
-      "type": "object",
-      "properties": {
-        "enabled": { "type": "boolean" },
-        "idField": { "type": "string", "default": "id" },
-        "relations": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/relation" }
-        },
-        "beforeExecute": { "$ref": "#/definitions/workflow" },
-        "afterExecute": { "$ref": "#/definitions/workflow" }
-      }
-    },
-    "createOperation": {
-      "type": "object",
-      "properties": {
-        "enabled": { "type": "boolean" },
-        "validation": { "$ref": "#/definitions/validation" },
-        "defaults": {
-          "type": "object",
-          "description": "Default values to merge with request body",
-          "additionalProperties": true
-        },
-        "beforeExecute": { "$ref": "#/definitions/workflow" },
-        "afterExecute": { "$ref": "#/definitions/workflow" }
-      }
-    },
-    "updateOperation": {
-      "type": "object",
-      "properties": {
-        "enabled": { "type": "boolean" },
-        "idField": { "type": "string", "default": "id" },
-        "validation": { "$ref": "#/definitions/validation" },
-        "beforeExecute": { "$ref": "#/definitions/workflow" },
-        "afterExecute": { "$ref": "#/definitions/workflow" }
-      }
-    },
-    "deleteOperation": {
-      "type": "object",
-      "properties": {
-        "enabled": { "type": "boolean" },
-        "idField": { "type": "string", "default": "id" },
-        "softDelete": {
-          "type": "object",
-          "description": "Soft delete configuration",
-          "properties": {
-            "enabled": { "type": "boolean" },
-            "field": { "type": "string", "default": "deletedAt" }
-          }
-        },
-        "beforeExecute": { "$ref": "#/definitions/workflow" },
-        "afterExecute": { "$ref": "#/definitions/workflow" }
-      }
-    },
-    "customOperation": {
-      "type": "object",
-      "required": ["path", "method", "workflow"],
-      "properties": {
-        "path": {
+        "id": {
           "type": "string",
-          "description": "Endpoint path relative to basePath (e.g., '/:id/complete')"
+          "description": "Unique operation identifier (e.g., 'createProject', 'listOrders')"
         },
         "method": {
           "type": "string",
           "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"]
         },
-        "description": { "type": "string" },
-        "validation": { "$ref": "#/definitions/validation" },
-        "workflow": { "$ref": "#/definitions/workflow" }
-      }
-    },
-    "relation": {
-      "type": "object",
-      "required": ["name", "table"],
-      "properties": {
-        "name": { "type": "string", "description": "Name to use in response" },
-        "table": { "type": "string", "description": "Related table name" },
-        "foreignKey": { "type": "string", "description": "Foreign key field in main table" },
-        "referencedKey": { "type": "string", "default": "id" },
-        "type": {
+        "path": {
           "type": "string",
-          "enum": ["one", "many"],
-          "description": "Relationship type"
-        }
-      }
-    },
-    "validation": {
-      "type": "object",
-      "properties": {
-        "required": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Required fields"
+          "description": "Operation path relative to basePath (e.g., '/', '/:id')"
         },
-        "fields": {
+        "description": {
+          "type": "string"
+        },
+        "requestSchema": {
           "type": "object",
-          "description": "Per-field validation rules",
-          "additionalProperties": { "$ref": "#/definitions/fieldValidation" }
-        }
-      }
-    },
-    "fieldValidation": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": ["string", "number", "boolean", "email", "url", "uuid", "date"],
-          "description": "Expected data type"
+          "description": "JSON Schema for request body validation"
         },
-        "min": { "type": "number", "description": "Min value/length" },
-        "max": { "type": "number", "description": "Max value/length" },
-        "pattern": { "type": "string", "description": "Regex pattern" },
-        "enum": {
+        "responseSchema": {
+          "type": "object",
+          "description": "JSON Schema for response body"
+        },
+        "actions": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "Allowed values"
+          "description": "Workflow actions to execute",
+          "items": { "$ref": "#/definitions/action" }
         },
-        "custom": {
-          "type": "string",
-          "description": "Custom validation expression"
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "tags": { "type": "array", "items": { "type": "string" } },
+            "version": { "type": "string" },
+            "deprecated": { "type": "boolean" },
+            "sla": { "type": "number" },
+            "auditEnabled": { "type": "boolean" }
+          }
         }
       }
     },
-    "workflow": {
-      "type": "object",
-      "required": ["steps"],
-      "properties": {
-        "steps": {
-          "type": "array",
-          "description": "Sequential workflow steps",
-          "items": { "$ref": "#/definitions/workflowStep" }
-        },
-        "onError": {
-          "type": "string",
-          "enum": ["rollback", "continue", "return_error"],
-          "default": "return_error"
-        }
-      }
-    },
-    "workflowStep": {
+    "action": {
       "type": "object",
       "required": ["type"],
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Step ID for referencing in jumps"
-        },
         "type": {
           "type": "string",
           "enum": [
-            "db_query",
-            "db_transaction",
-            "check_exists",
-            "conditional",
-            "foreach",
-            "while",
-            "set_variable",
-            "transform",
-            "http_request",
             "validate",
-            "return_response",
-            "return_error",
-            "log"
-          ],
-          "description": "Step type"
-        },
-        "db_query": { "$ref": "#/definitions/dbQuery" },
-        "check_exists": { "$ref": "#/definitions/checkExists" },
-        "conditional": { "$ref": "#/definitions/conditional" },
-        "foreach": { "$ref": "#/definitions/foreach" },
-        "while": { "$ref": "#/definitions/while" },
-        "set_variable": { "$ref": "#/definitions/setVariable" },
-        "transform": { "$ref": "#/definitions/transform" },
-        "http_request": { "$ref": "#/definitions/httpRequest" },
-        "validate": { "$ref": "#/definitions/validateStep" },
-        "return_response": { "$ref": "#/definitions/returnResponse" },
-        "return_error": { "$ref": "#/definitions/returnError" },
-        "transaction": { "$ref": "#/definitions/workflow" }
-      }
-    },
-    "dbQuery": {
-      "type": "object",
-      "required": ["action", "table"],
-      "properties": {
-        "action": {
-          "type": "string",
-          "enum": ["select", "insert", "update", "delete", "count"],
-          "description": "Database action"
-        },
-        "table": { "type": "string", "description": "Table name" },
-        "where": {
-          "type": "object",
-          "description": "Where conditions (supports variable interpolation)",
-          "additionalProperties": true
-        },
-        "data": {
-          "type": "object",
-          "description": "Data for insert/update (supports variable interpolation)",
-          "additionalProperties": true
-        },
-        "select": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Columns to select"
-        },
-        "orderBy": {
-          "type": "object",
-          "properties": {
-            "field": { "type": "string" },
-            "order": { "type": "string", "enum": ["asc", "desc"] }
-          }
-        },
-        "limit": { "type": "number" },
-        "storeAs": {
-          "type": "string",
-          "description": "Variable name to store result"
-        }
-      }
-    },
-    "checkExists": {
-      "type": "object",
-      "required": ["table", "where"],
-      "properties": {
-        "table": { "type": "string" },
-        "where": {
-          "type": "object",
-          "additionalProperties": true
-        },
-        "onExists": {
-          "type": "string",
-          "description": "Action when record exists: step_id, 'continue', or 'return_error'"
-        },
-        "onNotExists": {
-          "type": "string",
-          "description": "Action when record doesn't exist"
-        },
-        "error": {
-          "type": "object",
-          "properties": {
-            "code": { "type": "number" },
-            "message": { "type": "string" }
-          }
-        }
-      }
-    },
-    "conditional": {
-      "type": "object",
-      "required": ["condition"],
-      "properties": {
-        "condition": {
-          "oneOf": [
-            { "type": "string", "description": "Expression string (e.g., 'total > 100 AND status == active')" },
-            { "$ref": "#/definitions/conditionObject" }
-          ]
-        },
-        "then": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/workflowStep" }
-        },
-        "elif": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "condition": {
-                "oneOf": [
-                  { "type": "string" },
-                  { "$ref": "#/definitions/conditionObject" }
-                ]
-              },
-              "then": {
-                "type": "array",
-                "items": { "$ref": "#/definitions/workflowStep" }
-              }
-            }
-          }
-        },
-        "else": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/workflowStep" }
-        }
-      }
-    },
-    "conditionObject": {
-      "type": "object",
-      "required": ["field", "operator"],
-      "properties": {
-        "field": { "type": "string", "description": "Field path (e.g., 'body.total', 'user.status')" },
-        "operator": {
-          "type": "string",
-          "enum": ["equals", "not_equals", "greater_than", "less_than", "gte", "lte", "in", "not_in", "contains", "starts_with", "ends_with", "exists_in_db"],
-          "description": "Comparison operator"
-        },
-        "value": {
-          "description": "Value to compare against (supports variable interpolation)",
-          "oneOf": [
-            { "type": "string" },
-            { "type": "number" },
-            { "type": "boolean" },
-            { "type": "array" },
-            { "type": "object" }
+            "transform",
+            "calc",
+            "condition",
+            "loop",
+            "db.query",
+            "db.insert",
+            "db.update",
+            "db.delete",
+            "db.bulkInsert",
+            "http.call",
+            "transaction",
+            "parallel",
+            "response.map",
+            "try"
           ]
         }
-      }
-    },
-    "foreach": {
-      "type": "object",
-      "required": ["items", "as", "steps"],
-      "properties": {
-        "items": {
-          "type": "string",
-          "description": "Variable path to array (e.g., 'body.items')"
-        },
-        "as": {
-          "type": "string",
-          "description": "Variable name for current item"
-        },
-        "steps": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/workflowStep" }
-        },
-        "collectAs": {
-          "type": "string",
-          "description": "Variable name to collect all results"
-        }
-      }
-    },
-    "while": {
-      "type": "object",
-      "required": ["condition", "steps"],
-      "properties": {
-        "condition": {
-          "oneOf": [
-            { "type": "string" },
-            { "$ref": "#/definitions/conditionObject" }
-          ]
-        },
-        "steps": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/workflowStep" }
-        },
-        "maxIterations": {
-          "type": "number",
-          "default": 100,
-          "description": "Safety limit to prevent infinite loops"
-        }
-      }
-    },
-    "setVariable": {
-      "type": "object",
-      "required": ["name", "value"],
-      "properties": {
-        "name": { "type": "string" },
-        "value": {
-          "description": "Value (supports expressions and interpolation)",
-          "oneOf": [
-            { "type": "string" },
-            { "type": "number" },
-            { "type": "boolean" },
-            { "type": "object" },
-            { "type": "array" }
-          ]
-        }
-      }
-    },
-    "transform": {
-      "type": "object",
-      "required": ["input", "output"],
-      "properties": {
-        "input": { "type": "string", "description": "Input variable path" },
-        "output": { "type": "string", "description": "Output variable name" },
-        "operation": {
-          "type": "string",
-          "enum": ["map", "filter", "reduce", "sum", "count", "merge"],
-          "description": "Transformation operation"
-        },
-        "expression": {
-          "type": "string",
-          "description": "Transformation expression"
-        }
-      }
-    },
-    "httpRequest": {
-      "type": "object",
-      "required": ["url", "method"],
-      "properties": {
-        "url": { "type": "string" },
-        "method": { "type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"] },
-        "headers": {
-          "type": "object",
-          "additionalProperties": { "type": "string" }
-        },
-        "body": {
-          "description": "Request body (supports variable interpolation)",
-          "oneOf": [
-            { "type": "object" },
-            { "type": "string" }
-          ]
-        },
-        "storeAs": { "type": "string" }
-      }
-    },
-    "validateStep": {
-      "type": "object",
-      "required": ["data"],
-      "properties": {
-        "data": { "type": "string", "description": "Variable path to validate" },
-        "rules": { "$ref": "#/definitions/validation" },
-        "onError": {
-          "type": "string",
-          "enum": ["return_error", "continue"],
-          "default": "return_error"
-        }
-      }
-    },
-    "returnResponse": {
-      "type": "object",
-      "required": ["data"],
-      "properties": {
-        "data": {
-          "description": "Data to return (variable path or literal)",
-          "oneOf": [
-            { "type": "string" },
-            { "type": "object" }
-          ]
-        },
-        "status": {
-          "type": "number",
-          "default": 200
-        },
-        "wrap": {
-          "type": "boolean",
-          "default": true,
-          "description": "Wrap in {success: true, data: ...}"
-        }
-      }
-    },
-    "returnError": {
-      "type": "object",
-      "required": ["message"],
-      "properties": {
-        "message": { "type": "string" },
-        "code": { "type": "number", "default": 400 }
-      }
+      },
+      "additionalProperties": true
     }
   }
 }

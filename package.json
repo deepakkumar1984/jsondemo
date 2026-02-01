@@ -4,23 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "npm run build:api-index && wrangler dev",
-    "build": "npm run build:api-index && vite build && wrangler deploy --dry-run",
+    "dev": "npm run build:api-index && wrangler dev  --ip 0.0.0.0 --port ${PORT:-8001}",
+    "build": "npm run validate:all && npm run build:api-index && vite build && wrangler deploy --dry-run",
     "build:client": "vite build",
     "build:api-index": "tsx scripts/build-api-index.ts",
     "deploy": "npm run build:api-index && vite build && wrangler deploy",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "wrangler d1 migrations apply hrm-db --local",
-    "db:seed": "wrangler d1 execute hrm-db --local --file=src/db/seed.sql",
-    "db:setup": "npm run db:migrate && npm run db:seed",
-    "schema:export": "tsx scripts/schema/exporter.ts",
-    "schema:generate": "tsx scripts/schema/generator.ts",
-    "schema:diff": "tsx scripts/schema/differ.ts",
-    "schema:init": "npm run schema:export && npm run schema:generate",
+    "db:migrate": "tsx scripts/schema/migrate-to-data-api.ts",
+    "db:migrate:fresh": "tsx scripts/schema/migrate-to-data-api.ts --drop",
     "validate:config": "tsx scripts/validate-config.ts",
     "validate:all": "tsx scripts/validate-config.ts --all",
-    "ai:dev": "wrangler dev workers/ai-config-generator.ts --port 8787 --config wrangler.ai.toml",
-    "generate": "tsx scripts/generate-config.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -41,7 +33,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "drizzle-orm": "^0.45.1",
     "hono": "^4.11.6",
     "lucide-react": "^0.563.0",
     "react": "^19.2.4",
@@ -53,17 +44,16 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260127.0",
+    "@cloudflare/workers-types": "^4.20260128.0",
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "^10.4.23",
-    "drizzle-kit": "^0.31.8",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
-    "wrangler": "^4.60.0"
+    "wrangler": "^4.61.0"
   }
 }

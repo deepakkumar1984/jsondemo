@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
@@ -7,35 +7,42 @@ import { Button } from '../components/ui/button';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { useAppConfig } from '../lib/app-config';
 
-export default function LoginPage() {
+export default function SignupPage() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
   const { app } = useAppConfig();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Client-side validation
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
     setLoading(true);
     try {
-      await login(email, password);
+      await register(name, email, password);
       navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      setError(err.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
   };
-
-  // Pre-fill demo credentials from config
-  useEffect(() => {
-    if (app?.demoCredentials) {
-      setEmail(app.demoCredentials.email);
-    }
-  }, [app]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/50">
@@ -44,7 +51,7 @@ export default function LoginPage() {
           <CardTitle className="text-2xl">
             {app?.name || 'System'}
           </CardTitle>
-          <CardDescription>Sign in to your account</CardDescription>
+          <CardDescription>Create your account</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -54,45 +61,58 @@ export default function LoginPage() {
               </Alert>
             )}
             <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="name">Full Name</label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="John Doe"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="email">Email</label>
               <Input
                 id="email"
                 type="email"
-                placeholder={app?.demoCredentials?.email || 'email@example.com'}
+                placeholder="email@example.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
               />
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium" htmlFor="password">Password</label>
-                <Link to="/forgot-password" className="text-sm text-primary hover:underline">
-                  Forgot password?
-                </Link>
-              </div>
+              <label className="text-sm font-medium" htmlFor="password">Password</label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="At least 6 characters"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
+                required
+                minLength={6}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="confirmPassword">Confirm Password</label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="Confirm your password"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
                 required
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Creating account...' : 'Create Account'}
             </Button>
           </form>
-          {app?.demoCredentials && (
-            <div className="mt-4 text-center text-sm text-muted-foreground">
-              Demo: {app.demoCredentials.email} / {app.demoCredentials.password}
-            </div>
-          )}
           <div className="mt-4 text-center text-sm text-muted-foreground">
-            Don't have an account?{' '}
-            <Link to="/signup" className="text-primary hover:underline">
-              Sign up
+            Already have an account?{' '}
+            <Link to="/login" className="text-primary hover:underline">
+              Sign in
             </Link>
           </div>
         </CardContent>

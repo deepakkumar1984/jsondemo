@@ -1,0 +1,104 @@
+{
+  "table": "projects",
+  "description": "Project tracking with budgets and timelines",
+  "columns": [
+    {
+      "name": "id",
+      "type": "text",
+      "primaryKey": true,
+      "defaultFn": "uuid",
+      "description": "Unique project identifier"
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "notNull": true,
+      "description": "Project name"
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "description": "Detailed project description"
+    },
+    {
+      "name": "client_name",
+      "type": "text",
+      "description": "Client or customer name"
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "enum": ["planning", "active", "on-hold", "completed", "cancelled"],
+      "notNull": true,
+      "default": "planning",
+      "description": "Current project status"
+    },
+    {
+      "name": "priority",
+      "type": "text",
+      "enum": ["low", "medium", "high", "urgent"],
+      "notNull": true,
+      "default": "medium",
+      "description": "Project priority level"
+    },
+    {
+      "name": "budget_hours",
+      "type": "numeric",
+      "notNull": true,
+      "description": "Total allocated hours for the project"
+    },
+    {
+      "name": "hourly_rate",
+      "type": "numeric",
+      "notNull": true,
+      "description": "Billing rate per hour"
+    },
+    {
+      "name": "total_budget",
+      "type": "numeric",
+      "description": "Total project budget (budgetHours × hourlyRate)"
+    },
+    {
+      "name": "deadline",
+      "type": "text",
+      "description": "Project deadline"
+    },
+    {
+      "name": "started_at",
+      "type": "text",
+      "description": "When project actually started"
+    },
+    {
+      "name": "completed_at",
+      "type": "text",
+      "description": "When project was completed"
+    },
+    {
+      "name": "created_at",
+      "type": "text",
+      "default": "CURRENT_TIMESTAMP",
+      "notNull": true
+    },
+    {
+      "name": "updated_at",
+      "type": "text",
+      "default": "CURRENT_TIMESTAMP",
+      "notNull": true
+    },
+    {
+      "name": "deleted_at",
+      "type": "text",
+      "description": "Soft delete timestamp"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_projects_status",
+      "columns": ["status"]
+    },
+    {
+      "name": "idx_projects_deadline",
+      "columns": ["deadline"]
+    }
+  ]
+}

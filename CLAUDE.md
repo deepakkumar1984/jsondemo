@@ -4,110 +4,247 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **100% config-driven application framework** built on Cloudflare Workers, D1 database, and React. The core principle: **everything is controlled by JSON configs - zero hardcoded routes, schemas, or pages**. Users describe what they want in natural language, AI generates the configs, and the app adapts automatically.
+A JSON-driven full-stack application platform that generates APIs and UIs from declarative JSON configurations. The system supports operation-based APIs with workflow orchestration, data-driven UI rendering, and schema-driven database operations.
 
-## Critical Architecture Principles
+**Core Innovation:** Configuration-as-code approach where APIs, pages, and data schemas are defined in JSON files, then executed by engine components at runtime.
 
-### 1. Config-Driven Everything
+## Tech Stack
 
-**NEVER hardcode table names, routes, or component references.** The system uses dynamic discovery:
+**Backend:** Cloudflare Workers, Hono, Blazorly Data API Client
+**Frontend:** React 19, Vite 7, TypeScript, React Router 7, TailwindCSS 3, Radix UI
+**Data Layer:** Blazorly Data Service (external API), JSON schema definitions
 
-- **Database Schema**: JSON configs in `config/schema/` → TypeScript via `npm run schema:generate` → `src/db/schema.ts`
-- **API Endpoints**: JSON configs in `config/api/` → Auto-discovered at runtime → Executed by workflow engine (no code generation)
-- **UI Pages**: JSON configs in `config/pages/` → Bundled by Vite → Lazy-loaded at runtime
-- **Navigation**: JSON config in `config/apps.json` → Rendered dynamically
+## Development Commands
 
-### 2. Dual Build System
+```bash
+# Development
+npm run dev                    # Start Cloudflare Workers dev server (port 8001 by default)
+npm run build                  # Build client + validate configs + generate API index
+npm run build:client           # Build React frontend only
+npm run build:api-index        # Generate API config index from config/api/*.json
 
-This project has TWO separate build pipelines that must stay in sync:
+# Database Operations
+npm run db:migrate             # Run schema migration to Data API
+npm run db:migrate:fresh       # Drop and recreate all tables
 
-**Client (Vite):**
-- Entry: `src/client/index.html`
-- Output: `dist/client/`
-- Bundles: React app + page configs (JSON → JavaScript)
-- Command: `npm run build:client`
+# Validation & Type Checking
+npm run validate:config        # Validate single config file
+npm run validate:all           # Validate all configs + cross-references
+npm run typecheck              # TypeScript type checking
 
-**Worker (esbuild via Wrangler):**
-- Entry: `src/worker.ts`
-- Output: `.wrangler/` (ephemeral)
-- Bundles: Hono API + Cloudflare Worker runtime
-- Command: `wrangler dev` or `wrangler deploy`
+# Deployment
+npm run deploy                 # Build and deploy to Cloudflare Workers
+```
 
-**IMPORTANT:**
-- Client config changes require `npm run build:client`
-- API config changes require restarting `npm run dev` (build-api-index runs automatically)
-- Schema changes require `npm run schema:generate` then `npm run db:generate`
+## Project Structure
 
-### 3. Dynamic Schema Registry
+```
+jsondemo/
+├── config/                    # Declarative configurations (the heart of the system)
+│   ├── api/                  # API operation configs (projects.json, etc.)
+│   ├── pages/                # Page UI configs (dashboard.json, etc.)
+│   ├── schema/               # Database schema definitions (projects.json, users.json, etc.)
+│   ├── apps.json             # App navigation and routing
+│   ├── api-format.json       # JSON Schema for API configs
+│   ├── page-format.json      # JSON Schema for page configs
+│   └── schema-format.json    # JSON Schema for schema definitions
+├── src/
+│   ├── api/                  # Backend API layer
+│   │   ├── engine/           # Core engines (route, action, schema)
+│   │   ├── middleware/       # Auth, validation middleware
+│   │   ├── routes/           # Manual routes (auth.ts)
+│   │   ├── index.ts          # Main API router
+│   │   └── configs.generated.ts  # Auto-generated API config imports
+│   ├── client/               # React frontend
+│   │   ├── layouts/          # PageRenderer - renders JSON configs
+│   │   ├── pages/            # Static pages (login, signup)
+│   │   ├── components/ui/    # Reusable UI components
+│   │   └── lib/              # API client, auth context
+│   ├── db/                   # Data layer
+│   │   ├── BlazorlyDataServiceClient.ts  # Data API client
+│   │   └── data-client.ts    # Factory for client instances
+│   └── worker.ts             # Cloudflare Worker entry point
+├── scripts/                   # Build and validation scripts
+│   ├── build-api-index.ts    # Generates configs.generated.ts
+│   ├── validate-config.ts    # Schema validation + cross-reference checking
+│   └── schema/               # Schema migration scripts
+└── wrangler.toml             # Cloudflare Workers configuration
+```
 
-The schema registry (`src/api/engine/schema-registry.ts`) **automatically discovers all tables** from `src/db/schema.ts`. When you add a new table:
+## Core Architecture Patterns
 
+### 1. Config-Driven API Engine
+
+**How it works:**
+- API endpoints are defined in `config/api/*.json` files using operation-based format
+- Each operation specifies: method, path, request/response schemas, and **actions** (workflow)
+- `scripts/build-api-index.ts` generates static imports at build time (Cloudflare Workers don't support dynamic imports)
+- `RouteEngine` reads configs and dynamically creates Hono routes at runtime
+- `ActionEngine` executes the workflow defined in the `actions` array
+
+**Example flow:**
+```
+config/api/projects.json → build-api-index.ts → configs.generated.ts →
+RouteEngine.createRouterFromConfig() → Hono route at /api/projects
+```
+
+**Key files:**
+- `src/api/engine/route-engine.ts` - Converts API configs to Hono routes
+- `src/api/engine/action-engine.ts` - Executes action workflows (db.query, transform, condition, etc.)
+- `src/api/index.ts` - Auto-registers all API configs as routes
+
+### 2. Action-Based Workflow Engine
+
+**No static CRUD operations** - everything goes through the action workflow system.
+
+**Available action types:**
+- **Validation:** `validate` (required, email, min/max, etc.)
+- **Transformation:** `transform` (set variables, interpolate templates)
+- **Business Logic:** `calc` (sum, expressions), `condition` (if/then/else), `loop` (iterate arrays)
+- **Data Access:** `db.query`, `db.insert`, `db.update`, `db.delete`, `db.bulkInsert`
+- **Integration:** `http.call` (external API calls)
+- **Flow Control:** `transaction`, `parallel`
+- **Response Mapping:** `response.map`, `transform.array`
+- **Error Handling:** `try/catch`
+
+**Special features:**
+- Template interpolation: `"{{body.fieldName}}"` resolves from context
+- Special functions: `uuid()`, `now()`, `sum(array, field)`
+- Nested context: `body`, `params`, `query`, `user`, runtime variables
+
+**Example workflow:**
+```json
+{
+  "actions": [
+    { "type": "validate", "rules": [{"field": "body.name", "rule": "required"}] },
+    { "type": "transform", "set": { "body.id": "uuid()", "body.createdAt": "now()" } },
+    { "type": "db.insert", "table": "projects", "map": "{{body}}", "returning": "projectId" },
+    { "type": "response.map", "fields": { "id": "{{projectId}}", "message": "Project created" } }
+  ]
+}
+```
+
+### 3. JSON Schema-Driven UI Rendering
+
+**How it works:**
+- Pages are defined in `config/pages/*.json` using component hierarchies
+- `PageRenderer` (src/client/layouts/page-renderer.tsx) reads configs and renders React components
+- Supports declarative data binding with `dataPath`, `valuePath`, template expressions
+- Components are registered in PageRenderer's switch statement
+
+**Data flow:**
+```
+Page config → dataSources (API URLs) → PageRenderer fetches data →
+DataContext provides data to components → Components resolve paths (e.g., dataPath="projects")
+```
+
+**Component types:**
+- Layout: `PageHeader`, `Card`, `Grid`, `Stack`, `Tabs`, `TabPanel`
+- Data: `DataTable`, `StatCard`, `Badge`, `DetailRow`, `DetailSection`
+- Forms: `Form`, `TextField`, `TextArea`, `SelectField`, `DateField`, `Button`
+- Actions: `navigate`, `submit_form`, `delete_confirm`, `api_call`
+
+**Key patterns:**
+- `dataPath`: Points to data source (e.g., "projects" fetches from dataSources.projects)
+- `valuePath`: Nested path within data (e.g., "employee.firstName")
+- `template`: Mustache-style templates (e.g., "{{firstName}} {{lastName}}")
+- `action`: Declarative actions triggered by buttons, forms, rows
+
+### 4. Blazorly Data API Integration
+
+**Abstraction layer over external data service:**
+- `BlazorlyDataServiceClient` provides CRUD operations with typed responses
+- `data-client.ts` factory creates clients from environment bindings
+- Filter syntax: `{ field: { _eq: value } }`, `{ _gt, _lt, _in, _null, etc. }`
+- Pagination: `limit`, `offset` in QueryParams
+
+**Environment variables (wrangler.toml):**
+```toml
+DATA_API_URL = "http://localhost:8789"
+DATA_API_KEY = "blz_..."
+DATA_TENANT_ID = "uuid"
+DATA_DATABASE = "bdk_prod"
+```
+
+**Usage in actions:**
 ```typescript
-// ✅ CORRECT: Dynamic discovery
-export const schemaRegistry: Record<string, any> = {};
-for (const [key, value] of Object.entries(schema)) {
-  if (value && typeof value === 'object' && '_' in value) {
-    schemaRegistry[key] = value;
-  }
-}
-
-// ❌ WRONG: Hardcoded references
-export const schemaRegistry = {
-  users: schema.users,
-  tasks: schema.tasks,
-  // Don't do this!
-};
+// ActionEngine automatically creates client from context.env
+const result = await this.client.getItems('projects', { filter: { status: { _eq: 'active' } } });
 ```
 
-Same pattern applies to `src/api/engine/schema-loader.ts` and custom handlers.
+### 5. Config Validation System
 
-### 4. Config-Driven API Workflow Engine
+**Three layers of validation:**
 
-APIs are **100% config-driven** with NO code generation. The workflow engine (`src/api/engine/workflow-engine.ts`) interprets JSON configs at runtime, supporting:
+1. **JSON Schema validation** (`scripts/validate-config.ts`)
+   - Validates structure against format files (api-format.json, page-format.json, etc.)
+   - Checks required fields, types, enums, patterns
 
-**Simple CRUD Operations:**
-```json
-{
-  "resource": "tasks",
-  "basePath": "/api/tasks",
-  "table": "tasks",
-  "operations": {
-    "list": {"enabled": true},
-    "getById": {"enabled": true},
-    "create": {"enabled": true},
-    "update": {"enabled": true},
-    "delete": {"enabled": true}
-  }
-}
+2. **Cross-reference validation**
+   - APIs → Schemas: Ensures referenced tables exist
+   - Pages → APIs: Ensures dataSources reference valid API endpoints
+   - Apps → Pages: Ensures navigation/routes reference valid pages
+
+3. **Runtime validation**
+   - ActionEngine validates request schemas before execution
+   - Type coercion for numbers, booleans in route-engine.ts
+
+**Run validation:**
+```bash
+npm run validate:all           # Full validation with cross-references
+tsx scripts/validate-config.ts config/api/projects.json  # Single file
 ```
 
-**Complex Workflows** (conditionals, loops, validations, multi-step operations):
+## Common Workflows
+
+### Adding a New API Endpoint
+
+1. **Create API config:** `config/api/my-resource.json`
 ```json
 {
-  "custom": [
+  "resource": "my-resource",
+  "name": "My Resource API",
+  "basePath": "/api/my-resource",
+  "operations": [
     {
-      "path": "/:id/complete",
-      "method": "POST",
-      "workflow": {
-        "steps": [
-          {
-            "type": "check_exists",
-            "check_exists": {
-              "table": "tasks",
-              "where": {"id": "{{params.id}}"},
-              "onNotExists": "return_error",
-              "error": {"message": "Task not found", "code": 404}
-            }
-          },
-          {
-            "type": "db_query",
-            "db_query": {
-              "action": "update",
-              "table": "tasks",
-              "where": {"id": "{{params.id}}"},
-              "data": {"status": "completed"}
-            }
-          }
+      "id": "listItems",
+      "method": "GET",
+      "path": "/",
+      "actions": [
+        { "type": "db.query", "table": "my_table", "into": "items" },
+        { "type": "response.map", "fields": { "items": "{{items}}" } }
+      ]
+    }
+  ]
+}
+```
+
+2. **Rebuild API index:** `npm run build:api-index`
+   - This regenerates `src/api/configs.generated.ts`
+   - API is automatically registered in `src/api/index.ts` on next dev server restart
+
+3. **Validate:** `npm run validate:config config/api/my-resource.json`
+
+### Adding a New Page
+
+1. **Create page config:** `config/pages/my-page.json`
+```json
+{
+  "dataSources": {
+    "items": { "url": "/api/my-resource" }
+  },
+  "children": [
+    {
+      "type": "PageHeader",
+      "props": { "title": "My Page" }
+    },
+    {
+      "type": "DataTable",
+      "props": {
+        "dataPath": "items",
+        "columns": [
+          { "key": "name", "header": "Name" },
+          { "key": "status", "header": "Status" }
         ]
       }
     }
@@ -115,174 +252,141 @@ APIs are **100% config-driven** with NO code generation. The workflow engine (`s
 }
 ```
 
-**Supported Workflow Steps:**
-- `db_query` - Database operations (select, insert, update, delete, count)
-- `check_exists` - Validate record existence
-- `conditional` - If-then-else logic with expressions
-- `foreach` / `while` - Loops for batch operations
-- `set_variable` / `transform` - Data manipulation
-- `http_request` - External API calls
-- `validate` - Input validation
-- `return_response` / `return_error` - Early returns
-
-**See `docs/config-driven-api-guide.md` for comprehensive documentation and examples.**
-
-## Development Workflow
-
-### Starting Development
-
-```bash
-npm run dev              # Starts both client dev server (Vite proxy) and Worker
+2. **Add route to apps.json:**
+```json
+{
+  "apps": [{
+    "routes": [
+      { "path": "/my-page", "page": "my-page" }
+    ],
+    "navigation": {
+      "categories": [{
+        "items": [
+          { "title": "My Page", "path": "/my-page", "page": "my-page" }
+        ]
+      }]
+    }
+  }]
+}
 ```
 
-This runs `scripts/build-api-index.ts` automatically before starting Wrangler, ensuring API configs are bundled.
+3. **Validate:** `npm run validate:all`
 
-### Adding New Features
+### Migrating Database Schema
 
-**New Database Table:**
-```bash
-# 1. Create config/schema/new-table.json (see config/schema-format.json)
-# 2. Generate TypeScript schema
-npm run schema:generate
-# 3. Generate migration
-npm run db:generate
-# 4. Apply migration
-npm run db:migrate
+1. **Define schema:** `config/schema/my_table.json`
+```json
+{
+  "table": "my_table",
+  "columns": [
+    { "name": "id", "type": "text", "primaryKey": true, "defaultFn": "uuid" },
+    { "name": "name", "type": "text", "notNull": true }
+  ]
+}
 ```
 
-**New API Endpoint:**
-```bash
-# 1. Create config/api/new-resource.json (see config/api-format.json)
-# 2. Restart dev server to discover new config
-npm run dev
+2. **Run migration:** `npm run db:migrate`
+   - Creates/updates table in Blazorly Data Service
+   - For fresh start: `npm run db:migrate:fresh` (drops all tables)
 
-# Note: No code generation! Config is interpreted at runtime by workflow engine
+## Important Implementation Rules
+
+### When Writing API Configs
+
+1. **Always use actions array** - Never assume CRUD endpoints exist
+2. **Match schema field names exactly** - DB columns must match `body.fieldName` in transforms
+3. **Use template syntax for dynamic values:** `"{{body.fieldName}}"` not `body.fieldName`
+4. **Return responses with response.map** - Last action should map final response structure
+5. **Validate before database operations** - Use `validate` action first in workflow
+
+### When Writing Page Configs
+
+1. **dataPath must match dataSources key** - If dataSource is "projects", use `dataPath: "projects"`
+2. **Strip /api from URLs in dataSources** - Use `"/projects"` not `"/api/projects"` (api.ts client adds /api)
+3. **Use consistent page naming** - Match file path structure (e.g., `config/pages/dashboard.json` → `page: "dashboard"`)
+4. **Required form fields need validation** - PageRenderer validates based on `required: true` prop
+
+### When Writing Actions
+
+1. **db.query with limit: 1** returns single object, not array
+2. **Template interpolation** happens in ActionEngine via `interpolateString()` and `interpolateObject()`
+3. **Context variables persist** across actions in same workflow (e.g., `into: "variable"` makes it available to later actions)
+4. **Special functions** are case-sensitive: `uuid()`, `now()`, `sum(array, field)`
+
+## Error Handling Philosophy
+
+**Critical requirement from global CLAUDE.md:** NEVER hide errors or pretend operations succeeded when they failed.
+
+- ActionEngine returns `{ success: false, error: { message, status } }` on failure
+- RouteEngine propagates errors to HTTP responses (400, 404, 500)
+- PageRenderer shows error states in DataTable skeleton/empty states
+- FormRenderer displays inline validation errors
+
+**Example of correct error handling:**
+```typescript
+// GOOD - Propagates failure
+const result = await this.executeDbInsert(action);
+if (!result.success) {
+  return result; // Contains error
+}
+
+// BAD - Hides failure
+try {
+  await this.executeDbInsert(action);
+} catch {
+  console.log('Failed but continuing');
+}
+return { success: true }; // WRONG - operation failed!
 ```
 
-**New UI Page:**
-```bash
-# 1. Create config/pages/entity/page-name.json (see config/page-format.json)
-# 2. Rebuild client
-npm run build:client
-# 3. Add route to config/apps.json navigation
-```
+## Environment Configuration
 
-### Using AI to Generate Configs
+**Required environment variables (wrangler.toml or .dev.vars):**
+- `JWT_SECRET` - For authentication tokens
+- `DATA_API_URL` - Blazorly Data Service endpoint
+- `DATA_API_KEY` - API authentication key
+- `DATA_TENANT_ID` - Tenant identifier
+- `DATA_DATABASE` - Database name
 
-```bash
-# 1. Start AI worker (separate from main app)
-npm run ai:dev
+**Development vs Production:**
+- Dev: Uses `wrangler dev` with local vars from wrangler.toml
+- Prod: Override with `wrangler secret put <KEY>` for sensitive values
 
-# 2. Use CLI tool to generate configs
-npm run generate
-
-# Follow prompts - describe what you want in natural language
-# AI generates: schema → API → pages → apps navigation
-```
-
-The AI worker uses Cloudflare Workers AI (`@cf/openai/gpt-oss-120b` model) to convert natural language descriptions into properly formatted JSON configs.
-
-## Database Management
+## Key Debugging Commands
 
 ```bash
-npm run db:generate    # Create migration from schema changes
-npm run db:migrate     # Apply migrations to local D1 database
-npm run db:seed        # Run seed.sql (if exists)
-npm run db:setup       # migrate + seed
+# Check if API configs are registered
+npm run build:api-index && grep "export const apiConfigs" src/api/configs.generated.ts
+
+# Validate specific config file
+tsx scripts/validate-config.ts config/api/projects.json
+
+# Check cross-references (APIs→Schemas, Pages→APIs, Apps→Pages)
+npm run validate:all
+
+# Type check without building
+npm run typecheck
+
+# See all available API routes
+# Start dev server and check console logs for "Registering config-driven route:" messages
 ```
-
-**Local D1 database:** `.wrangler/state/v3/d1/`
-
-To reset database completely:
-```bash
-rm -rf .wrangler/state/v3/d1/
-npm run db:migrate
-```
-
-## Config Formats Reference
-
-All configs have corresponding `-format.json` files in `config/` that define their schemas:
-
-- `config/schema-format.json` - Database table definitions
-- `config/api-format.json` - REST API endpoint configs
-- `config/page-format.json` - UI page layouts
-- `config/apps-format.json` - App-level settings (navigation, theme, branding)
-- `config/requirements-format.json` - Natural language requirements for AI
-
-See `docs/configuration-guide.md` and `docs/schema-config-guide.md` for detailed format specifications.
-
-## Key Files & Their Roles
-
-### Config Discovery & Loading
-
-- `src/api/config-loader.ts` - Auto-discovers API configs from `config/api/` at runtime
-- `src/client/lib/config-loader.tsx` - Loads page configs via Vite's `import.meta.glob`
-
-### Schema Generation
-
-- `scripts/schema/generator.ts` - Converts JSON configs → Drizzle TypeScript
-- `scripts/schema/exporter.ts` - Exports existing Drizzle schema → JSON
-- `scripts/schema/differ.ts` - Compares schemas to detect drift
-
-### Dynamic Engines
-
-- `src/api/engine/route-engine.ts` - Config-driven API router (CRUD + custom workflows)
-- `src/api/engine/workflow-engine.ts` - Executes multi-step workflows (conditionals, loops, validations)
-- `src/api/engine/expression-evaluator.ts` - Safe evaluation of conditions and expressions
-- `src/api/engine/schema-registry.ts` - Dynamically discovers all tables
-- `src/api/config-loader.ts` - Loads and discovers API configs from `config/api/`
-- `src/client/layouts/page-renderer.tsx` - Renders any page config dynamically
-
-### Build Artifacts (Auto-generated)
-
-- `src/db/schema.ts` - Drizzle schema (regenerated by `schema:generate`)
-- `src/db/migrations/` - Drizzle migrations
-- `dist/client/` - Vite build output
-
-Note: API configs are **NOT** code-generated. They are interpreted at runtime by the workflow engine.
-
-## Common Pitfalls
-
-1. **Don't hardcode table/resource names** - Use dynamic discovery patterns
-2. **Client changes need rebuild** - Page config changes won't show until `npm run build:client`
-3. **Page dataSources format** - Must be `{ "items": { "url": "/api/tasks" } }` not `{ "items": "/api/tasks" }`
-4. **Schema changes require 3 steps** - generate → db:generate → db:migrate
-5. **Two separate servers** - Main app (port 8787) and AI worker (port 8787, separate process)
 
 ## Testing Changes
 
-After making config changes:
+1. **After modifying API configs:** Run `npm run build:api-index` then restart dev server
+2. **After modifying page configs:** No rebuild needed, just refresh browser
+3. **After modifying schemas:** Run `npm run db:migrate` to sync changes
+4. **Before committing:** Run `npm run validate:all` to catch config errors
 
-1. **Schema changes:**
-   ```bash
-   npm run schema:generate && npm run db:generate && npm run db:migrate
-   ```
+## Common Pitfalls
 
-2. **API changes:**
-   ```bash
-   # Just restart dev server - configs are discovered at runtime
-   npm run dev
-   ```
+1. **Dynamic imports don't work** - Always use `build-api-index.ts` to generate static imports for Cloudflare Workers
+2. **API path confusion** - RouteEngine strips `/api` prefix from basePath since router is already mounted at `/api`
+3. **Data binding case sensitivity** - `dataPath: "Projects"` won't match `dataSources.projects`
+4. **Missing config rebuild** - Changes to API configs require running `build:api-index` and restarting server
+5. **Type coercion edge cases** - Query params and form data arrive as strings, ActionEngine coerces based on requestSchema
+6. **Empty string select values** - FormRenderer maps empty string to `__EMPTY__` to avoid Radix UI issues
 
-3. **Page/UI changes:**
-   ```bash
-   npm run build:client
-   # Then hard refresh browser (Ctrl+Shift+R)
-   ```
+## Reference Architecture
 
-## Deployment
-
-```bash
-npm run deploy    # Builds client, generates API index, deploys to Cloudflare
-```
-
-This runs: `build-api-index → vite build → wrangler deploy`
-
-## Validation
-
-```bash
-npm run validate:config      # Validate single config file
-npm run validate:all         # Validate all configs in config/
-```
-
-Uses JSON Schema validation against format files.
+This project follows patterns from VibeSDK located at `/home/ubuntu/work/blazorly_vibe/vibesdk/` (see PROJECT_TRACKER_README.md for relationship to broader Blazorly platform).

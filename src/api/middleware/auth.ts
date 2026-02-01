@@ -5,8 +5,9 @@ import { getCookie, setCookie } from 'hono/cookie';
 interface JWTPayload {
   sub: string;
   email: string;
-  name: string;
-  role: string;
+  name?: string;
+  role?: string;
+  purpose?: string; // For special tokens like password-reset
   exp: number;
   iat: number;
 }
@@ -98,7 +99,7 @@ export async function authMiddleware(c: Context, next: Next) {
 export function requireRole(...roles: string[]) {
   return async (c: Context, next: Next) => {
     const user = c.get('user') as JWTPayload;
-    if (!user || !roles.includes(user.role)) {
+    if (!user || !user.role || !roles.includes(user.role)) {
       return c.json({ success: false, error: 'Insufficient permissions' }, 403);
     }
     await next();

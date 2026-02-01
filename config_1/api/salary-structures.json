@@ -1,0 +1,71 @@
+{
+  "resource": "salaryStructures",
+  "basePath": "/api/salary-structures",
+  "description": "Salary structure management API",
+  "table": "salaryStructures",
+  "auth": {
+    "required": true
+  },
+  "operations": {
+    "list": {
+      "enabled": true,
+      "filters": [
+        {
+          "field": "active",
+          "operator": "equals",
+          "queryParam": "active"
+        }
+      ],
+      "sort": {
+        "default": "createdAt",
+        "defaultOrder": "desc",
+        "allowed": ["createdAt", "name"]
+      },
+      "pagination": {
+        "enabled": true,
+        "defaultLimit": 50,
+        "maxLimit": 100
+      }
+    },
+    "getById": {
+      "enabled": true,
+      "idField": "id"
+    },
+    "create": {
+      "enabled": true,
+      "validation": {
+        "required": ["name"],
+        "fields": {
+          "name": {
+            "type": "string",
+            "min": 3,
+            "max": 255
+          }
+        }
+      },
+      "defaults": {
+        "active": true
+      }
+    },
+    "update": {
+      "enabled": true,
+      "idField": "id",
+      "validation": {
+        "fields": {
+          "name": {
+            "type": "string",
+            "min": 3,
+            "max": 255
+          }
+        }
+      }
+    },
+    "delete": {
+      "enabled": true,
+      "idField": "id",
+      "softDelete": {
+        "enabled": false
+      }
+    }
+  }
+}

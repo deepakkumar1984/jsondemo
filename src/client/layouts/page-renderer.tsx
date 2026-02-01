@@ -72,10 +72,20 @@ function useActionHandler(refreshData: () => void) {
         let url = stripApiPrefix(action.url as string);
         if (params.id) url = url.replace(':id', params.id);
         try {
-          await api.request(url, { method: action.method || 'POST', body: formValues });
+          const response = await api.request(url, { method: action.method || 'POST', body: formValues });
           let redirectTo = action.redirectTo as string;
           if (redirectTo) {
+            // Replace :id with params
             if (params.id) redirectTo = redirectTo.replace(':id', params.id);
+
+            // Interpolate {{response.data.*}} templates
+            if (redirectTo.includes('{{')) {
+              redirectTo = redirectTo.replace(/\{\{response\.data\.(\w+)\}\}/g, (_, field) => {
+                const value = response?.data?.[field];
+                return value != null ? String(value) : '';
+              });
+            }
+
             navigate(redirectTo);
           }
         } catch (err: any) {
@@ -94,6 +104,62 @@ function useActionHandler(refreshData: () => void) {
           else refreshData();
         } catch (err: any) {
           alert(err.message || 'Delete failed');
+        }
+        break;
+      }
+      case 'update': {
+        let url = stripApiPrefix(action.url as string);
+        // Replace :id with actual param if present in URL
+        // Note: For row actions, :id is already replaced in RenderComponent before calling onAction
+        // But for page actions, we might need to replace from params
+        if (params.id && url.includes(':id')) {
+          url = url.replace(':id', params.id);
+        }
+        
+        try {
+          await api.request(url, { 
+            method: action.method || 'PUT', 
+            body: action.data || action.body 
+          });
+          if (action.redirectTo) navigate(action.redirectTo);
+          else refreshData();
+        } catch (err: any) {
+          alert(err.message || 'Update failed');
+        }
+        break;
+      }
+      case 'batch_delete': {
+        const selectedIds = formValues?.selectedIds || [];
+        if (selectedIds.length === 0) return;
+        
+        const msg = action.confirmMessage || `Are you sure you want to delete ${selectedIds.length} items?`;
+        if (!window.confirm(msg)) return;
+
+        let url = stripApiPrefix(action.url as string);
+        try {
+          await api.request(url, { 
+            method: action.method || 'DELETE',
+            body: { ids: selectedIds }
+          });
+          refreshData();
+        } catch (err: any) {
+          alert(err.message || 'Batch delete failed');
+        }
+        break;
+      }
+      case 'batch_update': {
+        const selectedIds = formValues?.selectedIds || [];
+        if (selectedIds.length === 0) return;
+        
+        let url = stripApiPrefix(action.url as string);
+        try {
+          await api.request(url, { 
+            method: action.method || 'PATCH', 
+            body: { ids: selectedIds, data: action.data }
+          });
+          refreshData();
+        } catch (err: any) {
+          alert(err.message || 'Batch update failed');
         }
         break;
       }
@@ -130,10 +196,11 @@ import { Alert, AlertTitle, AlertDescription } from '../components/ui/alert';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '../components/ui/select';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../components/ui/dropdown-menu';
 import { SearchInput } from '../components/ui/search';
 import { StatCard } from '../components/ui/stat-card';
 import { Pagination } from '../components/ui/pagination';
-import { Plus, Edit, Trash2, ArrowLeft, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, ArrowLeft, Download, MoreHorizontal } from 'lucide-react';
 
 const ICON_MAP: Record<string, React.ReactNode> = {
   plus: <Plus className="h-4 w-4" />,
@@ -168,11 +235,21 @@ function RenderComponent({ node, onAction }: { node: any; onAction: (action: any
           })
           .join('');
       }
+
+      // Interpolate subtitle templates
+      let subtitle = node.props.subtitle;
+      if (subtitle && typeof subtitle === 'string' && subtitle.includes('{{')) {
+        subtitle = subtitle.replace(/\{\{(.+?)\}\}/g, (_, path) => {
+          const value = resolveDataPath(data, path.trim());
+          return value !== undefined && value !== null ? String(value) : '';
+        });
+      }
+
       return (
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{title || node.props.title || 'Page'}</h1>
-            {node.props.subtitle && <p className="text-muted-foreground mt-1">{node.props.subtitle}</p>}
+            {subtitle && <p className="text-muted-foreground mt-1">{subtitle}</p>}
           </div>
           {node.props.actions && (
             <div className="flex gap-2">
@@ -210,13 +287,25 @@ function RenderComponent({ node, onAction }: { node: any; onAction: (action: any
     }
 
     case 'StatCard': {
+      const { loading } = useContext(DataContext);
       const value = node.props.valuePath ? resolveDataPath(data, node.props.valuePath) : node.props.value;
+
+      let label = node.props.label;
+      // Interpolate templates
+      if (label && typeof label === 'string' && label.includes('{{')) {
+        label = label.replace(/\{\{(.+?)\}\}/g, (_, path) => {
+          const val = resolveDataPath(data, path.trim());
+          return val !== undefined && val !== null ? String(val) : '';
+        });
+      }
+
       return (
         <StatCard
-          label={node.props.label}
-          value={value ?? '—'}
+          label={label}
+          value={loading ? undefined : (value ?? '—')}
           change={node.props.change}
           changeType={node.props.changeType}
+          loading={loading}
         />
       );
     }
@@ -285,16 +374,27 @@ function RenderComponent({ node, onAction }: { node: any; onAction: (action: any
           });
         }
       }
+
+      // Handle empty string values which collide with Radix UI requirements
+      const safeVal = val === '' ? '__EMPTY__' : val;
+      const handleValueChange = (v: string) => {
+        const actualValue = v === '__EMPTY__' ? '' : v;
+        formCtx.clearError(fieldKey);
+        formCtx.setValue(fieldKey, actualValue);
+      };
+
       return (
         <div className="space-y-1.5">
           <label className="text-sm font-medium">{node.props.label}{node.props.required && <span className="text-destructive ml-1">*</span>}</label>
-          <Select value={val} onValueChange={v => { formCtx.clearError(fieldKey); formCtx.setValue(fieldKey, v); }}>
+          <Select value={safeVal} onValueChange={handleValueChange}>
             <SelectTrigger className={fieldError ? 'border-destructive' : ''}>
               <SelectValue placeholder={node.props.placeholder || `Select ${node.props.label}`} />
             </SelectTrigger>
             <SelectContent>
               {options.map((opt: any) => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                <SelectItem key={opt.value} value={opt.value === '' ? '__EMPTY__' : opt.value}>
+                  {opt.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -323,9 +423,12 @@ function RenderComponent({ node, onAction }: { node: any; onAction: (action: any
 
     case 'Grid': {
       const cols = node.props.columns || 2;
-      const gap = node.props.gap || '6';
+      const gap = node.props.gap || '2';
+      // Map semantic gap names to rem values (Tailwind gap-2 = 0.5rem)
+      const gapMap: Record<string, string> = { xs: '0.25rem', sm: '0.375rem', md: '0.5rem', lg: '1rem', xl: '1.5rem' };
+      const gapValue = gapMap[gap] || (isNaN(Number(gap)) ? '0.5rem' : `${Number(gap) * 0.25}rem`);
       return (
-        <div className={`grid grid-cols-1 md:grid-cols-${cols} gap-${gap}`} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+        <div className="grid grid-cols-1 md:grid-cols-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: gapValue }}>
           {children}
         </div>
       );
@@ -334,18 +437,49 @@ function RenderComponent({ node, onAction }: { node: any; onAction: (action: any
     case 'Stack': {
       const dir = node.props.direction === 'horizontal' ? 'flex-row' : 'flex-col';
       const gap = node.props.gap || '4';
+      // Map semantic gap names to rem values
+      const gapMap: Record<string, string> = { xs: '0.25rem', sm: '0.375rem', md: '0.5rem', lg: '1rem', xl: '1.5rem' };
+      const gapValue = gapMap[gap] || (isNaN(Number(gap)) ? '1rem' : `${Number(gap) * 0.25}rem`);
+      // Map justify prop to CSS justify-content values
+      const justifyMap: Record<string, string> = {
+        'flex-start': 'flex-start',
+        'flex-end': 'flex-end',
+        'center': 'center',
+        'space-between': 'space-between',
+        'space-around': 'space-around',
+        'space-evenly': 'space-evenly',
+        'start': 'flex-start',
+        'end': 'flex-end',
+      };
+      const justifyValue = node.props.justify ? (justifyMap[node.props.justify] || node.props.justify) : undefined;
       return (
-        <div className={`flex ${dir} gap-${gap}`} style={{ gap: `${parseInt(gap) * 0.25}rem` }}>
+        <div className="flex" style={{ flexDirection: dir === 'flex-row' ? 'row' : 'column', gap: gapValue, justifyContent: justifyValue }}>
           {children}
         </div>
       );
     }
 
     case 'Button': {
+      // Map config variant names to shadcn Button variants
+      const variantMap: Record<string, 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'> = {
+        primary: 'default',
+        default: 'default',
+        secondary: 'secondary',
+        outline: 'outline',
+        cancel: 'outline',
+        danger: 'destructive',
+        destructive: 'destructive',
+        ghost: 'ghost',
+        link: 'link',
+      };
+      const variant = variantMap[node.props.variant] || 'default';
+      const isSubmit = node.props.action?.type === 'submit_form';
+
       return (
         <Button
-          variant={(node.props.variant as any) || 'default'}
-          onClick={() => onAction(node.props.action)}
+          variant={variant}
+          type={isSubmit ? 'submit' : 'button'}
+          onClick={() => !isSubmit && onAction(node.props.action)}
           disabled={node.props.disabled}
         >
           {node.props.icon && ICON_MAP[node.props.icon]}
@@ -356,7 +490,16 @@ function RenderComponent({ node, onAction }: { node: any; onAction: (action: any
     }
 
     case 'Badge': {
-      const value = node.props.valuePath ? resolveDataPath(data, node.props.valuePath) : node.props.label;
+      let value = node.props.valuePath ? resolveDataPath(data, node.props.valuePath) : node.props.label;
+
+      // Interpolate templates
+      if (value && typeof value === 'string' && value.includes('{{')) {
+        value = value.replace(/\{\{(.+?)\}\}/g, (_, path) => {
+          const val = resolveDataPath(data, path.trim());
+          return val !== undefined && val !== null ? String(val) : '';
+        });
+      }
+
       let variant: any = node.props.variant || 'default';
       if (node.props.colorMap && value) {
         variant = node.props.colorMap[value] || variant;
@@ -365,10 +508,19 @@ function RenderComponent({ node, onAction }: { node: any; onAction: (action: any
     }
 
     case 'Alert': {
+      // Interpolate message templates
+      let message = node.props.message;
+      if (message && typeof message === 'string' && message.includes('{{')) {
+        message = message.replace(/\{\{(.+?)\}\}/g, (_, path) => {
+          const value = resolveDataPath(data, path.trim());
+          return value !== undefined && value !== null ? String(value) : '';
+        });
+      }
+
       return (
         <Alert variant={node.props.variant || 'default'} className="mb-4">
           {node.props.title && <AlertTitle>{node.props.title}</AlertTitle>}
-          <AlertDescription>{node.props.message}</AlertDescription>
+          <AlertDescription>{message}</AlertDescription>
         </Alert>
       );
     }
@@ -404,7 +556,16 @@ function RenderComponent({ node, onAction }: { node: any; onAction: (action: any
     }
 
     case 'Heading': {
-      const text = node.props.textPath ? resolveDataPath(data, node.props.textPath) : node.props.text;
+      let text = node.props.textPath ? resolveDataPath(data, node.props.textPath) : node.props.text;
+
+      // Interpolate templates
+      if (text && typeof text === 'string' && text.includes('{{')) {
+        text = text.replace(/\{\{(.+?)\}\}/g, (_, path) => {
+          const value = resolveDataPath(data, path.trim());
+          return value !== undefined && value !== null ? String(value) : '';
+        });
+      }
+
       const level = node.props.level || 2;
       const sizeClasses: Record<number, string> = {
         1: 'text-3xl font-bold',
@@ -418,7 +579,16 @@ function RenderComponent({ node, onAction }: { node: any; onAction: (action: any
     }
 
     case 'Text': {
-      const content = node.props.contentPath ? resolveDataPath(data, node.props.contentPath) : node.props.content;
+      let content = node.props.contentPath ? resolveDataPath(data, node.props.contentPath) : node.props.content;
+
+      // Interpolate templates
+      if (content && typeof content === 'string' && content.includes('{{')) {
+        content = content.replace(/\{\{(.+?)\}\}/g, (_, path) => {
+          const value = resolveDataPath(data, path.trim());
+          return value !== undefined && value !== null ? String(value) : '';
+        });
+      }
+
       const variantClasses: Record<string, string> = {
         default: '',
         muted: 'text-muted-foreground',
@@ -464,15 +634,11 @@ function RenderComponent({ node, onAction }: { node: any; onAction: (action: any
 
       // Handle render prop (e.g., Badge rendering)
       if (node.props.render && typeof node.props.render === 'object' && node.props.render.type === 'Badge') {
-        const badgeValue = node.props.render.props?.valuePath ? resolveDataPath(data, node.props.render.props.valuePath) : value;
+        const pathToUse = node.props.render.props?.valuePath || node.props.render.props?.labelPath;
+        const badgeValue = pathToUse ? resolveDataPath(data, pathToUse) : value;
         const strVal = String(badgeValue || '');
         const colorMap = node.props.render.props?.colorMap || {};
-        const DEFAULT_BADGE_COLORS: Record<string, string> = {
-          active: 'default', on_leave: 'secondary', terminated: 'destructive', resigned: 'outline',
-          draft: 'secondary', open: 'default', closed: 'outline', completed: 'default',
-          pending: 'secondary', approved: 'default', rejected: 'destructive',
-        };
-        const variant = colorMap[strVal] || DEFAULT_BADGE_COLORS[strVal.toLowerCase()] || 'default';
+        const variant = colorMap[strVal] || node.props.render.props?.variant || 'default';
         displayNode = <Badge variant={variant as any}>{strVal.replace(/_/g, ' ')}</Badge>;
       }
 
@@ -485,9 +651,19 @@ function RenderComponent({ node, onAction }: { node: any; onAction: (action: any
     }
 
     case 'DetailSection': {
+      let title = node.props.title;
+
+      // Interpolate templates
+      if (title && typeof title === 'string' && title.includes('{{')) {
+        title = title.replace(/\{\{(.+?)\}\}/g, (_, path) => {
+          const value = resolveDataPath(data, path.trim());
+          return value !== undefined && value !== null ? String(value) : '';
+        });
+      }
+
       return (
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-3 pb-2 border-b">{node.props.title}</h3>
+          <h3 className="text-lg font-semibold mb-3 pb-2 border-b">{title}</h3>
           {children}
         </div>
       );
@@ -500,8 +676,8 @@ function RenderComponent({ node, onAction }: { node: any; onAction: (action: any
 
 // --- DataTable Renderer ---
 
-function DataTableRenderer({ node }: { node: any; onAction?: (action: any, formValues?: any) => void }) {
-  const { data } = useContext(DataContext);
+function DataTableRenderer({ node, onAction }: { node: any; onAction?: (action: any, formValues?: any) => void }) {
+  const { data, loading } = useContext(DataContext);
   const params = useParams();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
@@ -510,6 +686,7 @@ function DataTableRenderer({ node }: { node: any; onAction?: (action: any, formV
   const pageSize = 10;
 
   const rawData = resolveDataPath(data, node.props.dataPath);
+  const isLoading = loading && !rawData;
   const isServerPaginated = rawData && !Array.isArray(rawData) && rawData.meta;
   let items = Array.isArray(rawData) ? rawData : (rawData?.data || []);
   const totalFromApi = rawData?.meta?.total;
@@ -542,7 +719,12 @@ function DataTableRenderer({ node }: { node: any; onAction?: (action: any, formV
   const handleRowClick = (row: any) => {
     if (node.props.rowClickAction) {
       let to = node.props.rowClickAction.to || '';
+      // Support both :id and {{id}} template formats
       to = to.replace(':id', row.id);
+      to = to.replace(/\{\{(\w+)\}\}/g, (_: string, key: string) => {
+        const val = row[key];
+        return val != null ? String(val) : '';
+      });
       if (params.id) to = to.replace(':parentId', params.id);
       navigate(to);
     }
@@ -569,7 +751,7 @@ function DataTableRenderer({ node }: { node: any; onAction?: (action: any, formV
                   if (item.label && item.value) return item;
                   if (item.id && item.name) return { label: item.name, value: item.id };
                   return { label: String(item), value: String(item) };
-                });
+                }).filter((o: any) => String(o.value) !== '');
               }
             }
             return (
@@ -603,10 +785,22 @@ function DataTableRenderer({ node }: { node: any; onAction?: (action: any, formV
               {node.props.columns?.map((col: any) => (
                 <TableHead key={col.key} className={col.className}>{col.header}</TableHead>
               ))}
+              {node.props.rowActions && <TableHead className="w-[50px]"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedItems.length === 0 ? (
+            {isLoading ? (
+              // Skeleton rows while loading
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={`skeleton-${i}`}>
+                  {node.props.columns?.map((_: any, j: number) => (
+                    <TableCell key={`skeleton-${i}-${j}`}>
+                      <div className="h-4 w-full animate-pulse rounded bg-muted" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : paginatedItems.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={node.props.columns?.length || 1} className="text-center py-8 text-muted-foreground">
                   {node.props.emptyMessage || 'No data found'}
@@ -624,6 +818,44 @@ function DataTableRenderer({ node }: { node: any; onAction?: (action: any, formV
                       {renderCellValue(row, col)}
                     </TableCell>
                   ))}
+                  {node.props.rowActions && (
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {node.props.rowActions.map((action: any, idx: number) => (
+                            <DropdownMenuItem
+                              key={idx}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!onAction) return;
+
+                                // Clone action to avoid mutating prop
+                                const resolvedAction = JSON.parse(JSON.stringify(action.action));
+                                
+                                // Replace :id with row.id in url and to
+                                if (resolvedAction.url) {
+                                  resolvedAction.url = resolvedAction.url.replace(':id', row.id);
+                                }
+                                if (resolvedAction.to) {
+                                  resolvedAction.to = resolvedAction.to.replace(':id', row.id);
+                                }
+                                
+                                onAction(resolvedAction);
+                              }}
+                            >
+                              {action.label}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
@@ -655,26 +887,11 @@ function renderCellValue(row: any, col: any): React.ReactNode {
 
   // Handle render config as object (e.g., { type: "Badge", props: { colorMap: {...} } })
   if (col.render && typeof col.render === 'object' && col.render.type === 'Badge') {
-    const cellValue = col.render.props?.valuePath ? resolveDataPath(row, col.render.props.valuePath) : value;
+    const pathToUse = col.render.props?.valuePath || col.render.props?.labelPath;
+    const cellValue = pathToUse ? resolveDataPath(row, pathToUse) : value;
     const colorMap = col.render.props?.colorMap || {};
-    const DEFAULT_BADGE_COLORS: Record<string, string> = {
-      active: 'default',
-      on_leave: 'secondary',
-      terminated: 'destructive',
-      resigned: 'outline',
-      draft: 'secondary',
-      open: 'default',
-      closed: 'outline',
-      completed: 'default',
-      pending: 'secondary',
-      approved: 'default',
-      rejected: 'destructive',
-      present: 'default',
-      absent: 'destructive',
-      half_day: 'secondary',
-    };
     const strVal = String(cellValue || '');
-    const variant = colorMap[strVal] || DEFAULT_BADGE_COLORS[strVal.toLowerCase()] || 'default';
+    const variant = colorMap[strVal] || col.render.props?.variant || 'default';
     return <Badge variant={variant as any}>{strVal.replace(/_/g, ' ')}</Badge>;
   }
 
@@ -814,14 +1031,22 @@ function FormRenderer({ node, children, onAction }: { node: any; children: React
     onAction(node.props.action, values);
   };
 
+  // Check if form already has buttons defined in children (avoid duplicate buttons)
+  const hasButtons = (node.children || []).some((child: any) =>
+    child?.type === 'Button' || child?.type === 'Stack' &&
+    (child.children || []).some((c: any) => c?.type === 'Button')
+  );
+
   return (
     <FormContext.Provider value={{ values, setValue, getValues, errors, setError, clearError }}>
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
         {children}
-        <div className="flex gap-3 pt-4">
-          <Button type="submit">Save</Button>
-          <Button type="button" variant="outline" onClick={() => window.history.back()}>Cancel</Button>
-        </div>
+        {!hasButtons && (
+          <div className="flex gap-3 pt-4">
+            <Button type="submit">Save</Button>
+            <Button type="button" variant="outline" onClick={() => window.history.back()}>Cancel</Button>
+          </div>
+        )}
       </form>
     </FormContext.Provider>
   );
@@ -893,14 +1118,7 @@ export function PageRenderer({ config }: { config: PageConfig }) {
     return resolved;
   }, [data]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
+  // Always render the UI - components show their own loading states
   return (
     <DataContext.Provider value={{ data: resolvedData, loading, refresh: fetchData }}>
       <div className="space-y-6">

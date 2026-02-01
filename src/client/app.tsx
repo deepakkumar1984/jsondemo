@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './lib/auth';
 import LoginPage from './pages/login';
+import SignupPage from './pages/signup';
+import ForgotPasswordPage from './pages/forgot-password';
+import ResetPasswordPage from './pages/reset-password';
 import AppLayout from './layouts/app-layout';
 import { PageRenderer } from './layouts/page-renderer';
 import { loadAllRoutes, loadNavigationMenu, getPageLoader } from './lib/config-loader';
@@ -92,6 +95,9 @@ export default function App() {
       <DocumentTitle />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
           {indexRoute && (
             <Route index element={<LazyPage page={indexRoute.page} />} />

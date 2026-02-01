@@ -1,6 +1,6 @@
 {
-  "table": "users",
-  "description": "User accounts with authentication",
+  "table": "departments",
+  "description": "Organizational departments",
   "columns": [
     {
       "name": "id",
@@ -9,31 +9,35 @@
       "defaultFn": "uuid"
     },
     {
-      "name": "email",
-      "type": "text",
-      "unique": true,
-      "notNull": true
-    },
-    {
-      "name": "passwordHash",
-      "type": "text",
-      "notNull": true
-    },
-    {
       "name": "name",
       "type": "text",
       "notNull": true
     },
     {
-      "name": "role",
+      "name": "code",
       "type": "text",
-      "enum": [
-        "admin",
-        "hr",
-        "manager",
-        "employee"
-      ],
+      "unique": true,
       "notNull": true
+    },
+    {
+      "name": "description",
+      "type": "text"
+    },
+    {
+      "name": "headId",
+      "type": "text",
+      "references": {
+        "table": "users",
+        "column": "id"
+      }
+    },
+    {
+      "name": "parentId",
+      "type": "text",
+      "references": {
+        "table": "departments",
+        "column": "id"
+      }
     },
     {
       "name": "active",
@@ -42,11 +46,6 @@
     },
     {
       "name": "createdAt",
-      "type": "text",
-      "default": "CURRENT_TIMESTAMP"
-    },
-    {
-      "name": "updatedAt",
       "type": "text",
       "default": "CURRENT_TIMESTAMP"
     }

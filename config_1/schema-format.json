@@ -35,7 +35,7 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Database column name in snake_case strictly, e.g., 'id', 'username', 'created_at', 'updated_at', 'client_name'"
+          "description": "Column name"
         },
         "type": {
           "type": "string",

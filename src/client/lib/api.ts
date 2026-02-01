@@ -43,6 +43,7 @@ class ApiClient {
   get<T>(endpoint: string) { return this.request<T>(endpoint); }
   post<T>(endpoint: string, body: any) { return this.request<T>(endpoint, { method: 'POST', body }); }
   put<T>(endpoint: string, body: any) { return this.request<T>(endpoint, { method: 'PUT', body }); }
+  patch<T>(endpoint: string, body: any) { return this.request<T>(endpoint, { method: 'PATCH', body }); }
   delete<T>(endpoint: string) { return this.request<T>(endpoint, { method: 'DELETE' }); }
 }
 
