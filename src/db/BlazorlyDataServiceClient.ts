@@ -155,7 +155,7 @@ export interface ItemsResult {
 
 /**
  * BlazorlyDataServiceClient - A utility client for calling Blazorly Data API endpoints
- * 
+ *
  * @example
  * ```typescript
  * const client = new BlazorlyDataServiceClient({
@@ -203,8 +203,10 @@ export class BlazorlyDataServiceClient {
 
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          if (Array.isArray(value)) {
+        if (value !== undefined) {
+          if (value === null) {
+            url.searchParams.append(key, '');
+          } else if (Array.isArray(value)) {
             value.forEach((v) => url.searchParams.append(key, String(v)));
           } else {
             url.searchParams.append(key, String(value));
@@ -227,34 +229,20 @@ export class BlazorlyDataServiceClient {
     const isGetRequest = !options.method || options.method === 'GET';
     const url = this.buildUrl(endpoint, isGetRequest ? options.body as any : undefined);
 
-    console.log(`[DataClient] Request: ${options.method || 'GET'} ${url.toString()}`);
-
-    const fetchOptions = {
+    const response = await fetch(url, {
       ...options,
       body: isGetRequest ? undefined : options.body, // Don't pass body for GET requests
       headers: {
         ...this.defaultHeaders,
         ...options.headers,
       },
-    };
-
-    console.log(`[DataClient] Fetch options:`, JSON.stringify({
-      method: fetchOptions.method,
-      headers: fetchOptions.headers,
-      body: fetchOptions.body
-    }, null, 2));
-
-    const response = await fetch(url, fetchOptions);
+    });
 
     const data = await response.json();
 
     if (!response.ok) {
       const errors: ApiError[] = data.errors || [{ message: response.statusText }];
-      const errorMessage = errors.map((e) => e.message).join(', ');
-      console.error(`[DataClient] ERROR: ${options.method || 'GET'} ${url}`);
-      console.error(`[DataClient] Status: ${response.status} ${response.statusText}`);
-      console.error(`[DataClient] Response:`, JSON.stringify(data, null, 2));
-      throw new Error(errorMessage);
+      throw new Error(errors.map((e) => e.message).join(', '));
     }
 
     return data;
@@ -298,9 +286,28 @@ export class BlazorlyDataServiceClient {
 
   /**
    * Update an existing collection
+   *
+   * Note: This method now supports schema evolution. When you add new fields
+   * to the collection, they will be automatically added to the database table
+   * using ALTER TABLE operations.
+   *
    * @param collectionName - The name of the collection to update
    * @param collection - The updated collection data
    * @returns Promise resolving to the updated collection
+   *
+   * @example
+   * ```typescript
+   * // Add new fields to an existing collection
+   * const updatedCollection = await client.updateCollection('users', {
+   *   collection: 'users',
+   *   schema: { name: 'users' },
+   *   fields: [
+   *     // ... existing fields
+   *     { field: 'username', type: 'string' },  // New field - will be added!
+   *     { field: 'bio', type: 'text' }           // New field - will be added!
+   *   ]
+   * });
+   * ```
    */
   async updateCollection(
     collectionName: string,
@@ -320,6 +327,83 @@ export class BlazorlyDataServiceClient {
    */
   async deleteCollection(collectionName: string): Promise<void> {
     await this.request<{ message: string }>(`/collections/${collectionName}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ============================================
+  // FIELD METHODS (Schema Evolution)
+  // ============================================
+
+  /**
+   * Add a new field to an existing collection
+   *
+   * This method adds a single field to a collection using ALTER TABLE.
+   * The field will be added to both the database table and the collection metadata.
+   *
+   * @param collectionName - The name of the collection
+   * @param field - The field definition
+   * @returns Promise resolving to the created field
+   *
+   * @example
+   * ```typescript
+   * await client.addField('users', {
+   *   field: 'bio',
+   *   type: 'text',
+   *   schema: { is_nullable: true }
+   * });
+   * ```
+   */
+  async addField(collectionName: string, field: Field): Promise<Field> {
+    const response = await this.request<Field>(`/fields/${collectionName}`, {
+      method: 'POST',
+      body: JSON.stringify(field),
+    });
+    return response.data;
+  }
+
+  /**
+   * Add a new field to a collection (alternative method with collection in body)
+   *
+   * @param fieldData - The field data including collection name
+   * @returns Promise resolving to the created field
+   *
+   * @example
+   * ```typescript
+   * await client.createField({
+   *   collection: 'users',
+   *   field: 'bio',
+   *   type: 'text',
+   *   schema: { is_nullable: true }
+   * });
+   * ```
+   */
+  async createField(fieldData: Field & { collection: string }): Promise<Field> {
+    const response = await this.request<Field>('/fields', {
+      method: 'POST',
+      body: JSON.stringify(fieldData),
+    });
+    return response.data;
+  }
+
+  /**
+   * Delete a field from a collection
+   *
+   * This method removes a field using ALTER TABLE DROP COLUMN.
+   * The field will be removed from both the database table and collection metadata.
+   * Note: Primary key fields cannot be deleted.
+   *
+   * @param collectionName - The name of the collection
+   * @param fieldName - The name of the field to delete
+   * @returns Promise resolving when field is deleted
+   *
+   * @example
+   * ```typescript
+   * await client.deleteField('users', 'old_field');
+   * ```
+   */
+  async deleteField(collectionName: string, fieldName: string): Promise<void> {
+    await this.request<{ message: string }>(`/fields/${collectionName}/${fieldName}`, {
       method: 'DELETE',
     });
   }
@@ -385,7 +469,6 @@ export class BlazorlyDataServiceClient {
     id: string | number,
     item: Item
   ): Promise<Item> {
-    console.log(`[DataClient] updateItem called:`, { collectionName, id, item });
     const response = await this.request<Item>(
       `/items/${collectionName}/${id}`,
       {
@@ -509,36 +592,3 @@ export class BlazorlyDataServiceClient {
     };
   }
 }
-
-// ============================================
-// USAGE EXAMPLE
-// ============================================
-
-/**
- * Example usage:
- * ```typescript
- * import { BlazorlyDataServiceClient } from './BlazorlyDataServiceClient';
- * 
- * // Initialize client
- * const client = new BlazorlyDataServiceClient({
- *   baseUrl: 'https://your-api.example.com',
- *   apiKey: 'your-api-key',
- *   tenantId: 'your-tenant-id'
- * });
- * 
- * // Get all collections
- * const collections = await client.getCollections();
- * 
- * // Get items with filtering
- * const users = await client.getItems('users', {
- *   limit: 10,
- *   filter: { status: { _eq: 'active' } }
- * });
- * 
- * // Create an item
- * const user = await client.createItem('users', {
- *   name: 'John Doe',
- *   email: 'john@example.com'
- * });
- * ```
- */

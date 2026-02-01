@@ -111,10 +111,11 @@ function SidebarNavContent() {
       <SidebarFooter>
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-medium">
-            {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+            {/* Try display_name first, then fallback to name or 'U' */}
+            {(user as any)?.display_name?.charAt(0)?.toUpperCase() || (user as any)?.name?.charAt(0)?.toUpperCase() || 'U'}
           </div>
           <div className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-sm font-medium">{user?.name || 'User'}</span>
+            <span className="truncate text-sm font-medium">{(user as any)?.display_name || (user as any)?.name || 'User'}</span>
             <span className="truncate text-xs text-muted-foreground">{user?.email || ''}</span>
           </div>
           <ThemeToggle />

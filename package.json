@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "npm run build:api-index && wrangler dev  --ip 0.0.0.0 --port ${PORT:-8001}",
-    "build": "npm run validate:all && npm run build:api-index && vite build && wrangler deploy --dry-run",
+    "dev": "bun run build:api-index && wrangler dev  --ip 0.0.0.0 --port ${PORT:-8001}",
+    "build": "bun run validate:all && bun run build:api-index && vite build && wrangler deploy --dry-run",
     "build:client": "vite build",
     "build:api-index": "tsx scripts/build-api-index.ts",
-    "deploy": "npm run build:api-index && vite build && wrangler deploy",
+    "deploy": "bun run build:api-index && vite build && wrangler deploy",
     "db:migrate": "tsx scripts/schema/migrate-to-data-api.ts",
     "validate:all": "tsx scripts/validate-config.ts --all",
     "typecheck": "tsc --noEmit"

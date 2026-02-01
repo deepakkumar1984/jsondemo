@@ -5,7 +5,8 @@ import { getCookie, setCookie } from 'hono/cookie';
 interface JWTPayload {
   sub: string;
   email: string;
-  name?: string;
+  name?: string; // Kept for backward compatibility
+  display_name?: string; // New field
   role?: string;
   purpose?: string; // For special tokens like password-reset
   exp: number;

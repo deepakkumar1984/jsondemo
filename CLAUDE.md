@@ -18,22 +18,22 @@ A JSON-driven full-stack application platform that generates APIs and UIs from d
 
 ```bash
 # Development
-npm run dev                    # Start Cloudflare Workers dev server (port 8001 by default)
-npm run build                  # Build client + validate configs + generate API index
-npm run build:client           # Build React frontend only
-npm run build:api-index        # Generate API config index from config/api/*.json
+bun run dev                    # Start Cloudflare Workers dev server (port 8001 by default)
+bun run build                  # Build client + validate configs + generate API index
+bun run build:client           # Build React frontend only
+bun run build:api-index        # Generate API config index from config/api/*.json
 
 # Database Operations
-npm run db:migrate             # Run schema migration to Data API
-npm run db:migrate:fresh       # Drop and recreate all tables
+bun run db:migrate             # Run schema migration to Data API
+bun run db:migrate:fresh       # Drop and recreate all tables
 
 # Validation & Type Checking
-npm run validate:config        # Validate single config file
-npm run validate:all           # Validate all configs + cross-references
-npm run typecheck              # TypeScript type checking
+bun run validate:config        # Validate single config file
+bun run validate:all           # Validate all configs + cross-references
+bun run typecheck              # TypeScript type checking
 
 # Deployment
-npm run deploy                 # Build and deploy to Cloudflare Workers
+bun run deploy                 # Build and deploy to Cloudflare Workers
 ```
 
 ## Project Structure
@@ -191,7 +191,7 @@ const result = await this.client.getItems('projects', { filter: { status: { _eq:
 
 **Run validation:**
 ```bash
-npm run validate:all           # Full validation with cross-references
+bun run validate:all           # Full validation with cross-references
 tsx scripts/validate-config.ts config/api/projects.json  # Single file
 ```
 
@@ -219,11 +219,11 @@ tsx scripts/validate-config.ts config/api/projects.json  # Single file
 }
 ```
 
-2. **Rebuild API index:** `npm run build:api-index`
+2. **Rebuild API index:** `bun run build:api-index`
    - This regenerates `src/api/configs.generated.ts`
    - API is automatically registered in `src/api/index.ts` on next dev server restart
 
-3. **Validate:** `npm run validate:config config/api/my-resource.json`
+3. **Validate:** `bun run validate:config config/api/my-resource.json`
 
 ### Adding a New Page
 
@@ -270,7 +270,7 @@ tsx scripts/validate-config.ts config/api/projects.json  # Single file
 }
 ```
 
-3. **Validate:** `npm run validate:all`
+3. **Validate:** `bun run validate:all`
 
 ### Migrating Database Schema
 
@@ -285,9 +285,9 @@ tsx scripts/validate-config.ts config/api/projects.json  # Single file
 }
 ```
 
-2. **Run migration:** `npm run db:migrate`
+2. **Run migration:** `bun run db:migrate`
    - Creates/updates table in Blazorly Data Service
-   - For fresh start: `npm run db:migrate:fresh` (drops all tables)
+   - For fresh start: `bun run db:migrate:fresh` (drops all tables)
 
 ## Important Implementation Rules
 
@@ -356,16 +356,16 @@ return { success: true }; // WRONG - operation failed!
 
 ```bash
 # Check if API configs are registered
-npm run build:api-index && grep "export const apiConfigs" src/api/configs.generated.ts
+bun run build:api-index && grep "export const apiConfigs" src/api/configs.generated.ts
 
 # Validate specific config file
 tsx scripts/validate-config.ts config/api/projects.json
 
 # Check cross-references (APIs→Schemas, Pages→APIs, Apps→Pages)
-npm run validate:all
+bun run validate:all
 
 # Type check without building
-npm run typecheck
+bun run typecheck
 
 # See all available API routes
 # Start dev server and check console logs for "Registering config-driven route:" messages
@@ -373,10 +373,10 @@ npm run typecheck
 
 ## Testing Changes
 
-1. **After modifying API configs:** Run `npm run build:api-index` then restart dev server
+1. **After modifying API configs:** Run `bun run build:api-index` then restart dev server
 2. **After modifying page configs:** No rebuild needed, just refresh browser
-3. **After modifying schemas:** Run `npm run db:migrate` to sync changes
-4. **Before committing:** Run `npm run validate:all` to catch config errors
+3. **After modifying schemas:** Run `bun run db:migrate` to sync changes
+4. **Before committing:** Run `bun run validate:all` to catch config errors
 
 ## Common Pitfalls
 

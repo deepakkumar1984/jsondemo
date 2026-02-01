@@ -5,7 +5,7 @@
  * in the Blazorly Data API using BlazorlyDataServiceClient.
  *
  * Usage:
- *   npx tsx scripts/schema/migrate-to-data-api.ts [options]
+ *   bun run tsx scripts/schema/migrate-to-data-api.ts [options]
  *
  * Options:
  *   --drop     Drop and recreate all collections (WARNING: deletes data)
@@ -107,8 +107,8 @@ function mapColumnType(col: ColumnConfig): FieldType {
     case 'text':
     case 'varchar':
     case 'char':
-      // Check if it's a timestamp field by name convention
-      if (col.name.toLowerCase().includes('at') || col.default === 'CURRENT_TIMESTAMP') {
+      // Check if it's a timestamp field by name convention (strict check)
+      if (col.name.toLowerCase().endsWith('_at') || col.default === 'CURRENT_TIMESTAMP') {
         return 'timestamp';
       }
       return 'string';
@@ -467,22 +467,45 @@ async function migrateToDataApi(options: MigrationOptions = {}) {
       const status = tableStatus.get(config.table)!;
       const needsFk = hasForeignKeys(config);
 
-      // If table actually exists and we're not in alter mode, skip creation
-      if (status.tableExists && !options.alter) {
-        return { table: config.table, action: 'skipped', needsFk };
-      }
-
-      // Alter mode - add missing columns to existing table
-      if (options.alter && status.tableExists) {
+      // Existing table handling (Check for updates)
+      if (status.tableExists) {
         const configFields = config.columns.map(c => toSnakeCase(c.name));
         const missingFields = configFields.filter(f => !status.existingFields.includes(f));
 
-        if (missingFields.length === 0) {
-          return { table: config.table, action: 'skipped', needsFk: false };
+        // Debug logging for troubleshooting
+        if (config.table === 'users') {
+          console.log(`\n[DEBUG] Table: ${config.table}`);
+          console.log(`[DEBUG] Existing fields in DB: ${status.existingFields.join(', ')}`);
+          console.log(`[DEBUG] Config fields: ${configFields.join(', ')}`);
+          console.log(`[DEBUG] Missing fields: ${missingFields.join(', ')}`);
         }
 
+        // If no new fields, just check if we need to verify FKs
+        // We comment this out to FORCE an update call to the API.
+        // This ensures that if the metadata is out of sync with the actual DB table,
+        // the API has a chance to run ALTER TABLE to fix it.
+        /*
+        if (missingFields.length === 0) {
+          // If in alter mode, we previously returned needsFk: false here.
+          // But returning needsFk allows Phase 2 to ensure FK constraints exist.
+          return { table: config.table, action: 'skipped', needsFk };
+        }
+        */
+
+        // If we have missing fields, apply them (implicitly enabling 'alter' behavior)
         try {
           await client.updateCollection(config.table, collection);
+          
+          // Verify if fields were actually added
+          const updatedFields = await getExistingFields(client, config.table);
+          const stillMissing = missingFields.filter(f => !updatedFields.includes(f));
+          
+          if (stillMissing.length > 0) {
+             console.warn(`  ⚠ Warning: The migration ran but fields are still missing: ${stillMissing.join(', ')}.`);
+             console.warn(`    The Data API ignored the request to add columns. You may need to use direct SQL or recreate the table.`);
+             return { table: config.table, action: 'failed', error: 'Data API did not apply schema changes', needsFk: false };
+          }
+          
           return { table: config.table, action: 'altered', addedFields: missingFields, needsFk };
         } catch (error) {
           return { table: config.table, action: 'failed', error: (error as Error).message, needsFk: false };
@@ -590,7 +613,7 @@ if (args.includes('--help') || args.includes('-h')) {
 Migrate Schema to Data API
 
 Usage:
-  npx tsx scripts/schema/migrate-to-data-api.ts [options]
+  bun run tsx scripts/schema/migrate-to-data-api.ts [options]
 
 Options:
   --drop     Drop and recreate all collections (WARNING: deletes data)
@@ -601,16 +624,16 @@ Options:
 
 Examples:
   # Create new tables (skip existing)
-  npm run db:migrate
+  bun run db:migrate
 
   # Add missing columns to existing tables
-  npm run db:migrate -- --alter
+  bun run db:migrate -- --alter
 
   # Drop all and recreate (WARNING: deletes data)
-  npm run db:migrate:fresh
+  bun run db:migrate:fresh
 
   # Verify all tables exist
-  npm run db:migrate -- --verify
+  bun run db:migrate -- --verify
 `);
   process.exit(0);
 }

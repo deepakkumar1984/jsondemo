@@ -43,24 +43,26 @@ auth.post('/login', async (c) => {
       return c.json({ success: false, error: 'Invalid credentials' }, 401);
     }
 
-    // if (!user.active) {
-    //   return c.json({ success: false, error: 'Account disabled' }, 403);
-    // }
+    // Check is_active (new schema) or active (old schema fallback)
+    if (user.is_active === false || user.active === false || user.is_suspended === true) {
+      return c.json({ success: false, error: 'Account disabled or suspended' }, 403);
+    }
 
     const userId = String(user.id);
     const userEmail = String(user.email);
-    const userName = String(user.name);
+    // Use display_name as primary name, fallback to name (old schema)
+    const displayName = String(user.display_name || user.name || '');
     const userRole = String(user.role);
 
     const token = await createJWT(
-      { sub: userId, email: userEmail, name: userName, role: userRole },
+      { sub: userId, email: userEmail, name: displayName, display_name: displayName, role: userRole },
       c.env.JWT_SECRET
     );
 
     return c.json(
       success({
         token,
-        user: { id: userId, email: userEmail, name: userName, role: userRole },
+        user: { id: userId, email: userEmail, display_name: displayName, role: userRole },
       })
     );
   } catch (err) {
@@ -72,9 +74,9 @@ auth.post('/login', async (c) => {
 // POST /api/auth/register (admin only - in a real app you'd protect this)
 auth.post('/register', async (c) => {
   try {
-    const { email, password, name, role } = await c.req.json();
-    if (!email || !password || !name) {
-      return c.json({ success: false, error: 'Email, password, and name required' }, 400);
+    const { email, password, display_name, role } = await c.req.json();
+    if (!email || !password || !display_name) {
+      return c.json({ success: false, error: 'Email, password, and display_name required' }, 400);
     }
 
     const client = createDataClient(c.env);
@@ -93,16 +95,20 @@ auth.post('/register', async (c) => {
     const password_hash = await hashPassword(password);
 
     // Create user via Data API (using snake_case column names)
-    await client.createItem('users', {
+    // Removed old 'name' field, changed to 'display_name'
+    const newUserItem: any = {
       id,
       email,
       password_hash,
-      name,
+      display_name,
       role: role || 'employee',
-      active: true,
-    });
+      // active: true, // Check if 'active' or 'is_active' is in schema. Schema has 'is_active'.
+      is_active: true
+    };
 
-    return c.json(success({ id, email, name, role: role || 'employee' }), 201);
+    await client.createItem('users', newUserItem);
+
+    return c.json(success({ id, email, display_name, role: role || 'employee' }), 201);
   } catch (err) {
     const e = handleError('Register', err);
     return c.json(e.body, e.status);
@@ -112,8 +118,15 @@ auth.post('/register', async (c) => {
 // GET /api/auth/me
 auth.get('/me', authMiddleware, async (c) => {
   try {
-    const user = (c as any).get('user');
-    return c.json(success(user));
+    const user = (c as any).get('user') as any; // Cast to access properties
+    // Map JWT standard claims to User interface
+    const userData = {
+        id: user.sub,
+        email: user.email,
+        display_name: user.display_name || user.name,
+        role: user.role
+    };
+    return c.json(success(userData));
   } catch (err) {
     const e = handleError('Get current user', err);
     return c.json(e.body, e.status);

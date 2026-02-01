@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '../components/ui/alert';
 import { useAppConfig } from '../lib/app-config';
 
 export default function SignupPage() {
-  const [name, setName] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -35,7 +35,7 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
-      await register(name, email, password);
+      await register(displayName, email, password);
       navigate('/');
     } catch (err: any) {
       setError(err.message || 'Registration failed');
@@ -61,13 +61,13 @@ export default function SignupPage() {
               </Alert>
             )}
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="name">Full Name</label>
+              <label className="text-sm font-medium" htmlFor="displayName">Display Name</label>
               <Input
-                id="name"
+                id="displayName"
                 type="text"
                 placeholder="John Doe"
-                value={name}
-                onChange={e => setName(e.target.value)}
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
                 required
               />
             </div>

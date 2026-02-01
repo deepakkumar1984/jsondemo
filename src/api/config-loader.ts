@@ -20,7 +20,7 @@ export async function loadApiConfigs(): Promise<Record<string, ApiConfig>> {
     return apiConfigs as Record<string, ApiConfig>;
   } catch (error) {
     console.error('[Config Loader] Error loading API configs:', error);
-    console.error('[Config Loader] Make sure to run: npm run build:api-index');
+    console.error('[Config Loader] Make sure to run: bun run build:api-index');
     return {};
   }
 }
