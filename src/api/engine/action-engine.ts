@@ -136,6 +136,16 @@ export class ActionEngine {
       case 'http.call':
         return await this.executeHttpCall(action);
 
+      // E2. Caching
+      case 'cache.get':
+        return await this.executeCacheGet(action);
+
+      case 'cache.set':
+        return await this.executeCacheSet(action);
+
+      case 'cache.delete':
+        return await this.executeCacheDelete(action);
+
       // F. Flow Control
       case 'transaction':
         return await this.executeTransaction(action);
@@ -413,7 +423,33 @@ export class ActionEngine {
    * D. DATA ACCESS - Query
    */
   private async executeDbQuery(action: Action): Promise<ActionResult> {
-    const { table, where, into, limit } = action;
+    const { table, sql, where, into, limit, offset, joins, select, orderBy } = action;
+
+    // Handle raw SQL queries
+    if (sql) {
+      const interpolatedSql = interpolateString(sql, this.context);
+      
+      try {
+        const result = await this.client.rawQuery(interpolatedSql);
+        
+        const data = result.data || [];
+        
+        if (into) {
+          this.context[into] = data;
+        }
+        
+        return { success: true, data };
+      } catch (error: any) {
+        console.error('[ActionEngine] Raw SQL query failed:', error);
+        return {
+          success: false,
+          error: {
+            message: `SQL query failed: ${error.message}`,
+            status: 500
+          }
+        };
+      }
+    }
 
     const interpolatedWhere = where ? interpolateObject(where, this.context) : {};
 
@@ -421,13 +457,56 @@ export class ActionEngine {
       filter: this.buildFilter(interpolatedWhere)
     };
 
-    if (limit) {
-      queryParams.limit = limit;
+    // Handle joins - convert from api-format.json format to client format
+    if (joins && joins.length > 0) {
+      queryParams.joins = joins.map((join: any) => ({
+        table: join.table,
+        type: join.type as 'LEFT' | 'INNER' | 'RIGHT',
+        on: {
+          local: Object.keys(join.on)[0].split('.').pop() || '', // Extract field name from 'table.field'
+          foreign: Object.values(join.on)[0].split('.').pop() || ''
+        },
+        alias: join.as,
+        fields: select // Use select fields for joined tables if provided
+      }));
+    }
+
+    // Handle limit with template expression support
+    if (limit !== undefined) {
+      if (typeof limit === 'string') {
+        const interpolatedLimit = interpolateString(limit, this.context);
+        queryParams.limit = parseInt(interpolatedLimit, 10);
+      } else {
+        queryParams.limit = limit;
+      }
+    }
+
+    // Handle offset with template expression support
+    if (offset !== undefined) {
+      if (typeof offset === 'string') {
+        const interpolatedOffset = interpolateString(offset, this.context);
+        queryParams.offset = parseInt(interpolatedOffset, 10);
+      } else {
+        queryParams.offset = offset;
+      }
+    }
+
+    // Handle select fields
+    if (select && select.length > 0) {
+      queryParams.fields = select;
+    }
+
+    // Handle orderBy - convert to Data API format
+    if (orderBy && orderBy.length > 0) {
+      queryParams.sort = orderBy.map(o => {
+        const direction = o.direction === 'DESC' ? '-' : '';
+        return `${direction}${o.field}`;
+      });
     }
 
     const result = await this.client.getItems(table, queryParams);
 
-    const data = limit === 1 ? result.data[0] : result.data;
+    const data = queryParams.limit === 1 ? result.data[0] : result.data;
 
     if (into) {
       this.context[into] = data;
@@ -753,6 +832,118 @@ export class ActionEngine {
     }
 
     return processed;
+  }
+
+  /**
+   * E2. CACHING - Cache Get
+   */
+  private async executeCacheGet(action: Action): Promise<ActionResult> {
+    const { key, into } = action;
+
+    const interpolatedKey = interpolateString(key, this.context);
+
+    // Access KV namespace from env
+    const cache = this.context.env?.CACHE;
+
+    if (!cache) {
+      console.warn('[ActionEngine] Cache not available in environment');
+      if (into) {
+        this.context[into] = null;
+      }
+      return { success: true, data: null };
+    }
+
+    try {
+      const value = await cache.get(interpolatedKey, { type: 'json' });
+
+      if (into) {
+        this.context[into] = value;
+      }
+
+      return { success: true, data: value };
+    } catch (error: any) {
+      console.error('[ActionEngine] Cache get error:', error);
+      if (into) {
+        this.context[into] = null;
+      }
+      return { success: true, data: null };
+    }
+  }
+
+  /**
+   * E2. CACHING - Cache Set
+   */
+  private async executeCacheSet(action: Action): Promise<ActionResult> {
+    const { key, value, ttl } = action;
+
+    const interpolatedKey = interpolateString(key, this.context);
+    const interpolatedValue = typeof value === 'string' && value.includes('{{')
+      ? resolveVariable(value.replace(/{{|}}/g, '').trim(), this.context)
+      : interpolateObject(value, this.context);
+
+    // Access KV namespace from env
+    const cache = this.context.env?.CACHE;
+
+    if (!cache) {
+      console.warn('[ActionEngine] Cache not available in environment');
+      return { success: true, data: null };
+    }
+
+    try {
+      const options: any = {};
+      if (ttl) {
+        options.expirationTtl = ttl;
+      }
+
+      await cache.put(
+        interpolatedKey,
+        JSON.stringify(interpolatedValue),
+        options
+      );
+
+      return { success: true, data: { cached: true } };
+    } catch (error: any) {
+      console.error('[ActionEngine] Cache set error:', error);
+      return { success: true, data: { cached: false } };
+    }
+  }
+
+  /**
+   * E2. CACHING - Cache Delete
+   */
+  private async executeCacheDelete(action: Action): Promise<ActionResult> {
+    const { key, pattern } = action;
+
+    // Access KV namespace from env
+    const cache = this.context.env?.CACHE;
+
+    if (!cache) {
+      console.warn('[ActionEngine] Cache not available in environment');
+      return { success: true, data: null };
+    }
+
+    try {
+      if (pattern) {
+        // Pattern-based deletion (list and delete)
+        const interpolatedPattern = interpolateString(pattern, this.context);
+        const list = await cache.list({ prefix: interpolatedPattern.replace('*', '') });
+        
+        for (const item of list.keys) {
+          await cache.delete(item.name);
+        }
+
+        return { success: true, data: { deleted: list.keys.length } };
+      } else {
+        // Single key deletion
+        const interpolatedKey = interpolateString(key, this.context);
+        await cache.delete(interpolatedKey);
+
+        return { success: true, data: { deleted: 1 } };
+      }
+    } catch (error: any) {
+      console.error('[ActionEngine] Cache delete error:', error);
+      return { success: true, data: { deleted: 0 } };
+    }
   }
 
   /**

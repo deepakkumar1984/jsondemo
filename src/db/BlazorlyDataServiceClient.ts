@@ -84,6 +84,20 @@ export interface Item {
 }
 
 /**
+ * JOIN configuration for multi-table queries
+ */
+export interface JoinConfig {
+  table: string;                    // Table to join with
+  type?: 'LEFT' | 'INNER' | 'RIGHT'; // Join type (default: LEFT)
+  on: {
+    local: string;                  // Local field (e.g., 'user_id')
+    foreign: string;                // Foreign field (e.g., 'id')
+  };
+  alias?: string;                   // Optional table alias
+  fields?: string[];                // Fields to select from joined table
+}
+
+/**
  * Query parameters for fetching items
  */
 export interface QueryParams {
@@ -97,6 +111,7 @@ export interface QueryParams {
   deep?: any;
   aliases?: any;
   export?: string;
+  joins?: JoinConfig[];             // JOIN operations across tables
 }
 
 /**
@@ -414,20 +429,191 @@ export class BlazorlyDataServiceClient {
 
   /**
    * Get items from a collection
+   *
+   * Supports JOIN operations when params.joins is provided.
+   * When joins are present, this method builds and executes a SQL query internally.
+   *
    * @param collectionName - The name of the collection
-   * @param params - Query parameters for filtering, sorting, pagination
+   * @param params - Query parameters for filtering, sorting, pagination, and joins
    * @returns Promise resolving to items and metadata
+   *
+   * @example
+   * ```typescript
+   * // Simple query without joins
+   * const users = await client.getItems('users', {
+   *   filter: { status: { _eq: 'active' } },
+   *   limit: 10
+   * });
+   *
+   * // Query with JOIN
+   * const usersWithProjects = await client.getItems('users', {
+   *   joins: [{
+   *     table: 'projects',
+   *     type: 'LEFT',
+   *     on: { local: 'id', foreign: 'user_id' },
+   *     alias: 'p',
+   *     fields: ['title', 'status']
+   *   }],
+   *   filter: { 'users.status': { _eq: 'active' } }
+   * });
+   * ```
    */
   async getItems(
     collectionName: string,
     params?: QueryParams
   ): Promise<ItemsResult> {
+    // If joins are present, use raw SQL query instead
+    if (params?.joins && params.joins.length > 0) {
+      return this.getItemsWithJoins(collectionName, params);
+    }
+
+    // Standard getItems without joins
     const response = await this.request<any>(`/items/${collectionName}`, {
       method: 'GET',
       body: params as any,
     });
     // API returns { data: Item[], meta: {...} } directly, not wrapped in ApiResponse
     return response as ItemsResult;
+  }
+
+  /**
+   * Internal method to handle queries with JOINs
+   * Builds SQL and executes via rawQuery
+   */
+  private async getItemsWithJoins(
+    collectionName: string,
+    params: QueryParams
+  ): Promise<ItemsResult> {
+    const joins = params.joins || [];
+
+    // Build SELECT clause
+    const mainTableAlias = 'main';
+    let selectFields: string[] = [];
+
+    // Main table fields
+    if (params.fields && params.fields.length > 0) {
+      selectFields = params.fields.map(f =>
+        f.includes('.') ? f : `${mainTableAlias}.${f}`
+      );
+    } else {
+      selectFields.push(`${mainTableAlias}.*`);
+    }
+
+    // Joined table fields
+    joins.forEach((join, idx) => {
+      const joinAlias = join.alias || `j${idx}`;
+      if (join.fields && join.fields.length > 0) {
+        join.fields.forEach(field => {
+          // Prefix with table alias and use AS to avoid name conflicts
+          selectFields.push(`${joinAlias}.${field} AS "${joinAlias}_${field}"`);
+        });
+      } else {
+        // Select all fields with prefix
+        selectFields.push(`${joinAlias}.*`);
+      }
+    });
+
+    // Build FROM clause
+    let sql = `SELECT ${selectFields.join(', ')}\nFROM ${collectionName} AS ${mainTableAlias}`;
+
+    // Build JOIN clauses
+    const sqlParams: any[] = [];
+    let paramIndex = 1;
+
+    joins.forEach((join, idx) => {
+      const joinType = join.type || 'LEFT';
+      const joinAlias = join.alias || `j${idx}`;
+      sql += `\n${joinType} JOIN ${join.table} AS ${joinAlias} ON ${mainTableAlias}.${join.on.local} = ${joinAlias}.${join.on.foreign}`;
+    });
+
+    // Build WHERE clause from filter
+    if (params.filter && Object.keys(params.filter).length > 0) {
+      const whereConditions: string[] = [];
+
+      for (const [field, condition] of Object.entries(params.filter)) {
+        // Handle field with table prefix (e.g., 'users.status')
+        const fieldName = field.includes('.') ? field : `${mainTableAlias}.${field}`;
+
+        if (typeof condition === 'object' && condition !== null) {
+          // Handle operators like { _eq: 'value' }
+          for (const [op, value] of Object.entries(condition)) {
+            if (op === '_eq') {
+              whereConditions.push(`${fieldName} = $${paramIndex++}`);
+              sqlParams.push(value);
+            } else if (op === '_neq') {
+              whereConditions.push(`${fieldName} != $${paramIndex++}`);
+              sqlParams.push(value);
+            } else if (op === '_gt') {
+              whereConditions.push(`${fieldName} > $${paramIndex++}`);
+              sqlParams.push(value);
+            } else if (op === '_gte') {
+              whereConditions.push(`${fieldName} >= $${paramIndex++}`);
+              sqlParams.push(value);
+            } else if (op === '_lt') {
+              whereConditions.push(`${fieldName} < $${paramIndex++}`);
+              sqlParams.push(value);
+            } else if (op === '_lte') {
+              whereConditions.push(`${fieldName} <= $${paramIndex++}`);
+              sqlParams.push(value);
+            } else if (op === '_in') {
+              const placeholders = (value as any[]).map(() => `$${paramIndex++}`).join(', ');
+              whereConditions.push(`${fieldName} IN (${placeholders})`);
+              sqlParams.push(...value);
+            } else if (op === '_null') {
+              whereConditions.push(`${fieldName} IS ${value ? 'NULL' : 'NOT NULL'}`);
+            }
+          }
+        } else {
+          // Direct equality
+          whereConditions.push(`${fieldName} = $${paramIndex++}`);
+          sqlParams.push(condition);
+        }
+      }
+
+      if (whereConditions.length > 0) {
+        sql += `\nWHERE ${whereConditions.join(' AND ')}`;
+      }
+    }
+
+    // Build ORDER BY clause
+    if (params.sort && params.sort.length > 0) {
+      const orderClauses = params.sort.map(sortField => {
+        if (sortField.startsWith('-')) {
+          const field = sortField.substring(1);
+          const fieldName = field.includes('.') ? field : `${mainTableAlias}.${field}`;
+          return `${fieldName} DESC`;
+        } else {
+          const fieldName = sortField.includes('.') ? sortField : `${mainTableAlias}.${sortField}`;
+          return `${fieldName} ASC`;
+        }
+      });
+      sql += `\nORDER BY ${orderClauses.join(', ')}`;
+    }
+
+    // Build LIMIT and OFFSET
+    if (params.limit) {
+      sql += `\nLIMIT $${paramIndex++}`;
+      sqlParams.push(params.limit);
+    }
+
+    if (params.offset) {
+      sql += `\nOFFSET $${paramIndex++}`;
+      sqlParams.push(params.offset);
+    }
+
+    // Execute raw query
+    const response = await this.rawQuery(sql, sqlParams);
+
+    // Return in ItemsResult format
+    return {
+      data: response.data || [],
+      meta: {
+        total: response.data?.length || 0,
+        limit: params.limit,
+        offset: params.offset,
+        collection: collectionName
+      }
+    };
   }
 
   /**
@@ -489,6 +675,46 @@ export class BlazorlyDataServiceClient {
     await this.request<{ message: string }>(`/items/${collectionName}/${id}`, {
       method: 'DELETE',
     });
+  }
+
+  /**
+   * Execute a raw SQL query
+   *
+   * This method allows executing raw SQL queries for complex operations
+   * like JOINs, aggregations, or custom queries that can't be expressed
+   * through the standard CRUD methods.
+   *
+   * @param sql - The SQL query string (can include placeholders)
+   * @param params - Optional parameters for the query (for parameterized queries)
+   * @returns Promise resolving to query results
+   *
+   * @example
+   * ```typescript
+   * // Simple SELECT
+   * const users = await client.rawQuery('SELECT * FROM users WHERE status = $1', ['active']);
+   *
+   * // JOIN query
+   * const results = await client.rawQuery(`
+   *   SELECT u.*, p.title
+   *   FROM users u
+   *   LEFT JOIN projects p ON u.id = p.user_id
+   *   WHERE u.status = $1
+   * `, ['active']);
+   *
+   * // Aggregation
+   * const stats = await client.rawQuery(`
+   *   SELECT COUNT(*) as total, status
+   *   FROM projects
+   *   GROUP BY status
+   * `);
+   * ```
+   */
+  async rawQuery(sql: string, params?: any[]): Promise<ApiResponse<any[]>> {
+    const response = await this.request<any[]>('/query/raw', {
+      method: 'POST',
+      body: JSON.stringify({ sql, params: params || [] }),
+    });
+    return response;
   }
 
   // ============================================
