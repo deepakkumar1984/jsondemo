@@ -1,0 +1,306 @@
+{
+  "summary": "Add configuration for a full task management application (projects, tasks, comments, activity tracking, CRUD workflows, and UI pages) plus an analytics dashboard with KPI widgets, trends, and breakdowns by status, assignee, project, and time range.",
+  "features": [
+    {
+      "title": "Task Management Data Model",
+      "description": "Define the schemas, relationships, and validation rules needed to store projects, tasks, comments, and task activity for auditing and analytics.",
+      "priority": "critical",
+      "estimatedComplexity": "complex",
+      "order": 0,
+      "tasks": [
+        {
+          "title": "Add Project schema to schemas registry",
+          "description": "Extend the existing `schemas` registry by adding `schemas.Project` with fields: `id` (primary key), `name` (required, unique within workspace), `description` (optional), `status` (enum: Active/Archived, default Active), `ownerUserId` (required reference to User), `createdAt`/`updatedAt` (system timestamps). Add validation for `name` length and non-empty trim. Add indexes on `status`, `ownerUserId`, and `updatedAt` to support filtering and sorting.",
+          "type": "task",
+          "scope": "schema",
+          "priority": "urgent",
+          "order": 0,
+          "estimatedHours": 3
+        },
+        {
+          "title": "Add Task schema with lifecycle fields and references",
+          "description": "Extend the existing `schemas` registry by adding `schemas.Task` with fields: `id` (primary key), `projectId` (required reference to Project), `title` (required), `description` (optional rich text/string), `status` (enum: Backlog/Todo/InProgress/Blocked/Done, default Todo), `priority` (enum: Low/Medium/High/Urgent, default Medium), `assigneeUserId` (optional reference to User), `reporterUserId` (required reference to User), `dueDate` (optional date-time), `startDate` (optional date-time), `completedAt` (optional date-time), `estimatePoints` (optional number with min 0), `tags` (optional array of strings), `createdAt`/`updatedAt` (system timestamps). Add validation rules: title length and required, dueDate >= startDate when both present, completedAt required when status=Done and cleared when status!=Done. Add indexes on `projectId`, `status`, `assigneeUserId`, `priority`, `dueDate`, and `updatedAt`.",
+          "type": "task",
+          "scope": "schema",
+          "priority": "urgent",
+          "order": 1,
+          "estimatedHours": 4
+        },
+        {
+          "title": "Add TaskComment schema for threaded discussion",
+          "description": "Extend the existing `schemas` registry by adding `schemas.TaskComment` with fields: `id` (primary key), `taskId` (required reference to Task), `authorUserId` (required reference to User), `body` (required), `createdAt`/`updatedAt` (system timestamps). Add validation for body non-empty and max length. Add indexes on `taskId` and `createdAt` to support ordered retrieval on task detail views.",
+          "type": "task",
+          "scope": "schema",
+          "priority": "high",
+          "order": 2,
+          "estimatedHours": 2
+        },
+        {
+          "title": "Add TaskActivity schema for audit trail and analytics",
+          "description": "Extend the existing `schemas` registry by adding `schemas.TaskActivity` with fields: `id` (primary key), `taskId` (required reference to Task), `actorUserId` (optional reference to User for automated events), `eventType` (enum: Created/Updated/StatusChanged/Assigned/Unassigned/Commented/DueDateChanged/PriorityChanged/Tagged, required), `fromValue` (optional JSON/string), `toValue` (optional JSON/string), `metadata` (optional JSON), `createdAt` (system timestamp). Add indexes on `taskId`, `eventType`, and `createdAt` for fast timeline queries and aggregation.",
+          "type": "task",
+          "scope": "schema",
+          "priority": "high",
+          "order": 3,
+          "estimatedHours": 3
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "title": "Task & Project APIs and Workflow Rules",
+      "description": "Expose configurable operations to create, read, update, and manage tasks and projects with validation, filtering, bulk actions, and automatic activity logging.",
+      "priority": "critical",
+      "estimatedComplexity": "complex",
+      "order": 1,
+      "tasks": [
+        {
+          "title": "Configure Project CRUD operations and list filters",
+          "description": "Extend the existing `api.operations` registry by adding operations: `project.create`, `project.getById`, `project.update`, `project.archive` (sets Project.status=Archived), and `project.list` with filter params (`status`, `ownerUserId`, `searchByName`) and sort options (`updatedAt desc`, `name asc`). Ensure `project.create` and `project.update` enforce schema validation and uniqueness of `name` within the configured workspace scope (as defined by existing tenant/workspace conventions).",
+          "type": "task",
+          "scope": "api",
+          "priority": "urgent",
+          "order": 0,
+          "estimatedHours": 3
+        },
+        {
+          "title": "Configure Task CRUD operations with server-side filtering",
+          "description": "Extend `api.operations` with `task.create`, `task.getById` (including related Project reference fields), `task.update`, `task.delete` (soft-delete if existing platform uses soft deletion; otherwise hard delete per existing pattern), and `task.list` supporting filters: `projectId`, `status`, `assigneeUserId`, `priority`, `tag`, `dueDateFrom`, `dueDateTo`, `searchText`, plus pagination and sort (`dueDate asc`, `updatedAt desc`, `priority desc`). Bind each operation to `schemas.Task` validation rules and return consistent list envelopes matching existing API response conventions.",
+          "type": "task",
+          "scope": "api",
+          "priority": "urgent",
+          "order": 1,
+          "estimatedHours": 4
+        },
+        {
+          "title": "Add task status transition rules and derived field behavior",
+          "description": "Extend the existing `api.rules` or equivalent validation/workflow rules configuration by adding Task lifecycle rules: allow status changes only among configured pipeline values; when setting status to Done, auto-set `completedAt` if empty; when moving away from Done, clear `completedAt`; when `startDate` is set after `dueDate`, reject update; enforce `estimatePoints >= 0`. Apply rules to `task.update` and any bulk status updates so behavior is consistent across endpoints.",
+          "type": "task",
+          "scope": "api",
+          "priority": "high",
+          "order": 2,
+          "estimatedHours": 3
+        },
+        {
+          "title": "Configure Task bulk operations (status, assignee, priority, tags)",
+          "description": "Extend `api.operations` with `task.bulkUpdate` that accepts `taskIds` and a patch object supporting: `status`, `assigneeUserId`, `priority`, `tagsAdd`, `tagsRemove`, and `dueDate`. Ensure it reuses the same rule set as single-task updates and returns a per-task success/error result array following existing bulk-operation patterns.",
+          "type": "task",
+          "scope": "api",
+          "priority": "high",
+          "order": 3,
+          "estimatedHours": 3
+        },
+        {
+          "title": "Configure comment APIs for task discussion",
+          "description": "Extend `api.operations` with `taskComment.create`, `taskComment.listByTask` (sorted by createdAt asc), and `taskComment.delete` (restricted to author or privileged roles per existing permission patterns). Bind create to `schemas.TaskComment` validation and ensure `taskComment.create` also emits an activity event of type `Commented` tied to the task.",
+          "type": "task",
+          "scope": "api",
+          "priority": "medium",
+          "order": 4,
+          "estimatedHours": 3
+        },
+        {
+          "title": "Configure automatic TaskActivity logging on key task events",
+          "description": "Extend the existing `api.workflows` / `eventHooks` configuration by registering triggers for `task.create` and `task.update` to write `schemas.TaskActivity` records for: Created, StatusChanged, Assigned/Unassigned, DueDateChanged, PriorityChanged, Tagged, and generic Updated (when non-tracked fields change). Include `fromValue`/`toValue` payload mapping for tracked fields and ensure actor identity is captured from the authenticated context.",
+          "type": "task",
+          "scope": "api",
+          "priority": "high",
+          "order": 5,
+          "estimatedHours": 4
+        }
+      ],
+      "dependencies": [
+        "Task Management Data Model"
+      ]
+    },
+    {
+      "title": "Task Management UI (Pages, Forms, and Views)",
+      "description": "Provide configurable pages for managing projects and tasks, including list, board, detail view, create/edit forms, comments, filters, and bulk actions bound to the configured APIs.",
+      "priority": "high",
+      "estimatedComplexity": "complex",
+      "order": 2,
+      "tasks": [
+        {
+          "title": "Add Projects page with create/edit/archive actions",
+          "description": "Extend the existing `pages` registry by adding `pages.projects` with a table bound to `api.operations.project.list`, showing columns `name`, `status`, `owner`, `updatedAt`. Add page actions: Create Project (form bound to `project.create`), Edit (bound to `project.update`), Archive (confirmation bound to `project.archive`). Add a project selector control that sets a global/app-level `currentProjectId` state used by task pages per existing global state conventions.",
+          "type": "task",
+          "scope": "page",
+          "priority": "high",
+          "order": 0,
+          "estimatedHours": 4
+        },
+        {
+          "title": "Add Task List page with filters, sorting, and bulk actions",
+          "description": "Add `pages.taskList` with a searchable, paginated table bound to `api.operations.task.list`. Include filter controls for `projectId` (defaulted from `currentProjectId`), `status`, `assigneeUserId`, `priority`, `tag`, and due date range. Add row actions: View (navigates to task detail), Edit (opens edit form), Delete (calls `task.delete`). Add bulk selection with bulk actions bound to `task.bulkUpdate` for status, assignee, priority, tags, and due date changes. Ensure the page persists filter state in URL/query params following existing routing patterns.",
+          "type": "task",
+          "scope": "page",
+          "priority": "urgent",
+          "order": 1,
+          "estimatedHours": 4
+        },
+        {
+          "title": "Add Kanban Board page grouped by task status",
+          "description": "Add `pages.taskBoard` configured as a board view grouped by `Task.status`, with columns for each configured status value. Bind card data source to `api.operations.task.list` filtered by `currentProjectId` and optional assignee/tag filters. Configure drag-and-drop (or status-change UI control per platform capability) to call `api.operations.task.update` (or `task.bulkUpdate` for multi-select) updating only the `status` field, and ensure the status transition rules are enforced with user-facing error messaging mapping.",
+          "type": "task",
+          "scope": "page",
+          "priority": "high",
+          "order": 2,
+          "estimatedHours": 4
+        },
+        {
+          "title": "Add Task Detail page with editable fields, comments, and activity timeline",
+          "description": "Add `pages.taskDetail` bound to `api.operations.task.getById` for the primary record, with editable sections for `title`, `description`, `status`, `priority`, `assigneeUserId`, `dueDate`, `startDate`, `estimatePoints`, and `tags` bound to `api.operations.task.update`. Add a comments panel bound to `taskComment.listByTask` and `taskComment.create`. Add an activity timeline panel bound to a new read operation for TaskActivity (configured in the same page task via existing generic list operation patterns), sorted by createdAt desc and rendered with event-specific labels using `eventType` plus `fromValue`/`toValue` mappings.",
+          "type": "task",
+          "scope": "page",
+          "priority": "high",
+          "order": 3,
+          "estimatedHours": 4
+        },
+        {
+          "title": "Add Task create/edit form configuration with validation bindings",
+          "description": "Extend `forms` (or the platform’s form configuration area) by adding `forms.taskCreate` and `forms.taskEdit` bound to `api.operations.task.create` and `api.operations.task.update`. Ensure fields map 1:1 to `schemas.Task` with UI validation mirroring schema rules (required title, date constraints, points min 0). Default `projectId` to `currentProjectId` and `reporterUserId` to the authenticated user context mapping used elsewhere in the app.",
+          "type": "task",
+          "scope": "page",
+          "priority": "medium",
+          "order": 4,
+          "estimatedHours": 3
+        }
+      ],
+      "dependencies": [
+        "Task Management Data Model",
+        "Task & Project APIs and Workflow Rules"
+      ]
+    },
+    {
+      "title": "Analytics Dashboard (KPIs, Trends, and Breakdown Views)",
+      "description": "Deliver a configurable analytics dashboard with time range controls and widgets showing task volume, completion performance, overdue risk, and distributions by status, project, and assignee.",
+      "priority": "high",
+      "estimatedComplexity": "complex",
+      "order": 3,
+      "tasks": [
+        {
+          "title": "Configure analytics API operations for KPI cards and breakdown charts",
+          "description": "Extend `api.operations` with analytics read operations scoped by `projectId` (optional) and `dateFrom/dateTo` (required, default to last 30 days on the page): `analytics.tasksByStatus` (counts grouped by status), `analytics.tasksCreatedTrend` (daily/weekly buckets), `analytics.tasksCompletedTrend` (daily/weekly buckets using completedAt), `analytics.overdueCounts` (overdue open tasks grouped by priority), and `analytics.assigneeWorkload` (open tasks grouped by assignee and status). Ensure operations return chart-friendly datasets (labels + series arrays) using existing analytics response conventions.",
+          "type": "task",
+          "scope": "api",
+          "priority": "urgent",
+          "order": 0,
+          "estimatedHours": 4
+        },
+        {
+          "title": "Configure cycle time and completion rate metrics using TaskActivity/Task timestamps",
+          "description": "Extend `api.operations` with `analytics.cycleTime` (avg/median time from startDate to completedAt, plus distribution buckets) and `analytics.completionRate` (completed tasks / created tasks over time). If startDate is missing, define a configurable fallback rule for cycle-time start (e.g., first transition into InProgress from TaskActivity) and document it within the operation configuration metadata so the dashboard labels match the metric definition.",
+          "type": "task",
+          "scope": "api",
+          "priority": "high",
+          "order": 1,
+          "estimatedHours": 4
+        },
+        {
+          "title": "Add Analytics Dashboard page with global filters and widget layout",
+          "description": "Add `pages.analyticsDashboard` with a top filter bar containing: `projectId` selector (default `currentProjectId` with option 'All Projects'), date range picker (default last 30 days), and optional assignee filter. Configure dashboard widgets: KPI cards (Open Tasks, Completed in Range, Overdue Open, Avg Cycle Time), charts (Tasks by Status donut/bar, Created vs Completed trend lines, Assignee workload stacked bar, Overdue by Priority bar). Bind each widget to the corresponding analytics operations and pass filter values as params.",
+          "type": "task",
+          "scope": "page",
+          "priority": "urgent",
+          "order": 2,
+          "estimatedHours": 4
+        },
+        {
+          "title": "Add dashboard drill-down navigation from widgets to Task List",
+          "description": "Extend `pages.analyticsDashboard` widget configuration to include click/drill actions that navigate to `pages.taskList` with pre-applied URL/query filters. Examples: clicking 'Overdue Open' sets `dueDateTo=now` and `status!=Done`; clicking a status segment sets `status=<segment>`; clicking an assignee bar sets `assigneeUserId=<assignee>`; clicking a project label sets `projectId=<project>`.",
+          "type": "task",
+          "scope": "page",
+          "priority": "high",
+          "order": 3,
+          "estimatedHours": 2
+        }
+      ],
+      "dependencies": [
+        "Task Management Data Model",
+        "Task & Project APIs and Workflow Rules",
+        "Task Management UI (Pages, Forms, and Views)"
+      ]
+    },
+    {
+      "title": "App Navigation, Roles, and Permissions",
+      "description": "Integrate the new pages into the app shell and enforce role-based access for project/task management and analytics viewing.",
+      "priority": "high",
+      "estimatedComplexity": "moderate",
+      "order": 4,
+      "tasks": [
+        {
+          "title": "Register routes and navigation items for projects, tasks, board, and analytics",
+          "description": "Extend the existing `app.routes` and `app.navigation` configuration by registering routes for `pages.projects`, `pages.taskList`, `pages.taskBoard`, `pages.taskDetail`, and `pages.analyticsDashboard`. Add navigation items under a new or existing 'Work' section: Projects, Tasks, Board, Analytics. Set a sensible default landing route (e.g., Tasks) while preserving any existing default-route behavior patterns.",
+          "type": "task",
+          "scope": "app",
+          "priority": "high",
+          "order": 0,
+          "estimatedHours": 2
+        },
+        {
+          "title": "Define role-based permissions for task management and analytics access",
+          "description": "Extend the existing `app.permissions` (or equivalent access control config) by adding capabilities: `project.read/write/archive`, `task.read/write/delete`, `task.bulkUpdate`, `comment.create/delete`, `analytics.view`. Map them to roles consistent with existing role patterns (e.g., Admin: all; Manager: all except system-level; Member: read/write tasks and comments, no delete unless owner; Viewer: read-only plus analytics.view if allowed). Bind permissions to API operations and page access guards so unauthorized users cannot invoke operations or view restricted pages.",
+          "type": "task",
+          "scope": "app",
+          "priority": "urgent",
+          "order": 1,
+          "estimatedHours": 4
+        },
+        {
+          "title": "Add configurable enums/settings for status pipeline and priority labels",
+          "description": "Extend existing `app.settings` (or shared configuration area) by adding `taskStatusPipeline` (ordered list of allowed statuses with display labels/colors), `taskPriorityOptions` (labels/colors), and `defaultTaskFilters` (e.g., exclude Done by default). Update page configs (`taskList`, `taskBoard`, `taskDetail`, forms) to reference these shared settings instead of hardcoding values, ensuring consistent UI labels and analytics grouping.",
+          "type": "task",
+          "scope": "app",
+          "priority": "medium",
+          "order": 2,
+          "estimatedHours": 3
+        }
+      ],
+      "dependencies": [
+        "Task Management UI (Pages, Forms, and Views)",
+        "Analytics Dashboard (KPIs, Trends, and Breakdown Views)"
+      ]
+    }
+  ],
+  "metadata": {
+    "totalEstimatedHours": 57,
+    "recommendedOrder": [
+      "Task Management Data Model",
+      "Task & Project APIs and Workflow Rules",
+      "Task Management UI (Pages, Forms, and Views)",
+      "Analytics Dashboard (KPIs, Trends, and Breakdown Views)",
+      "App Navigation, Roles, and Permissions"
+    ],
+    "riskAreas": [
+      "Consistency between schema validation rules and UI form validation bindings (especially date constraints and Done/completedAt behavior)",
+      "Analytics aggregation performance on large task/activity datasets without configured indexes and time-range constraints",
+      "Permissions alignment across page guards and API operation access to prevent unauthorized bulk updates or deletes",
+      "Cycle time definition ambiguity when startDate is missing; requires a clear, configured fallback rule"
+    ],
+    "suggestedMilestones": [
+      {
+        "name": "MVP",
+        "features": [
+          "Task Management Data Model",
+          "Task & Project APIs and Workflow Rules",
+          "Task Management UI (Pages, Forms, and Views)"
+        ],
+        "description": "Minimum working task management app with projects, task CRUD, list/board/detail views, comments, and activity logging."
+      },
+      {
+        "name": "Analytics",
+        "features": [
+          "Analytics Dashboard (KPIs, Trends, and Breakdown Views)"
+        ],
+        "description": "Operational dashboard with KPIs, trends, and drill-downs to task lists with time range and project filtering."
+      },
+      {
+        "name": "Governance",
+        "features": [
+          "App Navigation, Roles, and Permissions"
+        ],
+        "description": "Finalize navigation integration, role-based access, and shared settings for consistent task lifecycle behavior across the app."
+      }
+    ]
+  }
+}

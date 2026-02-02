@@ -1,0 +1,168 @@
+{
+  "table": "tasks",
+  "description": "Task records with status tracking, assignments, and metadata",
+  "columns": [
+    {
+      "name": "id",
+      "type": "text",
+      "primaryKey": true,
+      "defaultFn": "uuid",
+      "description": "Unique task identifier"
+    },
+    {
+      "name": "project_id",
+      "type": "text",
+      "notNull": true,
+      "references": {
+        "table": "projects",
+        "column": "id",
+        "onDelete": "cascade"
+      },
+      "description": "Reference to the parent project"
+    },
+    {
+      "name": "title",
+      "type": "text",
+      "notNull": true,
+      "description": "Task title"
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "notNull": false,
+      "description": "Optional task description or rich text content"
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "notNull": true,
+      "default": "Todo",
+      "description": "Task status: Backlog, Todo, InProgress, Blocked, or Done"
+    },
+    {
+      "name": "priority",
+      "type": "text",
+      "notNull": true,
+      "default": "Medium",
+      "description": "Task priority: Low, Medium, High, or Urgent"
+    },
+    {
+      "name": "assignee_user_id",
+      "type": "text",
+      "notNull": false,
+      "references": {
+        "table": "users",
+        "column": "id",
+        "onDelete": "set null"
+      },
+      "description": "Reference to the assigned user"
+    },
+    {
+      "name": "reporter_user_id",
+      "type": "text",
+      "notNull": true,
+      "references": {
+        "table": "users",
+        "column": "id",
+        "onDelete": "cascade"
+      },
+      "description": "Reference to the user who created the task"
+    },
+    {
+      "name": "due_date",
+      "type": "timestamp",
+      "notNull": false,
+      "description": "Optional task due date"
+    },
+    {
+      "name": "start_date",
+      "type": "timestamp",
+      "notNull": false,
+      "description": "Optional task start date"
+    },
+    {
+      "name": "completed_at",
+      "type": "timestamp",
+      "notNull": false,
+      "description": "Timestamp when task was completed"
+    },
+    {
+      "name": "estimate_points",
+      "type": "numeric",
+      "notNull": false,
+      "description": "Story points or effort estimate"
+    },
+    {
+      "name": "tags",
+      "type": "jsonb",
+      "notNull": false,
+      "description": "Array of string tags for categorization"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "notNull": true,
+      "default": "CURRENT_TIMESTAMP",
+      "description": "When the task was created"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp",
+      "notNull": true,
+      "default": "CURRENT_TIMESTAMP",
+      "description": "When the task was last updated"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_tasks_project_id",
+      "columns": [
+        "project_id"
+      ]
+    },
+    {
+      "name": "idx_tasks_status",
+      "columns": [
+        "status"
+      ]
+    },
+    {
+      "name": "idx_tasks_assignee_user_id",
+      "columns": [
+        "assignee_user_id"
+      ]
+    },
+    {
+      "name": "idx_tasks_priority",
+      "columns": [
+        "priority"
+      ]
+    },
+    {
+      "name": "idx_tasks_due_date",
+      "columns": [
+        "due_date"
+      ]
+    },
+    {
+      "name": "idx_tasks_updated_at",
+      "columns": [
+        "updated_at"
+      ]
+    },
+    {
+      "name": "idx_tasks_project_status",
+      "columns": [
+        "project_id",
+        "status"
+      ]
+    },
+    {
+      "name": "idx_tasks_assignee_status",
+      "columns": [
+        "assignee_user_id",
+        "status"
+      ]
+    }
+  ]
+}

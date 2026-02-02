@@ -5,3 +5,4 @@ dist
 
 # Environment variables (contains secrets)
 .dev.vars
+.env
