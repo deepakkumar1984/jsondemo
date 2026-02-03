@@ -1,0 +1,106 @@
+{
+  "table": "budgets",
+  "description": "Budget definitions for periods and categories",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "defaultFn": "uuid",
+      "description": "Unique budget identifier"
+    },
+    {
+      "name": "period_start",
+      "type": "date",
+      "notNull": true,
+      "description": "Start date of the budget period"
+    },
+    {
+      "name": "period_end",
+      "type": "date",
+      "notNull": true,
+      "description": "End date of the budget period"
+    },
+    {
+      "name": "category_id",
+      "type": "uuid",
+      "notNull": false,
+      "references": {
+        "table": "expense_categories",
+        "column": "id",
+        "onDelete": "cascade"
+      },
+      "description": "Foreign key to expense category, optional for overall budgets"
+    },
+    {
+      "name": "amount",
+      "type": "numeric",
+      "notNull": true,
+      "description": "Budget amount"
+    },
+    {
+      "name": "currency",
+      "type": "text",
+      "notNull": true,
+      "default": "USD",
+      "description": "Currency of the budget"
+    },
+    {
+      "name": "notes",
+      "type": "text",
+      "notNull": false,
+      "description": "Additional notes for the budget"
+    },
+    {
+      "name": "created_by",
+      "type": "uuid",
+      "notNull": true,
+      "references": {
+        "table": "users",
+        "column": "id",
+        "onDelete": "cascade"
+      },
+      "description": "Foreign key to user who created the budget"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "notNull": true,
+      "default": "CURRENT_TIMESTAMP",
+      "description": "Timestamp when the budget was created"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "notNull": true,
+      "default": "CURRENT_TIMESTAMP",
+      "description": "Timestamp when the budget was last updated"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_budgets_created_by_period_start",
+      "columns": [
+        "created_by",
+        "period_start"
+      ]
+    },
+    {
+      "name": "idx_budgets_category_id",
+      "columns": [
+        "category_id"
+      ]
+    },
+    {
+      "name": "idx_budgets_unique_constraint",
+      "columns": [
+        "created_by",
+        "period_start",
+        "period_end",
+        "category_id",
+        "currency"
+      ],
+      "unique": true
+    }
+  ]
+}

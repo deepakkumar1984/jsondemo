@@ -118,6 +118,7 @@ You MUST respond with a valid JSON object following this exact structure:
 
 ### Tasks
 Tasks are concrete, implementable work items with clear outputs. Each task should:
+- **Generate exactly ONE file** (critical for modularity and --skip-existing functionality)
 - Be completable in 1-4 hours of focused work
 - Have a clear acceptance criteria (e.g., "Schema file exists with all fields defined")
 - Follow the correct implementation order within a feature
@@ -126,7 +127,9 @@ Tasks are concrete, implementable work items with clear outputs. Each task shoul
 **Task title format:**
 - Schema: "Define {Resource} schema" or "Add {fields} to {Resource} schema"
 - API: "Implement {Resource} CRUD operations" or "Add {endpoint} to {Resource} API"
-- Page: "Create {Resource} {PageType} page" (e.g., "Create Projects List page", "Create Task Detail page")
+- Page: "Create {Resource} {PageType} page" - ONE page per task
+  - ✅ GOOD: "Create Expense Categories List page", "Create Vendors List page", "Create Payment Accounts List page"
+  - ❌ BAD: "Create Categories, Vendors, and Payment Accounts pages" (compound task)
 - App: "Register {Resource} routes in navigation" or "Configure {Resource} permissions"
 
 **Task description should be detailed and specific:**
@@ -224,19 +227,23 @@ Order 7: "Register Projects routes in navigation" (scope: app)
 
 1. **ALWAYS output valid JSON** - No markdown code fences, no explanations, just raw JSON
 2. **Every feature MUST have at least one task** - Features without tasks are not actionable
-3. **Task order within a feature must reflect implementation sequence** - Schema → API → Page → App
-4. **Be specific in descriptions** - Include exact field names, endpoint paths, component types
-5. **Consider the full stack** - Every feature needs schema (if new data), API (backend), page (frontend), app (routing)
-6. **Don't over-engineer** - Start with simple CRUD, add complexity only when needed
-7. **Group related functionality** - All tasks for a feature should work together cohesively
-8. **NEVER plan to recreate existing files** - Check existing schemas/APIs/pages first
-9. **ALWAYS check existing files before planning** - Extend existing implementations, don't replace
-10. **Use exact resource names** - Singular for types (e.g., "Project"), plural for collections (e.g., "projects" table/endpoint)
-11. **Follow naming conventions** - PascalCase for components, kebab-case for files, snake_case for database fields
-12. **Include all CRUD operations** - Unless explicitly stated otherwise, APIs should support Create, Read, Update, Delete
-13. **Describe UI interactions** - Pages should specify buttons, forms, tables, filters, and their actions
-14. **Specify data relationships** - Schemas should define foreign keys, indexes, and join requirements
-15. **Avoid adjectives as resource names** - "automatic" is not a resource; clarify if it's task automation, logging, or a workflow feature`;
+3. **ONE FILE PER TASK** - Each task must generate exactly ONE file. NEVER create compound tasks that generate multiple files.
+   - ❌ BAD: "Create Categories, Vendors, and Payment Accounts pages" (3 files in 1 task)
+   - ✅ GOOD: Three separate tasks: "Create Expense Categories List page", "Create Vendors List page", "Create Payment Accounts List page"
+   - This is critical for --skip-existing to work correctly and for modular, trackable progress
+4. **Task order within a feature must reflect implementation sequence** - Schema → API → Page → App
+5. **Be specific in descriptions** - Include exact field names, endpoint paths, component types
+6. **Consider the full stack** - Every feature needs schema (if new data), API (backend), page (frontend), app (routing)
+7. **Don't over-engineer** - Start with simple CRUD, add complexity only when needed
+8. **Group related functionality** - All tasks for a feature should work together cohesively
+9. **NEVER plan to recreate existing files** - Check existing schemas/APIs/pages first
+10. **ALWAYS check existing files before planning** - Extend existing implementations, don't replace
+11. **Use exact resource names** - Singular for types (e.g., "Project"), plural for collections (e.g., "projects" table/endpoint)
+12. **Follow naming conventions** - PascalCase for components, kebab-case for files, snake_case for database fields
+13. **Include all CRUD operations** - Unless explicitly stated otherwise, APIs should support Create, Read, Update, Delete
+14. **Describe UI interactions** - Pages should specify buttons, forms, tables, filters, and their actions
+15. **Specify data relationships** - Schemas should define foreign keys, indexes, and join requirements
+16. **Avoid adjectives as resource names** - "automatic" is not a resource; clarify if it's task automation, logging, or a workflow feature`;
 
 /**
  * Build user prompt for planning generation
