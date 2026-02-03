@@ -2,18 +2,20 @@
 /**
  * AI Config Generator
  *
- * Uses Cloudflare AI Gateway to generate configuration files for:
- * - Database schemas (config/schema/*.json)
- * - API operations (config/api/*.json)
- * - UI pages (config/pages/*.json)
- * - App configuration (config/apps.json)
+ * Uses Cloudflare AI Gateway to generate configuration files and code for:
+ * - Database schemas (config/schema/*.json) - JSON configs
+ * - API routes (config/api/*.routes.ts) - TypeScript code using Hono framework
+ * - UI pages (config/pages/*.json) - JSON configs with json-render components
+ * - App configuration (config/apps.json) - JSON configs
  *
  * Supports multiple AI providers via Cloudflare Gateway:
  * - Anthropic Claude
  * - OpenAI GPT
  * - Google Gemini
  *
- * The AI uses JSON schema response_format to ensure valid output.
+ * Output format:
+ * - API type: Generates TypeScript route files (*.routes.ts)
+ * - Other types: Generate JSON configs validated against JSON schemas
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
@@ -22,14 +24,11 @@ import { buildContext } from './dsl-converters';
 import Ajv from 'ajv';
 import {
   COMPREHENSIVE_SCHEMA_EXAMPLES,
-  COMPREHENSIVE_API_EXAMPLES,
   COMPREHENSIVE_PAGE_EXAMPLES,
-  COMPREHENSIVE_APPS_EXAMPLES,
-  VALID_ACTION_TYPES,
-  VALID_COMPONENT_TYPES,
-  SPECIAL_FUNCTIONS,
-  TEMPLATE_PATTERNS
+  COMPREHENSIVE_APPS_EXAMPLES
 } from './comprehensive-examples';
+import { generateCatalogPrompt } from '@json-render/core';
+import { catalog } from '../src/client/lib/catalog';
 
 /**
  * Load environment variables from .env file
@@ -150,58 +149,162 @@ function loadFormatSchema(type: string): any {
  * Build system prompt based on config type with comprehensive examples
  */
 function buildSystemPrompt(type: string): string {
+  // For API configs, generate TypeScript code
+  if (type === 'api') {
+    return `You are an expert software engineer specializing in TypeScript API development using the Hono framework.
+Your task is to generate production-ready TypeScript route handlers based on user requirements.
+
+=== ARCHITECTURE ===
+
+We use TypeScript route files (*.routes.ts) instead of JSON configs for APIs. Each route file:
+- Uses Hono framework for routing
+- Exports a router named after the resource (e.g., employeesRouter, departmentsRouter)
+- Directly uses the Blazorly Data API client for database operations
+- Handles validation, error handling, and business logic in TypeScript code
+
+=== FILE STRUCTURE ===
+
+File naming: config/api/{resource}.routes.ts
+Export pattern: export const {resource}Router = new Hono<{ Bindings: Env }>();
+
+=== DATA API CLIENT METHODS ===
+
+Available methods on the data client:
+- createItem(collection, data) - Create a new item
+- getItems(collection, params) - Query items with filters
+- getItemById(collection, id) - Get single item by ID
+- updateItem(collection, id, data) - Update an item
+- deleteItem(collection, id) - Delete an item
+
+Query parameters for getItems:
+- filter: { field: { _eq, _ne, _gt, _lt, _gte, _lte, _in, _null } }
+- limit: number
+- offset: number
+- sort: string[] (e.g., ['-created_at'])
+- fields: string[] (columns to return)
+
+=== TYPESCRIPT ROUTE EXAMPLES ===
+
+--- Example 1: Basic CRUD ---
+
+import { Hono } from 'hono';
+import type { Env } from '../../src/types';
+import { createDataClient } from '../../src/db/data-client';
+
+export const employeesRouter = new Hono<{ Bindings: Env }>();
+
+employeesRouter.get('/', async (c) => {
+  const client = createDataClient(c.env);
+  try {
+    const employees = await client.getItems('employees', {});
+    return c.json({ success: true, data: employees.data });
+  } catch (error: any) {
+    return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
+  }
+});
+
+employeesRouter.post('/', async (c) => {
+  const body = await c.req.json();
+  const client = createDataClient(c.env);
+
+  if (!body.firstName || !body.lastName) {
+    return c.json({
+      success: false,
+      error: { message: 'Missing required fields', status: 400 }
+    }, 400);
+  }
+
+  try {
+    const employee = await client.createItem('employees', {
+      id: crypto.randomUUID(),
+      first_name: body.firstName,
+      last_name: body.lastName,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    return c.json({
+      success: true,
+      data: employee.data,
+      message: 'Employee created successfully'
+    }, 201);
+  } catch (error: any) {
+    return c.json({
+      success: false,
+      error: { message: error.message, status: 500 }
+    }, 500);
+  }
+});
+
+=== IMPORTANT GUIDELINES ===
+
+1. ALWAYS export the router with the pattern: export const {resource}Router = new Hono<{ Bindings: Env }>();
+2. Map camelCase request body fields to snake_case database columns
+3. Always include validation before database operations
+4. Return consistent response format: { success: boolean, data?: any, error?: { message, status }, message?: string }
+5. Use crypto.randomUUID() for generating IDs
+6. Use new Date().toISOString() for timestamps
+7. Set appropriate HTTP status codes (200, 201, 400, 404, 500)
+8. Include error handling with try/catch blocks
+9. Check for existing records before creating (duplicate prevention)
+10. Check for dependent records before deleting (referential integrity)
+
+OUTPUT REQUIREMENTS:
+- Return ONLY TypeScript code for a single route file
+- Do NOT add markdown code fences (the output will be written directly to a .ts file)
+- Do NOT add explanatory comments outside the code
+- Include all necessary imports at the top
+- Follow the exact patterns shown in the examples
+`;
+  }
+
+  // For page configs, use json-render's catalog-based prompt generation
+  if (type === 'page') {
+    const catalogPrompt = generateCatalogPrompt(catalog);
+    const pageInstructions = `
+
+=== PAGE CONFIGURATION FORMAT ===
+
+Generate a page configuration with nested component hierarchy.
+Use the catalog components below and follow these rules:
+
+1. Use nested "children" arrays for component hierarchy (NOT flat UITree)
+2. Component props must match the catalog schemas exactly
+3. Use dataPath to reference data from dataSources
+4. Use valuePath for nested data access
+5. Use template syntax {{variable}} for dynamic values
+6. Return ONLY valid JSON matching this structure
+
+`;
+    return pageInstructions + catalogPrompt;
+  }
+
+  // For other config types, use example-driven approach
   const basePrompt = `You are an expert software engineer specializing in config-driven application development.
 Your task is to generate high-quality, production-ready configuration files based on user requirements.
 
 CRITICAL RULES:
-1. You MUST ONLY use properties, action types, component types, and functions shown in the examples below
-2. Do NOT invent new action types, component types, or properties that are not in the examples
-3. Follow the EXACT structure and patterns shown in the examples
-4. Use snake_case for database table/column names
-5. Use camelCase for JavaScript identifiers (API operation IDs, variable names)
-6. Use kebab-case for file names and paths
-7. Include proper descriptions for documentation
-8. Think about data relationships and foreign keys
-9. Include appropriate indexes for performance
-10. Follow REST API best practices
+1. Follow the EXACT structure and patterns shown in the examples
+2. Use snake_case for database table/column names
+3. Use camelCase for JavaScript identifiers
+4. Use kebab-case for file names and paths
+5. Include proper descriptions for documentation
 
 OUTPUT REQUIREMENTS:
 - Return ONLY valid JSON that matches the examples
 - Do NOT add markdown code fences
-- Do NOT add explanatory text before or after the JSON
-- Do NOT use properties not shown in the examples`;
+- Do NOT add explanatory text before or after the JSON`;
 
-  // Get examples based on type
   const examples = getExamplesForType(type);
 
   let examplesSection = '\n\n=== COMPREHENSIVE EXAMPLES ===\n\n';
-  examplesSection += 'Study these examples carefully. They show ALL valid properties and patterns.\n';
-  examplesSection += 'You MUST follow these patterns exactly.\n\n';
+  examplesSection += 'Study these examples carefully.\n\n';
 
   for (let i = 0; i < examples.length; i++) {
     const example = examples[i];
     examplesSection += `--- Example ${i + 1}: ${example.description} ---\n\n`;
     examplesSection += JSON.stringify(example.config, null, 2);
     examplesSection += '\n\n';
-  }
-
-  // Add valid types reference
-  if (type === 'api') {
-    examplesSection += '\n=== VALID ACTION TYPES ===\n';
-    examplesSection += 'You MUST ONLY use these action types:\n';
-    examplesSection += JSON.stringify(Array.from(VALID_ACTION_TYPES), null, 2);
-    examplesSection += '\n\n=== SPECIAL FUNCTIONS ===\n';
-    examplesSection += JSON.stringify(SPECIAL_FUNCTIONS, null, 2);
-    examplesSection += '\n\n=== TEMPLATE PATTERNS ===\n';
-    examplesSection += JSON.stringify(TEMPLATE_PATTERNS, null, 2);
-    examplesSection += '\n';
-  }
-
-  if (type === 'page') {
-    examplesSection += '\n=== VALID COMPONENT TYPES ===\n';
-    examplesSection += 'You MUST ONLY use these component types:\n';
-    examplesSection += JSON.stringify(Array.from(VALID_COMPONENT_TYPES), null, 2);
-    examplesSection += '\n';
   }
 
   return basePrompt + examplesSection;
@@ -215,7 +318,7 @@ function getExamplesForType(type: string): Array<{ description: string; config: 
     case 'schema':
       return COMPREHENSIVE_SCHEMA_EXAMPLES;
     case 'api':
-      return COMPREHENSIVE_API_EXAMPLES;
+      return []; // TypeScript code generated from examples in system prompt
     case 'page':
       return COMPREHENSIVE_PAGE_EXAMPLES;
     case 'app':
@@ -250,12 +353,17 @@ function buildUserPrompt(type: string, feature: string, tasks?: string, context?
 - Indexes for performance
 - Proper constraints (NOT NULL, UNIQUE, etc.)`;
   } else if (type === 'api') {
-    prompt += `\nGenerate a complete API configuration with:
+    prompt += `\nGenerate a complete TypeScript route file with:
+- Hono router exported as {resource}Router
 - RESTful operations (GET, POST, PUT, DELETE as needed)
-- Proper action workflows for each operation
-- Request/response validation
-- Database operations using action engine
-- Proper error handling`;
+- Input validation for all request fields
+- Database operations using Data API client
+- Proper error handling with try/catch
+- Business logic checks (duplicate prevention, referential integrity)
+- Consistent response format: { success, data?, error?, message? }
+- Appropriate HTTP status codes (200, 201, 400, 404, 500)
+
+Remember: Output ONLY TypeScript code, NO markdown fences, NO explanatory text.`;
   } else if (type === 'page') {
     prompt += `\nGenerate a complete page configuration with:
 - Data sources connecting to relevant APIs
@@ -327,8 +435,8 @@ async function generateConfig(options: GenerateOptions): Promise<any> {
     'cf-aig-authorization': `Bearer ${apiKey}`,
   };
 
-  // Load format schema
-  const formatSchema = loadFormatSchema(options.type);
+  // Load format schema (not needed for API type - generating TypeScript code)
+  const formatSchema = options.type === 'api' ? null : loadFormatSchema(options.type);
 
   // Auto-build context from existing configs (prevents AI hallucination)
   const autoContext = buildContext(options.type, {
@@ -446,7 +554,35 @@ async function generateConfig(options: GenerateOptions): Promise<any> {
       console.log(`🐛 Debug: Raw response saved to ${debugPath}`);
     }
 
-    // Strip markdown code blocks if present
+    // Declare config variable at the top
+    let config: any;
+
+    // For API type, content is TypeScript code (not JSON)
+    if (options.type === 'api') {
+      // Strip markdown code blocks if present
+      let tsContent = content.trim();
+
+      // Remove ```typescript ... ``` or ``` ... ```
+      if (tsContent.startsWith('```')) {
+        const lines = tsContent.split('\n');
+        // Remove first line (```typescript, ```ts, or ```)
+        lines.shift();
+        // Remove last line (```)
+        if (lines[lines.length - 1].trim() === '```') {
+          lines.pop();
+        }
+        tsContent = lines.join('\n').trim();
+        console.log(`🔧 Stripped markdown code blocks`);
+      }
+
+      // For TypeScript routes, the content IS the config
+      config = tsContent;
+      console.log(`✅ TypeScript route code generated successfully!`);
+      validConfig = config;
+      break;
+    }
+
+    // For other types, parse as JSON
     let jsonContent = content.trim();
 
     // Remove ```json ... ``` or ``` ... ```
@@ -463,7 +599,6 @@ async function generateConfig(options: GenerateOptions): Promise<any> {
     }
 
     // Parse JSON
-    let config;
     try {
       config = JSON.parse(jsonContent);
     } catch (parseError) {
@@ -491,6 +626,7 @@ async function generateConfig(options: GenerateOptions): Promise<any> {
     }
 
     // VALIDATE with full JSON Schema (no limitations!)
+    // Note: API type already handled above and broke out of loop
     if (skipValidation) {
       console.log(`\n⚠️  Skipping validation (default behavior)`);
       validConfig = config;
@@ -505,7 +641,7 @@ async function generateConfig(options: GenerateOptions): Promise<any> {
       verbose: true
     });
 
-    const validate = ajv.compile(formatSchema);
+    const validate = ajv.compile(formatSchema!);
     const isValid = validate(config);
 
     if (isValid) {
@@ -558,7 +694,8 @@ function saveConfig(config: any, type: string, output?: string): string {
     if (type === 'schema') {
       outputPath = join(process.cwd(), 'config', 'schema', `${fileName}.json`);
     } else if (type === 'api') {
-      outputPath = join(process.cwd(), 'config', 'api', `${fileName}.json`);
+      // For API, save as TypeScript route file
+      outputPath = join(process.cwd(), 'config', 'api', `${fileName}.routes.ts`);
     } else if (type === 'page') {
       outputPath = join(process.cwd(), 'config', 'pages', `${fileName}.json`);
     } else {
@@ -572,8 +709,13 @@ function saveConfig(config: any, type: string, output?: string): string {
     mkdirSync(dir, { recursive: true });
   }
 
-  // Write file with pretty formatting
-  writeFileSync(outputPath, JSON.stringify(config, null, 2), 'utf-8');
+  // For API type, config is TypeScript code (string), not JSON
+  if (type === 'api') {
+    writeFileSync(outputPath, config, 'utf-8');
+  } else {
+    // Write file with pretty formatting for JSON configs
+    writeFileSync(outputPath, JSON.stringify(config, null, 2), 'utf-8');
+  }
 
   return outputPath;
 }
@@ -643,10 +785,21 @@ async function main() {
     const outputPath = saveConfig(config, options.type, options.output);
 
     console.log(`✅ Configuration saved to: ${outputPath}`);
-    console.log(`\n📄 Generated config preview:`);
-    console.log(JSON.stringify(config, null, 2).split('\n').slice(0, 20).join('\n'));
-    if (JSON.stringify(config, null, 2).split('\n').length > 20) {
-      console.log('... (truncated)');
+
+    // Show preview (TypeScript code for API, JSON for others)
+    if (options.type === 'api') {
+      console.log(`\n📄 Generated TypeScript route preview:`);
+      const codeLines = config.split('\n');
+      console.log(codeLines.slice(0, 30).join('\n'));
+      if (codeLines.length > 30) {
+        console.log('... (truncated)');
+      }
+    } else {
+      console.log(`\n📄 Generated config preview:`);
+      console.log(JSON.stringify(config, null, 2).split('\n').slice(0, 20).join('\n'));
+      if (JSON.stringify(config, null, 2).split('\n').length > 20) {
+        console.log('... (truncated)');
+      }
     }
 
     // Next steps
@@ -654,10 +807,10 @@ async function main() {
     if (options.type === 'schema') {
       console.log(`   1. Review the generated schema: ${outputPath}`);
       console.log(`   2. Run migration: bun run db:migrate`);
-      console.log(`   3. Generate API config for this table`);
+      console.log(`   3. Generate API routes for this table`);
     } else if (options.type === 'api') {
-      console.log(`   1. Review the generated API: ${outputPath}`);
-      console.log(`   2. Rebuild API index: bun run build:api-index`);
+      console.log(`   1. Review the generated TypeScript route: ${outputPath}`);
+      console.log(`   2. Rebuild routes index: bun run build:routes-index`);
       console.log(`   3. Restart dev server`);
       console.log(`   4. Generate page config to display this data`);
     } else if (options.type === 'page') {

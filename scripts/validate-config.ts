@@ -289,15 +289,17 @@ function validateActionSchemas(registry: ConfigRegistry): ValidationError[] {
     'condition': { required: ['if'], optional: ['then', 'else'] },
     'loop': { required: ['over', 'actions'], optional: ['as'] },
     'db.query': { required: ['table'], optional: ['where', 'limit', 'into', 'orderBy'] },
+    'db.execute': { required: ['sql'], optional: ['params', 'into'] },
     'db.insert': { required: ['table', 'map'], optional: ['returning'] },
     'db.update': { required: ['table', 'where', 'map'], optional: [] },
     'db.delete': { required: ['table', 'where'], optional: [] },
     'db.bulkInsert': { required: ['table', 'items'], optional: [] },
     'http.call': { required: ['url'], optional: ['method', 'body', 'headers'] },
-    'response.map': { required: ['fields'], optional: [] },
+    'response.map': { required: ['fields'], optional: ['status'] },
     'transform.array': { required: ['from', 'fieldMap'], optional: [] },
     'transaction': { required: ['actions'], optional: [] },
     'parallel': { required: ['actions'], optional: [] },
+    'error': { required: ['message'], optional: ['status', 'code'] },
   };
 
   for (const [resource, api] of registry.apis) {
@@ -347,6 +349,97 @@ function validateActionSchemas(registry: ConfigRegistry): ValidationError[] {
 // Helper: Convert camelCase to snake_case
 function camelToSnake(str: string): string {
   return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+}
+
+// Validate SQL type casts in db.execute actions
+function validateSqlTypeCasts(registry: ConfigRegistry): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  console.log('   Validating SQL type casts...');
+
+  for (const [resource, api] of registry.apis) {
+    if (!api.operations || !Array.isArray(api.operations)) continue;
+
+    for (const operation of api.operations) {
+      const opId = operation.id || 'unknown';
+      const actions = operation.actions || [];
+
+      for (let i = 0; i < actions.length; i++) {
+        const action = actions[i];
+
+        if (action.type === 'db.execute' && action.sql) {
+          const sql = action.sql;
+
+          // Check for incomplete type casts in WHERE clauses
+          // Wrong pattern: ($N::type IS NULL OR column = $N) - cast only on NULL check
+          const incompleteCastPattern = /\(\$(\d+)::(text|uuid|integer|timestamp|timestamptz|boolean)\s+IS\s+NULL\s+OR\s+(\w+\.)?(\w+)\s*=\s*\$\1(?!::)\)/gi;
+          const incompleteCastMatches = sql.matchAll(incompleteCastPattern);
+
+          for (const match of incompleteCastMatches) {
+            const paramNum = match[1];
+            const castType = match[2].toLowerCase();
+            const columnName = match[4];
+
+            errors.push({
+              path: `api/${resource}.operations[${opId}].actions[${i}]`,
+              message: `SQL uses incomplete cast pattern '($${paramNum}::${castType} IS NULL OR ${columnName} = $${paramNum})'. PostgreSQL will cause type mismatch errors. Use '($${paramNum}::${castType} IS NULL OR ${columnName} = $${paramNum}::${castType})' to cast both sides.`,
+            });
+          }
+
+          // Check for correct pattern with type mismatches
+          // Pattern: ($N::type IS NULL OR column = $N::type) - both sides cast
+          const completeCastPattern = /\(\$(\d+)::(text|uuid|integer|timestamp|timestamptz|boolean)\s+IS\s+NULL\s+OR\s+(\w+\.)?(\w+)\s*=\s*\$\1::(text|uuid|integer|timestamp|timestamptz|boolean)\)/gi;
+          const completeCastMatches = sql.matchAll(completeCastPattern);
+
+          for (const match of completeCastMatches) {
+            const paramNum = match[1];
+            const castType1 = match[2].toLowerCase();
+            const columnName = match[4];
+            const castType2 = match[5].toLowerCase();
+
+            // Verify both casts match
+            if (castType1 !== castType2) {
+              errors.push({
+                path: `api/${resource}.operations[${opId}].actions[${i}]`,
+                message: `SQL has inconsistent casts: $${paramNum}::${castType1} in NULL check but $${paramNum}::${castType2} in comparison. Both should be the same type.`,
+              });
+              continue;
+            }
+
+            // Find the column in schemas and verify type matches
+            for (const [tableName, schema] of registry.schemas) {
+              const column = (schema.columns || []).find((col: any) => col.name === columnName);
+
+              if (column) {
+                const expectedType = column.type;
+
+                // Check for type mismatches
+                const typeMap: Record<string, string[]> = {
+                  'uuid': ['uuid'],
+                  'text': ['text', 'varchar', 'char'],
+                  'integer': ['integer', 'int', 'smallint', 'bigint'],
+                  'timestamp': ['timestamp'],
+                  'timestamptz': ['timestamptz', 'timestamp'],
+                  'boolean': ['boolean', 'bool'],
+                };
+
+                const validCasts = typeMap[expectedType] || [expectedType];
+
+                if (!validCasts.includes(castType1)) {
+                  errors.push({
+                    path: `api/${resource}.operations[${opId}].actions[${i}]`,
+                    message: `SQL casts parameter $${paramNum} to '${castType1}' but column '${columnName}' in table '${tableName}' has type '${expectedType}'. Change to '::${expectedType}' to match column type.`,
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return errors;
 }
 
 // Validate database insert/update compliance with schema
@@ -422,6 +515,49 @@ function validateDatabaseCompliance(registry: ConfigRegistry): ValidationError[]
   return errors;
 }
 
+// Validate schema type consistency (UUID columns, foreign key types)
+function validateSchemaTypes(registry: ConfigRegistry): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  console.log('   Validating schema type consistency...');
+
+  for (const [tableName, schema] of registry.schemas) {
+    const columns = schema.columns || [];
+
+    for (let i = 0; i < columns.length; i++) {
+      const col = columns[i];
+
+      // Check 1: UUID primary keys should use type 'uuid' not 'text'
+      if (col.primaryKey && col.defaultFn === 'uuid' && col.type !== 'uuid') {
+        errors.push({
+          path: `schema/${tableName}.columns[${i}]`,
+          message: `Column '${col.name}' is a UUID primary key but uses type '${col.type}'. Should be 'uuid'`,
+        });
+      }
+
+      // Check 2: Foreign key columns should match the referenced column type
+      if (col.references) {
+        const refTable = col.references.table;
+        const refColumn = col.references.column;
+        const refSchema = registry.schemas.get(refTable);
+
+        if (refSchema) {
+          const refCol = (refSchema.columns || []).find((c: any) => c.name === refColumn);
+
+          if (refCol && refCol.type !== col.type) {
+            errors.push({
+              path: `schema/${tableName}.columns[${i}]`,
+              message: `Foreign key '${col.name}' has type '${col.type}' but references ${refTable}.${refColumn} which has type '${refCol.type}'. Types must match`,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return errors;
+}
+
 // Validate page data paths and API endpoints
 function validatePageDataPaths(registry: ConfigRegistry): ValidationError[] {
   const errors: ValidationError[] = [];
@@ -438,12 +574,19 @@ function validatePageDataPaths(registry: ConfigRegistry): ValidationError[] {
       // Strip query parameters for validation
       const urlWithoutQuery = url.split('?')[0];
 
-      // Parse URL: /api/projects/:id/time-entries
-      const match = urlWithoutQuery.match(/^\/api\/([^/]+)(\/.*)?$/);
+      // Strip /api prefix if present (api.ts client adds it automatically)
+      // Standard format: /employees/:id
+      // Also accept: /api/employees/:id (for backward compatibility)
+      const normalizedUrl = urlWithoutQuery.startsWith('/api/')
+        ? urlWithoutQuery.slice(4)
+        : urlWithoutQuery;
+
+      // Parse URL: /projects/:id/time-entries or /auth/me
+      const match = normalizedUrl.match(/^\/([^/]+)(\/.*)?$/);
       if (!match) {
         errors.push({
           path: `page/${pageId}.dataSources.${dsName}`,
-          message: `Invalid API URL format: '${url}'. Expected: /api/{resource}/{path}`,
+          message: `Invalid API URL format: '${url}'. Expected: /{resource}/{path} (without /api prefix)`,
         });
         continue;
       }
@@ -924,6 +1067,8 @@ function validateAll(): void {
   console.log('\n🔍 Enhanced Validation\n');
 
   const actionErrors = validateActionSchemas(registry);
+  const schemaTypeErrors = validateSchemaTypes(registry);
+  const sqlTypeCastErrors = validateSqlTypeCasts(registry);
   const dbErrors = validateDatabaseCompliance(registry);
   const pathErrors = validatePageDataPaths(registry);
   const templateErrors = validateTemplates(registry);
@@ -931,6 +1076,8 @@ function validateAll(): void {
 
   const allEnhancedErrors = [
     ...actionErrors,
+    ...schemaTypeErrors,
+    ...sqlTypeCastErrors,
     ...dbErrors,
     ...pathErrors,
     ...templateErrors,
@@ -944,6 +1091,20 @@ function validateAll(): void {
     if (actionErrors.length > 0) {
       console.log(`\n   🔧 Action Schema Errors (${actionErrors.length}):`);
       for (const error of actionErrors) {
+        console.log(`      ${error.path}: ${error.message}`);
+      }
+    }
+
+    if (schemaTypeErrors.length > 0) {
+      console.log(`\n   🗂️  Schema Type Errors (${schemaTypeErrors.length}):`);
+      for (const error of schemaTypeErrors) {
+        console.log(`      ${error.path}: ${error.message}`);
+      }
+    }
+
+    if (sqlTypeCastErrors.length > 0) {
+      console.log(`\n   🔤 SQL Type Cast Errors (${sqlTypeCastErrors.length}):`);
+      for (const error of sqlTypeCastErrors) {
         console.log(`      ${error.path}: ${error.message}`);
       }
     }
@@ -984,6 +1145,8 @@ function validateAll(): void {
   console.log(`   ✅ Schema Valid: ${validCount}`);
   console.log(`   ❌ Schema Invalid: ${invalidCount}`);
   console.log(`   🔧 Action Errors: ${actionErrors.length}`);
+  console.log(`   🗂️  Schema Type Errors: ${schemaTypeErrors.length}`);
+  console.log(`   🔤 SQL Type Cast Errors: ${sqlTypeCastErrors.length}`);
   console.log(`   💾 Database Errors: ${dbErrors.length}`);
   console.log(`   🔗 Path Errors: ${pathErrors.length}`);
   console.log(`   📝 Template Errors: ${templateErrors.length}`);

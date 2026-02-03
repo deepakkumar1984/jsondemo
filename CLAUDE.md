@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A JSON-driven full-stack application platform that generates APIs and UIs from declarative JSON configurations. The system supports operation-based APIs with workflow orchestration, data-driven UI rendering, and schema-driven database operations.
+A hybrid full-stack application platform combining TypeScript APIs with JSON-driven UIs. APIs are implemented as TypeScript route handlers using Hono framework, while pages and schemas are defined in declarative JSON configurations.
 
-**Core Innovation:** Configuration-as-code approach where APIs, pages, and data schemas are defined in JSON files, then executed by engine components at runtime.
+**Core Innovation:** TypeScript code for APIs (simplicity, type safety), JSON configs for UI/data (AI-friendly generation).
 
 ## Tech Stack
 
@@ -19,9 +19,9 @@ A JSON-driven full-stack application platform that generates APIs and UIs from d
 ```bash
 # Development
 bun run dev                    # Start Cloudflare Workers dev server (port 8001 by default)
-bun run build                  # Build client + validate configs + generate API index
+bun run build                  # Build client + validate configs + generate routes index
 bun run build:client           # Build React frontend only
-bun run build:api-index        # Generate API config index from config/api/*.json
+bun run build:routes-index     # Generate routes index from config/api/*.routes.ts
 
 # Database Operations
 bun run db:migrate             # Run schema migration to Data API
@@ -40,103 +40,137 @@ bun run deploy                 # Build and deploy to Cloudflare Workers
 
 ```
 jsondemo/
-├── config/                    # Declarative configurations (the heart of the system)
-│   ├── api/                  # API operation configs (projects.json, etc.)
+├── config/                    # API routes and declarative configurations
+│   ├── api/                  # TypeScript route handlers (*.routes.ts)
 │   ├── pages/                # Page UI configs (dashboard.json, etc.)
-│   ├── schema/               # Database schema definitions (projects.json, users.json, etc.)
+│   ├── schema/               # Database schema definitions (employees.json, departments.json, etc.)
 │   ├── apps.json             # App navigation and routing
-│   ├── api-format.json       # JSON Schema for API configs
 │   ├── page-format.json      # JSON Schema for page configs
 │   └── schema-format.json    # JSON Schema for schema definitions
 ├── src/
 │   ├── api/                  # Backend API layer
-│   │   ├── engine/           # Core engines (route, action, schema)
 │   │   ├── middleware/       # Auth, validation middleware
 │   │   ├── routes/           # Manual routes (auth.ts)
 │   │   ├── index.ts          # Main API router
-│   │   └── configs.generated.ts  # Auto-generated API config imports
+│   │   └── routes.generated.ts  # Auto-generated route imports
 │   ├── client/               # React frontend
-│   │   ├── layouts/          # PageRenderer - renders JSON configs
+│   │   ├── layouts/          # JsonPageRenderer - renders JSON configs using json-render
 │   │   ├── pages/            # Static pages (login, signup)
-│   │   ├── components/ui/    # Reusable UI components
-│   │   └── lib/              # API client, auth context
+│   │   ├── components/
+│   │   │   ├── ui/           # Reusable UI components (shadcn/ui)
+│   │   │   └── json-render/  # json-render component wrappers & registry
+│   │   └── lib/              # API client, auth context, action handlers
 │   ├── db/                   # Data layer
 │   │   ├── BlazorlyDataServiceClient.ts  # Data API client
 │   │   └── data-client.ts    # Factory for client instances
 │   └── worker.ts             # Cloudflare Worker entry point
 ├── scripts/                   # Build and validation scripts
-│   ├── build-api-index.ts    # Generates configs.generated.ts
+│   ├── build-routes-index.ts # Generates routes.generated.ts
 │   ├── validate-config.ts    # Schema validation + cross-reference checking
+│   ├── ai-config-generator.ts # AI-powered code/config generator
 │   └── schema/               # Schema migration scripts
 └── wrangler.toml             # Cloudflare Workers configuration
 ```
 
 ## Core Architecture Patterns
 
-### 1. Config-Driven API Engine
+### 1. TypeScript Route Handlers
 
 **How it works:**
-- API endpoints are defined in `config/api/*.json` files using operation-based format
-- Each operation specifies: method, path, request/response schemas, and **actions** (workflow)
-- `scripts/build-api-index.ts` generates static imports at build time (Cloudflare Workers don't support dynamic imports)
-- `RouteEngine` reads configs and dynamically creates Hono routes at runtime
-- `ActionEngine` executes the workflow defined in the `actions` array
+- API routes are TypeScript files in `config/api/*.routes.ts`
+- Each file exports a Hono router named after the resource (e.g., `employeesRouter`)
+- Routes use the Blazorly Data API client directly for database operations
+- `scripts/build-routes-index.ts` generates static imports at build time
+- Routes are auto-registered in `src/api/index.ts` at server startup
 
 **Example flow:**
 ```
-config/api/projects.json → build-api-index.ts → configs.generated.ts →
-RouteEngine.createRouterFromConfig() → Hono route at /api/projects
+config/api/employees.routes.ts → build-routes-index.ts → routes.generated.ts →
+src/api/index.ts auto-registers → Hono route at /api/employees
 ```
 
-**Key files:**
-- `src/api/engine/route-engine.ts` - Converts API configs to Hono routes
-- `src/api/engine/action-engine.ts` - Executes action workflows (db.query, transform, condition, etc.)
-- `src/api/index.ts` - Auto-registers all API configs as routes
+**Key patterns:**
+- File naming: `{resource}.routes.ts`
+- Export pattern: `export const {resource}Router = new Hono<{ Bindings: Env }>()`
+- Request body fields: camelCase → Database columns: snake_case
+- Response format: `{ success: boolean, data?: any, error?: { message, status }, message?: string }`
 
-### 2. Action-Based Workflow Engine
+**Example route file:**
+```typescript
+import { Hono } from 'hono';
+import type { Env } from '../../src/types';
+import { createDataClient } from '../../src/db/data-client';
 
-**No static CRUD operations** - everything goes through the action workflow system.
+export const employeesRouter = new Hono<{ Bindings: Env }>();
 
-**Available action types:**
-- **Validation:** `validate` (required, email, min/max, etc.)
-- **Transformation:** `transform` (set variables, interpolate templates)
-- **Business Logic:** `calc` (sum, expressions), `condition` (if/then/else), `loop` (iterate arrays)
-- **Data Access:** `db.query`, `db.insert`, `db.update`, `db.delete`, `db.bulkInsert`
-- **Integration:** `http.call` (external API calls)
-- **Flow Control:** `transaction`, `parallel`
-- **Response Mapping:** `response.map`, `transform.array`
-- **Error Handling:** `try/catch`
+employeesRouter.get('/', async (c) => {
+  const client = createDataClient(c.env);
+  try {
+    const employees = await client.getItems('employees', {});
+    return c.json({ success: true, data: employees.data });
+  } catch (error: any) {
+    return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
+  }
+});
 
-**Special features:**
-- Template interpolation: `"{{body.fieldName}}"` resolves from context
-- Special functions: `uuid()`, `now()`, `sum(array, field)`
-- Nested context: `body`, `params`, `query`, `user`, runtime variables
+employeesRouter.post('/', async (c) => {
+  const body = await c.req.json();
+  const client = createDataClient(c.env);
 
-**Example workflow:**
-```json
-{
-  "actions": [
-    { "type": "validate", "rules": [{"field": "body.name", "rule": "required"}] },
-    { "type": "transform", "set": { "body.id": "uuid()", "body.createdAt": "now()" } },
-    { "type": "db.insert", "table": "projects", "map": "{{body}}", "returning": "projectId" },
-    { "type": "response.map", "fields": { "id": "{{projectId}}", "message": "Project created" } }
-  ]
-}
+  // Validation
+  if (!body.firstName || !body.lastName || !body.email) {
+    return c.json({
+      success: false,
+      error: { message: 'Missing required fields', status: 400 }
+    }, 400);
+  }
+
+  try {
+    const employee = await client.createItem('employees', {
+      id: crypto.randomUUID(),
+      first_name: body.firstName,
+      last_name: body.lastName,
+      email: body.email,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    return c.json({
+      success: true,
+      data: employee.data,
+      message: 'Employee created successfully'
+    }, 201);
+  } catch (error: any) {
+    return c.json({
+      success: false,
+      error: { message: error.message, status: 500 }
+    }, 500);
+  }
+});
 ```
 
-### 3. JSON Schema-Driven UI Rendering
+### 2. json-render-Based UI Rendering
 
 **How it works:**
-- Pages are defined in `config/pages/*.json` using component hierarchies
-- `PageRenderer` (src/client/layouts/page-renderer.tsx) reads configs and renders React components
-- Supports declarative data binding with `dataPath`, `valuePath`, template expressions
-- Components are registered in PageRenderer's switch statement
+- Pages are defined in `config/pages/*.json` using nested component hierarchies
+- `JsonPageRenderer` (src/client/layouts/json-page-renderer.tsx) uses the [@json-render](https://github.com/vercel-labs/json-render) library
+- Page configs are converted from nested format to flat UITree structure transparently
+- Component wrappers in `src/client/components/json-render/wrappers/` bridge json-render to shadcn/ui components
+- Supports declarative data binding with `dataPath`, `valuePath`, template expressions (`{{variable}}`)
 
 **Data flow:**
 ```
-Page config → dataSources (API URLs) → PageRenderer fetches data →
-DataContext provides data to components → Components resolve paths (e.g., dataPath="projects")
+Page config (nested) → JsonPageRenderer fetches data from dataSources →
+  convertToUITree() → Flat UITree → json-render Renderer →
+  ComponentRegistry → Wrapper Components → shadcn/ui Components
 ```
+
+**Key architecture:**
+- `JsonPageRenderer` - Main entry point, handles data fetching and setup
+- `ComponentRegistry` - Maps component type names to wrapper components
+- `Wrapper Components` - Adapt json-render props to shadcn/ui components, handle template interpolation
+- `Action Handlers` - Execute actions (navigate, submit_form, api_call, etc.)
+- `Utility Functions` - convertToUITree, interpolateTemplate, resolveDataPath
 
 **Component types:**
 - Layout: `PageHeader`, `Card`, `Grid`, `Stack`, `Tabs`, `TabPanel`
@@ -150,7 +184,7 @@ DataContext provides data to components → Components resolve paths (e.g., data
 - `template`: Mustache-style templates (e.g., "{{firstName}} {{lastName}}")
 - `action`: Declarative actions triggered by buttons, forms, rows
 
-### 4. Blazorly Data API Integration
+### 3. Blazorly Data API Integration
 
 **Abstraction layer over external data service:**
 - `BlazorlyDataServiceClient` provides CRUD operations with typed responses
@@ -166,84 +200,134 @@ DATA_TENANT_ID = "uuid"
 DATA_DATABASE = "bdk_prod"
 ```
 
-**Usage in actions:**
+**Available Data API client methods:**
 ```typescript
-// ActionEngine automatically creates client from context.env
-const result = await this.client.getItems('projects', { filter: { status: { _eq: 'active' } } });
+const client = createDataClient(env);
+
+// CRUD operations
+await client.createItem(collection, data)
+await client.getItems(collection, params)
+await client.getItemById(collection, id)
+await client.updateItem(collection, id, data)
+await client.deleteItem(collection, id)
+
+// Query parameters for getItems
+{
+  filter: { field: { _eq, _ne, _gt, _lt, _gte, _lte, _in, _null } },
+  limit: number,
+  offset: number,
+  sort: string[],  // e.g., ['-created_at']
+  fields: string[]  // columns to return
+}
 ```
 
-### 5. Config Validation System
+### 4. Config Validation System
 
-**Three layers of validation:**
+**Two layers of validation:**
 
 1. **JSON Schema validation** (`scripts/validate-config.ts`)
-   - Validates structure against format files (api-format.json, page-format.json, etc.)
+   - Validates structure against format files (page-format.json, schema-format.json)
    - Checks required fields, types, enums, patterns
+   - **Note:** API routes are TypeScript code, not validated by JSON schema
 
 2. **Cross-reference validation**
-   - APIs → Schemas: Ensures referenced tables exist
    - Pages → APIs: Ensures dataSources reference valid API endpoints
    - Apps → Pages: Ensures navigation/routes reference valid pages
-
-3. **Runtime validation**
-   - ActionEngine validates request schemas before execution
-   - Type coercion for numbers, booleans in route-engine.ts
+   - Schemas → Tables: Ensures table names are valid
 
 **Run validation:**
 ```bash
 bun run validate:all           # Full validation with cross-references
-tsx scripts/validate-config.ts config/api/projects.json  # Single file
+tsx scripts/validate-config.ts config/pages/employees-list.json  # Single file
 ```
 
 ## Common Workflows
 
 ### Adding a New API Endpoint
 
-1. **Create API config:** `config/api/my-resource.json`
-```json
-{
-  "resource": "my-resource",
-  "name": "My Resource API",
-  "basePath": "/api/my-resource",
-  "operations": [
-    {
-      "id": "listItems",
-      "method": "GET",
-      "path": "/",
-      "actions": [
-        { "type": "db.query", "table": "my_table", "into": "items" },
-        { "type": "response.map", "fields": { "items": "{{items}}" } }
-      ]
-    }
-  ]
-}
+1. **Create TypeScript route file:** `config/api/tasks.routes.ts`
+```typescript
+import { Hono } from 'hono';
+import type { Env } from '../../src/types';
+import { createDataClient } from '../../src/db/data-client';
+
+export const tasksRouter = new Hono<{ Bindings: Env }>();
+
+// List tasks
+tasksRouter.get('/', async (c) => {
+  const client = createDataClient(c.env);
+
+  try {
+    const tasks = await client.getItems('tasks', {
+      sort: ['-created_at']
+    });
+    return c.json({ success: true, data: tasks.data });
+  } catch (error: any) {
+    return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
+  }
+});
+
+// Create task
+tasksRouter.post('/', async (c) => {
+  const body = await c.req.json();
+  const client = createDataClient(c.env);
+
+  if (!body.title) {
+    return c.json({
+      success: false,
+      error: { message: 'Title is required', status: 400 }
+    }, 400);
+  }
+
+  try {
+    const task = await client.createItem('tasks', {
+      id: crypto.randomUUID(),
+      title: body.title,
+      description: body.description,
+      status: body.status || 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    return c.json({
+      success: true,
+      data: task.data,
+      message: 'Task created successfully'
+    }, 201);
+  } catch (error: any) {
+    return c.json({
+      success: false,
+      error: { message: error.message, status: 500 }
+    }, 500);
+  }
+});
 ```
 
-2. **Rebuild API index:** `bun run build:api-index`
-   - This regenerates `src/api/configs.generated.ts`
-   - API is automatically registered in `src/api/index.ts` on next dev server restart
+2. **Rebuild routes index:** `bun run build:routes-index`
+   - This regenerates `src/api/routes.generated.ts`
+   - Route is automatically registered in `src/api/index.ts` on next dev server restart
 
-3. **Validate:** `bun run validate:config config/api/my-resource.json`
+3. **Restart dev server:** API is ready to use at `/api/tasks`
 
 ### Adding a New Page
 
-1. **Create page config:** `config/pages/my-page.json`
+1. **Create page config:** `config/pages/tasks-list.json`
 ```json
 {
   "dataSources": {
-    "items": { "url": "/api/my-resource" }
+    "tasks": { "url": "/api/tasks" }
   },
   "children": [
     {
       "type": "PageHeader",
-      "props": { "title": "My Page" }
+      "props": { "title": "Tasks" }
     },
     {
       "type": "DataTable",
       "props": {
-        "dataPath": "items",
+        "dataPath": "tasks",
         "columns": [
-          { "key": "name", "header": "Name" },
+          { "key": "title", "header": "Title" },
           { "key": "status", "header": "Status" }
         ]
       }
@@ -257,12 +341,12 @@ tsx scripts/validate-config.ts config/api/projects.json  # Single file
 {
   "apps": [{
     "routes": [
-      { "path": "/my-page", "page": "my-page" }
+      { "path": "/tasks", "page": "tasks-list" }
     ],
     "navigation": {
       "categories": [{
         "items": [
-          { "title": "My Page", "path": "/my-page", "page": "my-page" }
+          { "title": "Tasks", "path": "/tasks", "page": "tasks-list" }
         ]
       }]
     }
@@ -271,16 +355,21 @@ tsx scripts/validate-config.ts config/api/projects.json  # Single file
 ```
 
 3. **Validate:** `bun run validate:all`
+4. **Refresh browser:** Page is ready at `/tasks`
 
 ### Migrating Database Schema
 
-1. **Define schema:** `config/schema/my_table.json`
+1. **Define schema:** `config/schema/tasks.json`
 ```json
 {
-  "table": "my_table",
+  "table": "tasks",
   "columns": [
     { "name": "id", "type": "text", "primaryKey": true, "defaultFn": "uuid" },
-    { "name": "name", "type": "text", "notNull": true }
+    { "name": "title", "type": "text", "notNull": true },
+    { "name": "description", "type": "text" },
+    { "name": "status", "type": "text", "notNull": true, "default": "pending" },
+    { "name": "created_at", "type": "timestamp", "notNull": true },
+    { "name": "updated_at", "type": "timestamp", "notNull": true }
   ]
 }
 ```
@@ -291,53 +380,54 @@ tsx scripts/validate-config.ts config/api/projects.json  # Single file
 
 ## Important Implementation Rules
 
-### When Writing API Configs
+### When Writing API Routes
 
-1. **Always use actions array** - Never assume CRUD endpoints exist
-2. **Match schema field names exactly** - DB columns must match `body.fieldName` in transforms
-3. **Use template syntax for dynamic values:** `"{{body.fieldName}}"` not `body.fieldName`
-4. **Return responses with response.map** - Last action should map final response structure
-5. **Validate before database operations** - Use `validate` action first in workflow
+1. **Use Hono router pattern** - Export as `{resource}Router`
+2. **Map field names correctly** - Request body camelCase → Database snake_case
+3. **Always validate input** - Check required fields before database operations
+4. **Use Data API client methods** - `createItem`, `getItems`, `updateItem`, `deleteItem`
+5. **Return consistent responses** - `{ success, data?, error?, message? }`
+6. **Set proper HTTP status codes** - 200, 201, 400, 404, 500
+7. **Use crypto.randomUUID()** for generating IDs
+8. **Use new Date().toISOString()** for timestamps
+9. **Implement business logic** - Duplicate prevention, referential integrity checks
+10. **Handle errors with try/catch** - Return error details in response
 
 ### When Writing Page Configs
 
 1. **dataPath must match dataSources key** - If dataSource is "projects", use `dataPath: "projects"`
 2. **Strip /api from URLs in dataSources** - Use `"/projects"` not `"/api/projects"` (api.ts client adds /api)
 3. **Use consistent page naming** - Match file path structure (e.g., `config/pages/dashboard.json` → `page: "dashboard"`)
-4. **Required form fields need validation** - PageRenderer validates based on `required: true` prop
-
-### When Writing Actions
-
-1. **db.query with limit: 1** returns single object, not array
-2. **Template interpolation** happens in ActionEngine via `interpolateString()` and `interpolateObject()`
-3. **Context variables persist** across actions in same workflow (e.g., `into: "variable"` makes it available to later actions)
-4. **Special functions** are case-sensitive: `uuid()`, `now()`, `sum(array, field)`
+4. **Required form fields need validation** - json-render's ValidationProvider validates based on `required: true` prop
+5. **Use nested format** - Component children are nested arrays, not flat UITree (conversion is automatic)
+6. **Template syntax** - Use `{{path}}` for interpolation (e.g., `{{employee.firstName}}`)
 
 ## Error Handling Philosophy
 
 **Critical requirement from global CLAUDE.md:** NEVER hide errors or pretend operations succeeded when they failed.
 
-- ActionEngine returns `{ success: false, error: { message, status } }` on failure
-- RouteEngine propagates errors to HTTP responses (400, 404, 500)
+- Routes return `{ success: false, error: { message, status } }` on failure
+- Proper HTTP status codes propagated (400, 404, 500)
 - PageRenderer shows error states in DataTable skeleton/empty states
 - FormRenderer displays inline validation errors
 
 **Example of correct error handling:**
 ```typescript
-// GOOD - Propagates failure
-const result = await this.executeDbInsert(action);
-if (!result.success) {
-  return result; // Contains error
-}
-
-// BAD - Hides failure
 try {
-  await this.executeDbInsert(action);
-} catch {
-  console.log('Failed but continuing');
+  await client.createItem('employees', data);
+  return c.json({ success: true, data: result }, 201);
+} catch (error: any) {
+  return c.json({
+    success: false,
+    error: { message: error.message, status: 500 }
+  }, 500);
 }
-return { success: true }; // WRONG - operation failed!
 ```
+
+**In json-render components:**
+- ActionProvider handles action errors automatically
+- Components show loading states via the `loading` prop
+- Form validation errors display inline via useFieldValidation hook
 
 ## Environment Configuration
 
@@ -355,37 +445,61 @@ return { success: true }; // WRONG - operation failed!
 ## Key Debugging Commands
 
 ```bash
-# Check if API configs are registered
-bun run build:api-index && grep "export const apiConfigs" src/api/configs.generated.ts
+# Check if routes are registered
+bun run build:routes-index && grep "export const apiRoutes" src/api/routes.generated.ts
 
-# Validate specific config file
-tsx scripts/validate-config.ts config/api/projects.json
-
-# Check cross-references (APIs→Schemas, Pages→APIs, Apps→Pages)
+# Validate configs
 bun run validate:all
 
 # Type check without building
 bun run typecheck
 
 # See all available API routes
-# Start dev server and check console logs for "Registering config-driven route:" messages
+# Start dev server and check console logs for "Registering TypeScript route:" messages
 ```
 
 ## Testing Changes
 
-1. **After modifying API configs:** Run `bun run build:api-index` then restart dev server
+1. **After modifying route files:** Run `bun run build:routes-index` then restart dev server
 2. **After modifying page configs:** No rebuild needed, just refresh browser
 3. **After modifying schemas:** Run `bun run db:migrate` to sync changes
 4. **Before committing:** Run `bun run validate:all` to catch config errors
 
 ## Common Pitfalls
 
-1. **Dynamic imports don't work** - Always use `build-api-index.ts` to generate static imports for Cloudflare Workers
-2. **API path confusion** - RouteEngine strips `/api` prefix from basePath since router is already mounted at `/api`
+1. **Dynamic imports don't work** - Always use `build-routes-index.ts` to generate static imports for Cloudflare Workers
+2. **API path confusion** - Routes are mounted at `/api/{resource}` automatically
 3. **Data binding case sensitivity** - `dataPath: "Projects"` won't match `dataSources.projects`
-4. **Missing config rebuild** - Changes to API configs require running `build:api-index` and restarting server
-5. **Type coercion edge cases** - Query params and form data arrive as strings, ActionEngine coerces based on requestSchema
+4. **Missing routes rebuild** - Changes to route files require running `build:routes-index` and restarting server
+5. **Field name mismatches** - Request body fields (camelCase) must map to database columns (snake_case)
 6. **Empty string select values** - FormRenderer maps empty string to `__EMPTY__` to avoid Radix UI issues
+
+## AI Code Generation
+
+The project includes an AI-powered code generator at `scripts/ai-config-generator.ts`:
+
+```bash
+# Generate TypeScript API routes
+tsx scripts/ai-config-generator.ts \
+  --type api \
+  --feature "Task management CRUD operations" \
+  --tasks "Create, read, update, delete tasks with priority and status"
+
+# Generate page configuration
+tsx scripts/ai-config-generator.ts \
+  --type page \
+  --feature "Task list with filters and search"
+
+# Generate database schema
+tsx scripts/ai-config-generator.ts \
+  --type schema \
+  --feature "Task tracking system"
+```
+
+**Output:**
+- `api` type: Generates TypeScript route files (*.routes.ts)
+- `page` type: Generates JSON page configs
+- `schema` type: Generates JSON schema definitions
 
 ## Reference Architecture
 

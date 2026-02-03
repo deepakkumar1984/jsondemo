@@ -194,8 +194,8 @@ function convertColumnToField(col: ColumnConfig, skipForeignKeys = false): Field
   // (that's only for integer types). The API will handle UUID generation.
   // Just mark it as a UUID primary key - the application generates UUIDs.
 
-  // Add default value for non-UUID, non-timestamp fields
-  if (col.default !== undefined && col.default !== 'CURRENT_TIMESTAMP' && col.defaultFn !== 'uuid') {
+  // Add default value (including SQL functions like CURRENT_TIMESTAMP)
+  if (col.default !== undefined && col.defaultFn !== 'uuid') {
     field.schema!.default_value = col.default;
   }
 

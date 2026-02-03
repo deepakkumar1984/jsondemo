@@ -78,13 +78,48 @@
             "id": "overview",
             "title": "Overview",
             "order": 1,
+            "items": []
+          },
+          {
+            "id": "employees",
+            "title": "Employees",
+            "order": 2,
             "items": [
-              
+              {
+                "id": "employees-list",
+                "title": "All Employees",
+                "path": "/employees",
+                "page": "employees-list",
+                "icon": "users"
+              },
+              {
+                "id": "create-employee",
+                "title": "Add Employee",
+                "path": "/employees/new",
+                "page": "create-employee",
+                "icon": "user-plus"
+              }
             ]
           }
         ]
       },
       "routes": [
+        {
+          "path": "/employees",
+          "page": "employees-list"
+        },
+        {
+          "path": "/employees/new",
+          "page": "create-employee"
+        },
+        {
+          "path": "/employees/:id",
+          "page": "employee-details"
+        },
+        {
+          "path": "/employees/:id/edit",
+          "page": "edit-employee"
+        }
       ],
       "defaults": {
         "table": {

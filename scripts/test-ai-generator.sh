@@ -75,15 +75,40 @@ else
     exit 1
 fi
 
+# Test 3: Generate a page config (uses json-render catalog)
+echo ""
+echo "📋 Test 3: Generating page config with json-render catalog..."
+echo "Feature: Task list page"
+echo ""
+
+tsx scripts/ai-config-generator.ts \
+  --type page \
+  --feature "Task list page" \
+  --tasks "Display tasks in a table with search and filters" \
+  --output /tmp/test-task-page.json
+
+if [ $? -eq 0 ]; then
+    echo "✅ Page generation successful"
+    echo ""
+    echo "Generated page preview:"
+    cat /tmp/test-task-page.json | head -50
+    echo ""
+else
+    echo "❌ Page generation failed"
+    exit 1
+fi
+
 echo ""
 echo "🎉 All tests passed!"
 echo ""
-echo "The example-driven approach is working correctly."
+echo "The json-render catalog-based approach is working correctly for pages."
 echo "Generated files saved to:"
 echo "  - /tmp/test-task-schema.json"
 echo "  - /tmp/test-task-api.json"
+echo "  - /tmp/test-task-page.json"
 echo ""
 echo "Next steps:"
 echo "  1. Review the generated configs"
 echo "  2. Use --debug flag for detailed output"
-echo "  3. Update comprehensive-examples.ts as you add new features"
+echo "  3. Page configs now use json-render catalog for component definitions"
+echo "  4. Update catalog.ts to add new component types or actions"

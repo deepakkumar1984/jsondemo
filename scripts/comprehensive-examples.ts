@@ -760,277 +760,147 @@ export const COMPREHENSIVE_API_EXAMPLES = [
 ];
 
 export const COMPREHENSIVE_PAGE_EXAMPLES = [
-  // Example 1: Complex data table with all features
+  // Example 1: Simple list page with DataTable
   {
-    "description": "Shows ALL component types, data binding patterns, actions, and layout components",
+    "description": "Basic list page with search, filters, and row actions using DataTable",
     "config": {
       "dataSources": {
-        "projects": {
-          "url": "/projects",
-          "method": "GET",
-          "params": {
-            "status": "active"
-          }
-        },
-        "summary": {
-          "url": "/reports/dashboard-summary",
-          "method": "GET"
-        },
-        "currentUser": {
-          "url": "/auth/me",
-          "method": "GET"
+        "items": {
+          "url": "/items"
         }
       },
       "children": [
         {
           "type": "PageHeader",
           "props": {
-            "title": "Project Management",
-            "subtitle": "Manage your projects and track progress",
-            "actions": [
-              {
-                "type": "navigate",
-                "label": "New Project",
-                "path": "/projects/new",
-                "variant": "default"
-              },
-              {
-                "type": "api_call",
-                "label": "Export All",
-                "endpoint": "/projects/export",
-                "method": "POST",
-                "confirmMessage": "Export all projects to CSV?",
-                "variant": "outline"
-              }
-            ]
-          }
-        },
-        {
-          "type": "Grid",
-          "props": {
-            "columns": 3,
-            "gap": 4
-          },
-          "children": [
-            {
-              "type": "StatCard",
-              "props": {
-                "title": "Total Projects",
-                "valuePath": "summary.totalProjects",
-                "icon": "FolderIcon",
-                "trend": {
-                  "value": "{{summary.projectsChange}}",
-                  "direction": "{{summary.projectsChange > 0 ? 'up' : 'down'}}"
-                }
-              }
-            },
-            {
-              "type": "StatCard",
-              "props": {
-                "title": "Active Hours",
-                "valuePath": "summary.totalHours",
-                "icon": "ClockIcon",
-                "format": "number",
-                "decimals": 1
-              }
-            },
-            {
-              "type": "StatCard",
-              "props": {
-                "title": "Total Revenue",
-                "valuePath": "summary.totalRevenue",
-                "icon": "DollarIcon",
-                "format": "currency"
-              }
-            }
-          ]
-        },
-        {
-          "type": "Tabs",
-          "props": {
-            "defaultValue": "all",
-            "tabs": [
-              { "value": "all", "label": "All Projects" },
-              { "value": "active", "label": "Active" },
-              { "value": "completed", "label": "Completed" }
-            ]
-          },
-          "children": [
-            {
-              "type": "TabPanel",
-              "props": {
-                "value": "all"
-              },
-              "children": [
-                {
-                  "type": "Card",
-                  "props": {
-                    "title": "All Projects",
-                    "description": "Complete list of all projects"
-                  },
-                  "children": [
-                    {
-                      "type": "DataTable",
-                      "props": {
-                        "dataPath": "projects",
-                        "searchable": true,
-                        "searchPlaceholder": "Search projects...",
-                        "sortable": true,
-                        "pagination": true,
-                        "pageSize": 10,
-                        "columns": [
-                          {
-                            "key": "name",
-                            "header": "Project Name",
-                            "sortable": true,
-                            "searchable": true
-                          },
-                          {
-                            "key": "status",
-                            "header": "Status",
-                            "render": {
-                              "type": "Badge",
-                              "props": {
-                                "valuePath": "status",
-                                "variant": "{{status === 'active' ? 'success' : status === 'completed' ? 'default' : 'warning'}}"
-                              }
-                            }
-                          },
-                          {
-                            "key": "client",
-                            "header": "Client",
-                            "template": "{{client.name}}"
-                          },
-                          {
-                            "key": "budget",
-                            "header": "Budget",
-                            "format": "currency"
-                          },
-                          {
-                            "key": "progress",
-                            "header": "Progress",
-                            "template": "{{progress}}%"
-                          },
-                          {
-                            "key": "dueDate",
-                            "header": "Due Date",
-                            "format": "date"
-                          }
-                        ],
-                        "rowActions": [
-                          {
-                            "type": "navigate",
-                            "label": "View",
-                            "path": "/projects/{{id}}",
-                            "icon": "EyeIcon"
-                          },
-                          {
-                            "type": "navigate",
-                            "label": "Edit",
-                            "path": "/projects/{{id}}/edit",
-                            "icon": "EditIcon"
-                          },
-                          {
-                            "type": "delete_confirm",
-                            "label": "Delete",
-                            "endpoint": "/projects/{{id}}",
-                            "confirmTitle": "Delete Project",
-                            "confirmMessage": "Are you sure you want to delete '{{name}}'? This action cannot be undone.",
-                            "icon": "TrashIcon",
-                            "variant": "destructive"
-                          }
-                        ],
-                        "emptyState": {
-                          "title": "No projects found",
-                          "description": "Get started by creating your first project",
-                          "action": {
-                            "type": "navigate",
-                            "label": "Create Project",
-                            "path": "/projects/new"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "TabPanel",
-              "props": {
-                "value": "active"
-              },
-              "children": [
-                {
-                  "type": "Card",
-                  "children": [
-                    {
-                      "type": "DataTable",
-                      "props": {
-                        "dataPath": "projects",
-                        "filter": {
-                          "field": "status",
-                          "value": "active"
-                        },
-                        "columns": [
-                          { "key": "name", "header": "Project Name" },
-                          { "key": "client.name", "header": "Client" },
-                          { "key": "budget", "header": "Budget", "format": "currency" }
-                        ]
-                      }
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "Divider",
-          "props": {
-            "spacing": 6
+            "title": "Items",
+            "subtitle": "Manage your items"
           }
         },
         {
           "type": "Card",
-          "props": {
-            "title": "Quick Actions",
-            "description": "Common project management tasks"
-          },
           "children": [
             {
-              "type": "Stack",
+              "type": "DataTable",
               "props": {
-                "direction": "horizontal",
-                "gap": 4,
-                "wrap": true
+                "dataPath": "items",
+                "searchable": true,
+                "searchPlaceholder": "Search items...",
+                "paginated": true,
+                "columns": [
+                  {
+                    "key": "name",
+                    "header": "Name"
+                  },
+                  {
+                    "key": "status",
+                    "header": "Status",
+                    "render": "badge"
+                  },
+                  {
+                    "key": "createdAt",
+                    "header": "Created",
+                    "format": "date"
+                  }
+                ],
+                "rowClickAction": {
+                  "to": "/items/:id"
+                },
+                "emptyMessage": "No items found"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  // Example 2: Form page with various field types
+  {
+    "description": "Form with TextField, TextArea, SelectField, DateField, and submit action",
+    "config": {
+      "dataSources": {
+        "item": {
+          "url": "/items/:id"
+        },
+        "categories": {
+          "url": "/categories"
+        }
+      },
+      "children": [
+        {
+          "type": "PageHeader",
+          "props": {
+            "title": "Edit Item"
+          }
+        },
+        {
+          "type": "Card",
+          "children": [
+            {
+              "type": "Form",
+              "props": {
+                "action": {
+                  "type": "submit_form",
+                  "url": "/items/:id",
+                  "method": "PUT",
+                  "onSuccess": {
+                    "type": "navigate",
+                    "to": "/items"
+                  }
+                }
               },
               "children": [
                 {
-                  "type": "Button",
+                  "type": "TextField",
                   "props": {
-                    "label": "Generate Report",
-                    "action": {
-                      "type": "api_call",
-                      "endpoint": "/reports/generate",
-                      "method": "POST",
-                      "successMessage": "Report generated successfully"
-                    },
-                    "variant": "outline"
+                    "label": "Name",
+                    "bindPath": "name",
+                    "validation": {
+                      "checks": [
+                        { "fn": "required", "message": "Name is required" },
+                        { "fn": "minLength", "args": 3, "message": "Min 3 characters" },
+                        { "fn": "maxLength", "args": 100 }
+                      ],
+                      "validateOn": "blur"
+                    }
                   }
                 },
                 {
-                  "type": "Button",
+                  "type": "TextArea",
                   "props": {
-                    "label": "Archive Completed",
-                    "action": {
-                      "type": "api_call",
-                      "endpoint": "/projects/archive-completed",
-                      "method": "POST",
-                      "confirmMessage": "Archive all completed projects?",
-                      "successMessage": "Projects archived"
-                    },
-                    "variant": "outline"
+                    "label": "Description",
+                    "bindPath": "description",
+                    "rows": 4,
+                    "validation": {
+                      "checks": [
+                        { "fn": "maxLength", "args": 500, "message": "Max 500 characters" }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "SelectField",
+                  "props": {
+                    "label": "Category",
+                    "bindPath": "categoryId",
+                    "optionsPath": "categories",
+                    "validation": {
+                      "checks": [
+                        { "fn": "required", "message": "Please select a category" }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "DateField",
+                  "props": {
+                    "label": "Due Date",
+                    "bindPath": "dueDate",
+                    "validation": {
+                      "checks": [
+                        { "fn": "required" }
+                      ]
+                    }
                   }
                 }
               ]
@@ -1040,299 +910,320 @@ export const COMPREHENSIVE_PAGE_EXAMPLES = [
       ]
     }
   },
-  // Example 2: Form with all field types and validation
+  // Example 3: Dashboard with StatCards and Grid layout
   {
-    "description": "Shows ALL form components, validation rules, conditional fields, and form actions",
+    "description": "Dashboard page with statistics, grid layout, and multiple data sources",
     "config": {
       "dataSources": {
-        "project": {
-          "url": "/projects/{{params.id}}",
-          "method": "GET"
+        "stats": {
+          "url": "/dashboard/stats"
         },
-        "clients": {
-          "url": "/clients",
-          "method": "GET"
-        },
-        "categories": {
-          "url": "/categories",
-          "method": "GET"
+        "recentItems": {
+          "url": "/items?limit=5"
         }
       },
       "children": [
         {
           "type": "PageHeader",
           "props": {
-            "title": "{{project ? 'Edit Project' : 'New Project'}}",
-            "subtitle": "{{project ? 'Update project details' : 'Create a new project'}}",
-            "backLink": {
-              "path": "/projects",
-              "label": "Back to Projects"
-            }
+            "title": "Dashboard",
+            "subtitle": "Overview of your data"
           }
         },
         {
           "type": "Grid",
           "props": {
-            "columns": 2,
-            "gap": 6
+            "columns": 3,
+            "gap": "4"
           },
           "children": [
             {
-              "type": "Card",
+              "type": "StatCard",
               "props": {
-                "title": "Project Details",
-                "description": "Basic information about the project"
+                "label": "Total Items",
+                "valuePath": "stats.totalItems"
+              }
+            },
+            {
+              "type": "StatCard",
+              "props": {
+                "label": "Active",
+                "valuePath": "stats.activeItems"
+              }
+            },
+            {
+              "type": "StatCard",
+              "props": {
+                "label": "Completed",
+                "valuePath": "stats.completedItems"
+              }
+            }
+          ]
+        },
+        {
+          "type": "Card",
+          "props": {
+            "title": "Recent Items"
+          },
+          "children": [
+            {
+              "type": "DataTable",
+              "props": {
+                "dataPath": "recentItems",
+                "columns": [
+                  {
+                    "key": "name",
+                    "header": "Name"
+                  },
+                  {
+                    "key": "status",
+                    "header": "Status",
+                    "render": "badge"
+                  },
+                  {
+                    "key": "updatedAt",
+                    "header": "Updated",
+                    "format": "date"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  // Example 4: Visibility conditions with logic expressions
+  {
+    "description": "Conditional rendering using visible property with path, auth, and logic expressions",
+    "config": {
+      "dataSources": {
+        "user": {
+          "url": "/auth/me"
+        },
+        "item": {
+          "url": "/items/:id"
+        }
+      },
+      "children": [
+        {
+          "type": "PageHeader",
+          "props": {
+            "title": "Item Details"
+          }
+        },
+        {
+          "type": "Alert",
+          "visible": { "auth": "signedIn" },
+          "props": {
+            "title": "Welcome",
+            "message": "You are signed in"
+          }
+        },
+        {
+          "type": "Card",
+          "visible": { "path": "/item" },
+          "props": {
+            "title": "Item Information"
+          },
+          "children": [
+            {
+              "type": "DetailSection",
+              "props": {
+                "title": "Details"
               },
               "children": [
                 {
-                  "type": "Form",
+                  "type": "DetailRow",
                   "props": {
-                    "id": "projectForm",
-                    "endpoint": "{{project ? '/projects/' + project.id : '/projects'}}",
-                    "method": "{{project ? 'PUT' : 'POST'}}",
-                    "redirectOnSuccess": "/projects",
-                    "successMessage": "{{project ? 'Project updated' : 'Project created'}}",
-                    "submitLabel": "{{project ? 'Update Project' : 'Create Project'}}",
-                    "cancelLabel": "Cancel",
-                    "cancelPath": "/projects"
-                  },
-                  "children": [
-                    {
-                      "type": "TextField",
-                      "props": {
-                        "name": "name",
-                        "label": "Project Name",
-                        "placeholder": "Enter project name",
-                        "valuePath": "project.name",
-                        "required": true,
-                        "validation": {
-                          "minLength": 3,
-                          "maxLength": 100,
-                          "pattern": "^[a-zA-Z0-9\\s-]+$",
-                          "message": "Name must be 3-100 characters, alphanumeric only"
-                        },
-                        "helpText": "This will be displayed to clients"
-                      }
-                    },
-                    {
-                      "type": "TextArea",
-                      "props": {
-                        "name": "description",
-                        "label": "Description",
-                        "placeholder": "Describe the project",
-                        "valuePath": "project.description",
-                        "rows": 4,
-                        "validation": {
-                          "maxLength": 500
-                        },
-                        "helpText": "Up to 500 characters"
-                      }
-                    },
-                    {
-                      "type": "SelectField",
-                      "props": {
-                        "name": "clientId",
-                        "label": "Client",
-                        "placeholder": "Select a client",
-                        "valuePath": "project.clientId",
-                        "required": true,
-                        "options": {
-                          "dataPath": "clients",
-                          "labelPath": "name",
-                          "valuePath": "id"
-                        },
-                        "searchable": true
-                      }
-                    },
-                    {
-                      "type": "SelectField",
-                      "props": {
-                        "name": "categoryId",
-                        "label": "Category",
-                        "valuePath": "project.categoryId",
-                        "options": {
-                          "dataPath": "categories",
-                          "labelPath": "name",
-                          "valuePath": "id"
-                        }
-                      }
-                    },
-                    {
-                      "type": "SelectField",
-                      "props": {
-                        "name": "status",
-                        "label": "Status",
-                        "valuePath": "project.status",
-                        "required": true,
-                        "options": [
-                          { "label": "Planning", "value": "planning" },
-                          { "label": "Active", "value": "active" },
-                          { "label": "On Hold", "value": "on_hold" },
-                          { "label": "Completed", "value": "completed" },
-                          { "label": "Cancelled", "value": "cancelled" }
-                        ],
-                        "defaultValue": "planning"
-                      }
-                    },
-                    {
-                      "type": "SelectField",
-                      "props": {
-                        "name": "priority",
-                        "label": "Priority",
-                        "valuePath": "project.priority",
-                        "options": [
-                          { "label": "Low", "value": "low" },
-                          { "label": "Medium", "value": "medium" },
-                          { "label": "High", "value": "high" },
-                          { "label": "Urgent", "value": "urgent" }
-                        ],
-                        "defaultValue": "medium"
-                      }
-                    },
-                    {
-                      "type": "DateField",
-                      "props": {
-                        "name": "startDate",
-                        "label": "Start Date",
-                        "valuePath": "project.startDate",
-                        "required": true
-                      }
-                    },
-                    {
-                      "type": "DateField",
-                      "props": {
-                        "name": "dueDate",
-                        "label": "Due Date",
-                        "valuePath": "project.dueDate",
-                        "required": true,
-                        "validation": {
-                          "min": "{{form.startDate}}",
-                          "message": "Due date must be after start date"
-                        }
-                      }
-                    },
-                    {
-                      "type": "TextField",
-                      "props": {
-                        "name": "budget",
-                        "label": "Budget",
-                        "type": "number",
-                        "valuePath": "project.budget",
-                        "required": true,
-                        "validation": {
-                          "min": 0,
-                          "message": "Budget must be positive"
-                        },
-                        "prefix": "$"
-                      }
-                    },
-                    {
-                      "type": "TextField",
-                      "props": {
-                        "name": "hourlyRate",
-                        "label": "Hourly Rate",
-                        "type": "number",
-                        "valuePath": "project.hourlyRate",
-                        "validation": {
-                          "min": 0,
-                          "max": 1000
-                        },
-                        "prefix": "$",
-                        "suffix": "/hour"
-                      }
-                    },
-                    {
-                      "type": "TextField",
-                      "props": {
-                        "name": "tags",
-                        "label": "Tags",
-                        "placeholder": "Enter tags separated by commas",
-                        "valuePath": "project.tags",
-                        "helpText": "e.g., web, mobile, design"
-                      }
-                    }
-                  ]
+                    "label": "Name",
+                    "valuePath": "item.name"
+                  }
+                },
+                {
+                  "type": "DetailRow",
+                  "props": {
+                    "label": "Status",
+                    "valuePath": "item.status"
+                  }
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "type": "Button",
+          "visible": {
+            "and": [
+              { "path": "/user/isAdmin" },
+              { "eq": [{ "path": "/item/status" }, "draft"] }
+            ]
+          },
+          "props": {
+            "label": "Publish Draft",
+            "action": {
+              "type": "api_call",
+              "method": "POST",
+              "url": "/items/:id/publish"
+            }
+          }
+        },
+        {
+          "type": "Button",
+          "visible": {
+            "or": [
+              { "path": "/user/isAdmin" },
+              { "eq": [{ "path": "/item/createdBy" }, { "path": "/user/id" }] }
+            ]
+          },
+          "props": {
+            "label": "Edit",
+            "action": {
+              "type": "navigate",
+              "to": "/items/:id/edit"
+            }
+          }
+        },
+        {
+          "type": "Alert",
+          "visible": {
+            "not": { "path": "/item/isPublished" }
+          },
+          "props": {
+            "variant": "destructive",
+            "message": "This item is not published yet"
+          }
+        },
+        {
+          "type": "Card",
+          "visible": {
+            "and": [
+              { "path": "/user/isAdmin" },
+              { "gt": [{ "path": "/item/views" }, 100] }
+            ]
+          },
+          "props": {
+            "title": "Popular Item"
+          },
+          "children": [
+            {
+              "type": "Text",
+              "props": {
+                "content": "This item has over 100 views"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  // Example 5: Action enhancements with confirm, onSuccess, onError
+  {
+    "description": "Demonstrates confirm dialogs and action chaining with onSuccess/onError",
+    "config": {
+      "dataSources": {
+        "item": {
+          "url": "/items/:id"
+        }
+      },
+      "children": [
+        {
+          "type": "PageHeader",
+          "props": {
+            "title": "Advanced Actions"
+          }
+        },
+        {
+          "type": "Card",
+          "props": {
+            "title": "Action Examples"
+          },
+          "children": [
             {
               "type": "Stack",
               "props": {
                 "direction": "vertical",
-                "gap": 4
+                "gap": "4"
               },
               "children": [
                 {
-                  "type": "Card",
+                  "type": "Button",
                   "props": {
-                    "title": "Project Statistics",
-                    "condition": "{{project != null}}"
-                  },
-                  "children": [
-                    {
-                      "type": "DetailSection",
-                      "props": {
-                        "rows": [
-                          {
-                            "label": "Total Hours",
-                            "valuePath": "project.totalHours",
-                            "format": "number",
-                            "decimals": 2
-                          },
-                          {
-                            "label": "Total Cost",
-                            "valuePath": "project.totalCost",
-                            "format": "currency"
-                          },
-                          {
-                            "label": "Completion",
-                            "template": "{{project.progress}}%"
-                          },
-                          {
-                            "label": "Created",
-                            "valuePath": "project.createdAt",
-                            "format": "datetime"
-                          },
-                          {
-                            "label": "Last Updated",
-                            "valuePath": "project.updatedAt",
-                            "format": "relative"
-                          }
-                        ]
+                    "label": "Delete with Confirmation",
+                    "variant": "destructive",
+                    "action": {
+                      "type": "delete_confirm",
+                      "url": "/items/:id",
+                      "confirm": {
+                        "title": "Delete Item",
+                        "message": "Are you sure you want to delete this item? This action cannot be undone.",
+                        "variant": "destructive"
+                      },
+                      "onSuccess": {
+                        "type": "navigate",
+                        "to": "/items"
                       }
                     }
-                  ]
+                  }
                 },
                 {
-                  "type": "Card",
+                  "type": "Button",
                   "props": {
-                    "title": "Project Team",
-                    "condition": "{{project != null && project.team != null}}"
-                  },
-                  "children": [
-                    {
-                      "type": "DataTable",
-                      "props": {
-                        "dataPath": "project.team",
-                        "columns": [
-                          {
-                            "key": "name",
-                            "header": "Name"
-                          },
-                          {
-                            "key": "role",
-                            "header": "Role",
-                            "render": {
-                              "type": "Badge",
-                              "props": {
-                                "valuePath": "role"
-                              }
-                            }
-                          }
-                        ]
+                    "label": "Publish with Success Action",
+                    "action": {
+                      "type": "api_call",
+                      "method": "POST",
+                      "url": "/items/:id/publish",
+                      "confirm": {
+                        "message": "Publish this item now?"
+                      },
+                      "onSuccess": {
+                        "type": "refresh_data"
                       }
                     }
-                  ]
+                  }
+                },
+                {
+                  "type": "Button",
+                  "props": {
+                    "label": "Submit with Error Handling",
+                    "action": {
+                      "type": "api_call",
+                      "method": "POST",
+                      "url": "/items/:id/validate",
+                      "onSuccess": {
+                        "type": "navigate",
+                        "to": "/items/:id/success"
+                      },
+                      "onError": {
+                        "type": "refresh_data"
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "Button",
+                  "props": {
+                    "label": "Complex Chain",
+                    "action": {
+                      "type": "submit_form",
+                      "url": "/items",
+                      "method": "POST",
+                      "confirm": {
+                        "title": "Create Item",
+                        "message": "Create this new item?"
+                      },
+                      "onSuccess": {
+                        "type": "api_call",
+                        "method": "POST",
+                        "url": "/notifications/send",
+                        "onSuccess": {
+                          "type": "navigate",
+                          "to": "/items"
+                        }
+                      }
+                    }
+                  }
                 }
               ]
             }
@@ -1693,29 +1584,6 @@ export const VALID_ACTION_TYPES = [
   "response.map",
   "transform.array",
   "try"
-] as const;
-
-// Export all component types for validation (matches page-format.json exactly)
-export const VALID_COMPONENT_TYPES = [
-  "PageHeader",
-  "DataTable",
-  "Form",
-  "Grid",
-  "Stack",
-  "Card",
-  "Tabs",
-  "TabPanel",
-  "TextField",
-  "TextArea",
-  "SelectField",
-  "DateField",
-  "DetailSection",
-  "DetailRow",
-  "Badge",
-  "StatCard",
-  "Button",
-  "Divider",
-  "Alert"
 ] as const;
 
 // Export special functions for reference

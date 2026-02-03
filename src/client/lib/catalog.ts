@@ -1,16 +1,65 @@
-import { createCatalog } from '@json-render/core';
+import { createCatalog, builtInValidationFunctions } from '@json-render/core';
 import { z } from 'zod';
 
-const ActionSchema = z.union([
-  z.object({ type: z.literal('navigate'), to: z.string() }),
-  z.object({ type: z.literal('api_call'), method: z.string(), url: z.string(), body: z.record(z.string(), z.any()).optional(), onSuccess: z.any().optional() }),
-  z.object({ type: z.literal('submit_form'), url: z.string(), method: z.string().optional(), redirectTo: z.string().optional() }),
-  z.object({ type: z.literal('delete_confirm'), url: z.string(), message: z.string().optional(), redirectTo: z.string().optional() }),
-  z.object({ type: z.literal('refresh_data') }),
-  z.object({ type: z.literal('export_csv'), dataPath: z.string() }),
+// Confirm dialog configuration (json-render standard)
+const ConfirmSchema = z.object({
+  title: z.string().optional(),
+  message: z.string(),
+  variant: z.enum(['default', 'destructive']).optional(),
+});
+
+// Base action properties (supports action chaining via onSuccess/onError)
+const BaseActionProps = {
+  confirm: ConfirmSchema.optional(),
+  onSuccess: z.lazy(() => ActionSchema).optional(),
+  onError: z.lazy(() => ActionSchema).optional(),
+};
+
+const ActionSchema: z.ZodType<any> = z.union([
+  z.object({
+    type: z.literal('navigate'),
+    to: z.string(),
+    ...BaseActionProps,
+  }),
+  z.object({
+    type: z.literal('api_call'),
+    method: z.string(),
+    url: z.string(),
+    body: z.record(z.string(), z.any()).optional(),
+    ...BaseActionProps,
+  }),
+  z.object({
+    type: z.literal('submit_form'),
+    url: z.string(),
+    method: z.string().optional(),
+    data: z.record(z.string(), z.any()).optional(),
+    ...BaseActionProps,
+  }),
+  z.object({
+    type: z.literal('delete_confirm'),
+    url: z.string(),
+    ...BaseActionProps,
+  }),
+  z.object({
+    type: z.literal('update'),
+    url: z.string(),
+    method: z.string().optional(),
+    data: z.record(z.string(), z.any()).optional(),
+    ...BaseActionProps,
+  }),
+  z.object({
+    type: z.literal('refresh_data'),
+    ...BaseActionProps,
+  }),
+  z.object({
+    type: z.literal('export_csv'),
+    dataPath: z.string(),
+    ...BaseActionProps,
+  }),
 ]);
 
 export const catalog = createCatalog({
+  functions: builtInValidationFunctions,
   components: {
     PageHeader: {
       props: z.object({
@@ -80,6 +129,14 @@ export const catalog = createCatalog({
         required: z.boolean().optional(),
         type: z.string().optional(),
         disabled: z.boolean().optional(),
+        validation: z.object({
+          checks: z.array(z.object({
+            fn: z.enum(['required', 'email', 'minLength', 'maxLength', 'pattern', 'min', 'max']),
+            args: z.any().optional(),
+            message: z.string().optional(),
+          })).optional(),
+          validateOn: z.enum(['change', 'blur', 'submit']).optional(),
+        }).optional(),
       }),
     },
     TextArea: {
@@ -89,6 +146,14 @@ export const catalog = createCatalog({
         placeholder: z.string().optional(),
         rows: z.number().optional(),
         required: z.boolean().optional(),
+        validation: z.object({
+          checks: z.array(z.object({
+            fn: z.enum(['required', 'minLength', 'maxLength']),
+            args: z.any().optional(),
+            message: z.string().optional(),
+          })).optional(),
+          validateOn: z.enum(['change', 'blur', 'submit']).optional(),
+        }).optional(),
       }),
     },
     SelectField: {
@@ -99,6 +164,13 @@ export const catalog = createCatalog({
         required: z.boolean().optional(),
         options: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
         optionsPath: z.string().optional(),
+        validation: z.object({
+          checks: z.array(z.object({
+            fn: z.enum(['required']),
+            message: z.string().optional(),
+          })).optional(),
+          validateOn: z.enum(['change', 'blur', 'submit']).optional(),
+        }).optional(),
       }),
     },
     DateField: {
@@ -107,6 +179,14 @@ export const catalog = createCatalog({
         bindPath: z.string(),
         placeholder: z.string().optional(),
         required: z.boolean().optional(),
+        validation: z.object({
+          checks: z.array(z.object({
+            fn: z.enum(['required', 'min', 'max']),
+            args: z.any().optional(),
+            message: z.string().optional(),
+          })).optional(),
+          validateOn: z.enum(['change', 'blur', 'submit']).optional(),
+        }).optional(),
       }),
     },
     Grid: {

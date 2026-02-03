@@ -467,10 +467,31 @@ export class BlazorlyDataServiceClient {
       return this.getItemsWithJoins(collectionName, params);
     }
 
+    // Build URL with query parameters
+    let url = `/items/${collectionName}`;
+    if (params) {
+      const queryString = new URLSearchParams();
+
+      // Add filter as JSON string
+      if (params.filter) {
+        queryString.append('filter', JSON.stringify(params.filter));
+      }
+
+      // Add other params
+      if (params.limit) queryString.append('limit', params.limit.toString());
+      if (params.offset) queryString.append('offset', params.offset.toString());
+      if (params.sort) queryString.append('sort', JSON.stringify(params.sort));
+      if (params.fields) queryString.append('fields', params.fields.join(','));
+
+      const queryStr = queryString.toString();
+      if (queryStr) {
+        url += `?${queryStr}`;
+      }
+    }
+
     // Standard getItems without joins
-    const response = await this.request<any>(`/items/${collectionName}`, {
+    const response = await this.request<any>(url, {
       method: 'GET',
-      body: params as any,
     });
     // API returns { data: Item[], meta: {...} } directly, not wrapped in ApiResponse
     return response as ItemsResult;

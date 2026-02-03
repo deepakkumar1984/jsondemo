@@ -6,7 +6,7 @@ import SignupPage from './pages/signup';
 import ForgotPasswordPage from './pages/forgot-password';
 import ResetPasswordPage from './pages/reset-password';
 import AppLayout from './layouts/app-layout';
-import { PageRenderer } from './layouts/page-renderer';
+import { JsonPageRenderer } from './layouts/json-page-renderer';
 import { loadAllRoutes, loadNavigationMenu, getPageLoader } from './lib/config-loader';
 import type { RouteDef, NavCategory } from './lib/config-loader';
 import { useAppConfig } from './lib/app-config';
@@ -37,7 +37,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Lazily loads a page config JSON and renders it via PageRenderer.
+ * Lazily loads a page config JSON and renders it via JsonPageRenderer.
  * Each page reference (e.g., "departments/list") maps to a config file
  * discovered by import.meta.glob at build time.
  */
@@ -64,7 +64,7 @@ function LazyPage({ page }: { page: string }) {
       </div>
     );
 
-  return <PageRenderer config={config} />;
+  return <JsonPageRenderer config={config} />;
 }
 
 export default function App() {

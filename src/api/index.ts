@@ -1,8 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import auth from './routes/auth';
-import { apiConfigs } from './configs.generated';
-import { createRouterFromConfig, ApiConfig } from './engine/route-engine';
+import { apiRoutes } from './routes.generated';
 
 type Env = { Bindings: { DB: D1Database; JWT_SECRET: string } };
 
@@ -14,15 +13,12 @@ api.use('*', cors());
 // Public routes (no auth required)
 api.route('/auth', auth);
 
-// Auto-register config-driven API routes (synchronous - runs at module load time)
-for (const [resource, config] of Object.entries(apiConfigs)) {
-  // Strip /api prefix from basePath since this router is already mounted at /api
-  const routePath = (config as ApiConfig).basePath.replace(/^\/api/, '') || '/';
-  console.log(`[API] Registering config-driven route: ${routePath} (from ${(config as ApiConfig).basePath})`);
-  const router = createRouterFromConfig(config as ApiConfig);
-  api.route(routePath, router);
+// Auto-register TypeScript API routes
+for (const route of apiRoutes) {
+  console.log(`[API] Registering TypeScript route: ${route.path}`);
+  api.route(route.path, route.router);
 }
 
-console.log(`[API] Registered ${Object.keys(apiConfigs).length} config-driven API routes`);
+console.log(`[API] Registered ${apiRoutes.length} TypeScript API routes`);
 
 export default api;
