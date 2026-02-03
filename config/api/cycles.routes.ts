@@ -1,69 +1,62 @@
 import { Hono } from 'hono';
-import type { Env } from '../../src/types';
 import { createDataClient } from '../../src/db/data-client';
 
 export const analyticsRouter = new Hono<{ Bindings: Env }>();
 
-analyticsRouter.get('/cycleTime', async (c) => {
+// GET /analytics/cycle-time
+// Computes average, median cycle time from start to completion, with distribution buckets.
+// Cycle time start: start_date if present, else first StatusChanged to InProgress from task_activities.
+// Query params: project_id (optional), start_date (ISO string), end_date (ISO string)
+analyticsRouter.get('/cycle-time', async (c) => {
   const client = createDataClient(c.env);
-  const startDate = c.req.query('startDate');
-  const endDate = c.req.query('endDate');
+  const { project_id, start_date, end_date } = c.req.query();
 
-  if (!startDate || !endDate) {
-    return c.json({
-      success: false,
-      error: { message: 'startDate and endDate query parameters are required', status: 400 }
-    }, 400);
+  // Validation
+  if (start_date && isNaN(Date.parse(start_date))) {
+    return c.json({ success: false, error: { message: 'Invalid start_date format', status: 400 } }, 400);
+  }
+  if (end_date && isNaN(Date.parse(end_date))) {
+    return c.json({ success: false, error: { message: 'Invalid end_date format', status: 400 } }, 400);
+  }
+  if (project_id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(project_id)) {
+    return c.json({ success: false, error: { message: 'Invalid project_id format', status: 400 } }, 400);
   }
 
   try {
-    // Get completed tasks within the date range
-    const tasks = await client.getItems('tasks', {
-      filter: {
-        completed_at: { _gte: startDate, _lte: endDate },
-        status: { _eq: 'Done' }
-      },
-      fields: ['id', 'start_date', 'completed_at']
-    });
+    // Fetch tasks with completed_at not null, within date range if provided
+    const filter: any = { completed_at: { _null: false } };
+    if (start_date) filter.created_at = { _gte: start_date };
+    if (end_date) filter.created_at = { ...filter.created_at, _lte: end_date };
+    if (project_id) filter.project_id = { _eq: project_id };
+
+    const tasksResponse = await client.getItems('tasks', { filter, fields: ['id', 'start_date', 'completed_at'] });
+    const tasks = tasksResponse.data;
 
     const cycleTimes: number[] = [];
 
-    for (const task of tasks.data) {
-      let start: Date;
-      if (task.start_date) {
-        start = new Date(task.start_date);
-      } else {
-        // Fallback: find first StatusChanged to InProgress
-        const activities = await client.getItems('task_activities', {
-          filter: {
-            task_id: { _eq: task.id },
-            event_type: { _eq: 'StatusChanged' },
-            to_value: { _eq: 'InProgress' }
-          },
+    for (const task of tasks) {
+      let startTime: Date | null = task.start_date ? new Date(task.start_date) : null;
+      if (!startTime) {
+        // Fallback: first StatusChanged to InProgress
+        const activitiesResponse = await client.getItems('task_activities', {
+          filter: { task_id: { _eq: task.id }, event_type: { _eq: 'StatusChanged' }, to_value: { _eq: 'InProgress' } },
           sort: ['created_at'],
-          limit: 1
+          limit: 1,
+          fields: ['created_at']
         });
-        if (activities.data.length > 0) {
-          start = new Date(activities.data[0].created_at);
-        } else {
-          continue; // Skip if no start found
+        if (activitiesResponse.data.length > 0) {
+          startTime = new Date(activitiesResponse.data[0].created_at);
         }
       }
-      const end = new Date(task.completed_at);
-      const diffMs = end.getTime() - start.getTime();
-      if (diffMs > 0) {
-        cycleTimes.push(diffMs / (1000 * 60 * 60)); // in hours
+      if (startTime) {
+        const endTime = new Date(task.completed_at);
+        const cycleTimeMs = endTime.getTime() - startTime.getTime();
+        if (cycleTimeMs > 0) cycleTimes.push(cycleTimeMs);
       }
     }
 
     if (cycleTimes.length === 0) {
-      return c.json({
-        success: true,
-        data: { average: 0, median: 0, distribution: {} },
-        metadata: {
-          fallbackRule: 'If startDate is missing, use the timestamp of the first StatusChanged to InProgress event.'
-        }
-      });
+      return c.json({ success: true, data: { average: 0, median: 0, distribution: {} }, message: 'No completed tasks found' });
     }
 
     // Calculate average
@@ -75,19 +68,23 @@ analyticsRouter.get('/cycleTime', async (c) => {
       ? (cycleTimes[cycleTimes.length / 2 - 1] + cycleTimes[cycleTimes.length / 2]) / 2
       : cycleTimes[Math.floor(cycleTimes.length / 2)];
 
-    // Distribution buckets (in hours: 0-1, 1-24, 24-168, 168+)
-    const distribution = {
-      '0-1h': cycleTimes.filter(t => t <= 1).length,
-      '1-24h': cycleTimes.filter(t => t > 1 && t <= 24).length,
-      '1-7d': cycleTimes.filter(t => t > 24 && t <= 168).length,
-      '7d+': cycleTimes.filter(t => t > 168).length
-    };
+    // Distribution buckets (in days: 0-1, 1-3, 3-7, 7-14, 14+)
+    const buckets = { '0-1': 0, '1-3': 0, '3-7': 0, '7-14': 0, '14+': 0 };
+    cycleTimes.forEach(ct => {
+      const days = ct / (1000 * 60 * 60 * 24);
+      if (days <= 1) buckets['0-1']++;
+      else if (days <= 3) buckets['1-3']++;
+      else if (days <= 7) buckets['3-7']++;
+      else if (days <= 14) buckets['7-14']++;
+      else buckets['14+']++;
+    });
 
     return c.json({
       success: true,
-      data: { average, median, distribution },
-      metadata: {
-        fallbackRule: 'If startDate is missing, use the timestamp of the first StatusChanged to InProgress event.'
+      data: {
+        average: Math.round(average / (1000 * 60 * 60 * 24) * 100) / 100, // in days, rounded to 2 decimals
+        median: Math.round(median / (1000 * 60 * 60 * 24) * 100) / 100,
+        distribution: buckets
       }
     });
   } catch (error: any) {
@@ -95,66 +92,65 @@ analyticsRouter.get('/cycleTime', async (c) => {
   }
 });
 
-analyticsRouter.get('/completionRate', async (c) => {
+// GET /analytics/completion-rate
+// Computes completion rate: completed tasks / created tasks over time periods.
+// Query params: project_id (optional), start_date (ISO string), end_date (ISO string), period (day|week|month, default month)
+analyticsRouter.get('/completion-rate', async (c) => {
   const client = createDataClient(c.env);
-  const startDate = c.req.query('startDate');
-  const endDate = c.req.query('endDate');
+  const { project_id, start_date, end_date, period = 'month' } = c.req.query();
 
-  if (!startDate || !endDate) {
-    return c.json({
-      success: false,
-      error: { message: 'startDate and endDate query parameters are required', status: 400 }
-    }, 400);
+  // Validation
+  if (start_date && isNaN(Date.parse(start_date))) {
+    return c.json({ success: false, error: { message: 'Invalid start_date format', status: 400 } }, 400);
+  }
+  if (end_date && isNaN(Date.parse(end_date))) {
+    return c.json({ success: false, error: { message: 'Invalid end_date format', status: 400 } }, 400);
+  }
+  if (project_id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(project_id)) {
+    return c.json({ success: false, error: { message: 'Invalid project_id format', status: 400 } }, 400);
+  }
+  if (!['day', 'week', 'month'].includes(period)) {
+    return c.json({ success: false, error: { message: 'Invalid period, must be day, week, or month', status: 400 } }, 400);
   }
 
   try {
-    // Get tasks created within the range
-    const createdTasks = await client.getItems('tasks', {
-      filter: {
-        created_at: { _gte: startDate, _lte: endDate }
-      },
-      fields: ['id', 'created_at']
-    });
+    const filter: any = {};
+    if (start_date) filter.created_at = { _gte: start_date };
+    if (end_date) filter.created_at = { ...filter.created_at, _lte: end_date };
+    if (project_id) filter.project_id = { _eq: project_id };
 
-    // Get tasks completed within the range
-    const completedTasks = await client.getItems('tasks', {
-      filter: {
-        completed_at: { _gte: startDate, _lte: endDate },
-        status: { _eq: 'Done' }
-      },
-      fields: ['id', 'completed_at']
-    });
+    // Fetch all tasks in range
+    const tasksResponse = await client.getItems('tasks', { filter, fields: ['id', 'created_at', 'completed_at'] });
+    const tasks = tasksResponse.data;
 
-    // Group by date (assuming daily)
-    const createdByDate: Record<string, number> = {};
-    const completedByDate: Record<string, number> = {};
+    // Group by period
+    const grouped: { [key: string]: { created: number, completed: number } } = {};
 
-    createdTasks.data.forEach(task => {
-      const date = new Date(task.created_at).toISOString().split('T')[0];
-      createdByDate[date] = (createdByDate[date] || 0) + 1;
-    });
-
-    completedTasks.data.forEach(task => {
-      const date = new Date(task.completed_at).toISOString().split('T')[0];
-      completedByDate[date] = (completedByDate[date] || 0) + 1;
-    });
-
-    // Combine dates
-    const allDates = new Set([...Object.keys(createdByDate), ...Object.keys(completedByDate)]);
-    const data = Array.from(allDates).sort().map(date => {
-      const created = createdByDate[date] || 0;
-      const completed = completedByDate[date] || 0;
-      const rate = created > 0 ? (completed / created) * 100 : 0;
-      return { date, created, completed, rate };
-    });
-
-    return c.json({
-      success: true,
-      data,
-      metadata: {
-        description: 'Completion rate as percentage of completed tasks over created tasks per day.'
+    tasks.forEach(task => {
+      const date = new Date(task.created_at);
+      let key: string;
+      if (period === 'day') {
+        key = date.toISOString().split('T')[0];
+      } else if (period === 'week') {
+        const weekStart = new Date(date);
+        weekStart.setDate(date.getDate() - date.getDay());
+        key = weekStart.toISOString().split('T')[0];
+      } else { // month
+        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       }
+
+      if (!grouped[key]) grouped[key] = { created: 0, completed: 0 };
+      grouped[key].created++;
+      if (task.completed_at) grouped[key].completed++;
     });
+
+    // Compute rates
+    const data = Object.keys(grouped).sort().map(key => ({
+      period: key,
+      completionRate: grouped[key].created > 0 ? (grouped[key].completed / grouped[key].created) * 100 : 0
+    }));
+
+    return c.json({ success: true, data });
   } catch (error: any) {
     return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
   }

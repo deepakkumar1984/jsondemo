@@ -4,14 +4,14 @@
  * Run: npm run build:routes-index
  */
 
-import { automaticsRouter } from '../../config/api/automatics.routes.ts';
-import { commentsRouter } from '../../config/api/comments.routes.ts';
-import { cyclesRouter } from '../../config/api/cycles.routes.ts';
-import { projectsRouter } from '../../config/api/projects.routes.ts';
-import { tasksRouter } from '../../config/api/tasks.routes.ts';
+import { analyticsRouter } from '../../config/api/analytics.routes';
+import { commentsRouter } from '../../config/api/comments.routes';
+import { cyclesRouter } from '../../config/api/cycles.routes';
+import { projectsRouter } from '../../config/api/projects.routes';
+import { tasksRouter } from '../../config/api/tasks.routes';
 
 export const apiRoutes = [
-  { path: '/automatics', router: automaticsRouter },
+  { path: '/analytics', router: analyticsRouter },
   { path: '/comments', router: commentsRouter },
   { path: '/cycles', router: cyclesRouter },
   { path: '/projects', router: projectsRouter },

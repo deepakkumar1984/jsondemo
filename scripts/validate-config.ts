@@ -256,6 +256,10 @@ function loadConfigRegistry(): ConfigRegistry {
 
           registry.pages.set(actualId, content);
         } catch {}
+      } else if (entry.name.endsWith('.tsx') || entry.name.endsWith('.jsx')) {
+        // Support React component pages (.tsx/.jsx)
+        const expectedId = prefix ? `${prefix}/${entry.name.replace(/\.(tsx|jsx)$/, '')}` : entry.name.replace(/\.(tsx|jsx)$/, '');
+        registry.pages.set(expectedId, { page: expectedId, type: 'component' });
       }
     });
   }

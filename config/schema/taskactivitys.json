@@ -1,6 +1,6 @@
 {
   "table": "task_activities",
-  "description": "Audit log for task activities to track changes and events",
+  "description": "Audit log for task activities including changes and events",
   "columns": [
     {
       "name": "id",
@@ -46,19 +46,19 @@
         "PriorityChanged",
         "Tagged"
       ],
-      "description": "Type of event that occurred"
+      "description": "Type of activity event"
     },
     {
       "name": "from_value",
       "type": "jsonb",
       "notNull": false,
-      "description": "Previous value before the change, optional"
+      "description": "Previous value for the change, optional"
     },
     {
       "name": "to_value",
       "type": "jsonb",
       "notNull": false,
-      "description": "New value after the change, optional"
+      "description": "New value for the change, optional"
     },
     {
       "name": "metadata",
@@ -72,6 +72,13 @@
       "notNull": true,
       "default": "CURRENT_TIMESTAMP",
       "description": "Timestamp when the activity was created"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "notNull": true,
+      "default": "CURRENT_TIMESTAMP",
+      "description": "Timestamp when the activity was last updated"
     }
   ],
   "indexes": [

@@ -1,6 +1,6 @@
 {
   "table": "task_comments",
-  "description": "Comments on tasks, including author, body, and timestamps",
+  "description": "Comments associated with tasks, including author and timestamps",
   "columns": [
     {
       "name": "id",
@@ -35,7 +35,7 @@
       "name": "body",
       "type": "text",
       "notNull": true,
-      "description": "Comment body text, required and non-empty with max length validation in application"
+      "description": "Comment body, must be non-empty with max length enforced at application level"
     },
     {
       "name": "created_at",
@@ -64,6 +64,14 @@
       "columns": [
         "created_at"
       ]
+    },
+    {
+      "name": "idx_task_comments_task_id_created_at",
+      "columns": [
+        "task_id",
+        "created_at"
+      ],
+      "unique": false
     }
   ]
 }

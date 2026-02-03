@@ -1,154 +1,174 @@
 import { Hono } from 'hono';
-import type { Env } from '../../src/types';
 import { createDataClient } from '../../src/db/data-client';
 
 export const analyticsRouter = new Hono<{ Bindings: Env }>();
 
-// Helper function to get date range, defaulting to last 30 days
-function getDateRange(dateFrom?: string, dateTo?: string) {
-  const now = new Date();
-  const from = dateFrom ? new Date(dateFrom) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const to = dateTo ? new Date(dateTo) : now;
-  return { from: from.toISOString(), to: to.toISOString() };
-}
-
-// Helper function to group and count
-function groupByCount(data: any[], key: string) {
-  const counts: { [key: string]: number } = {};
-  data.forEach(item => {
-    const value = item[key];
-    counts[value] = (counts[value] || 0) + 1;
-  });
-  return counts;
-}
-
-// Helper function for trend data (daily buckets)
-function trendData(data: any[], dateField: string, from: string, to: string) {
-  const fromDate = new Date(from);
-  const toDate = new Date(to);
-  const days = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
-  const labels = [];
-  const series = [];
-  for (let i = 0; i <= days; i++) {
-    const date = new Date(fromDate.getTime() + i * 24 * 60 * 60 * 1000);
-    const dateStr = date.toISOString().split('T')[0];
-    labels.push(dateStr);
-    const count = data.filter(item => new Date(item[dateField]).toISOString().split('T')[0] === dateStr).length;
-    series.push(count);
-  }
-  return { labels, series };
-}
-
-analyticsRouter.get('/tasksByStatus', async (c) => {
+analyticsRouter.get('/tasks-by-status', async (c) => {
+  const { projectId, dateFrom, dateTo } = c.req.query();
   const client = createDataClient(c.env);
-  const projectId = c.req.query('projectId');
-  const { from, to } = getDateRange(c.req.query('dateFrom'), c.req.query('dateTo'));
+
+  let from = dateFrom ? new Date(dateFrom) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  let to = dateTo ? new Date(dateTo) : new Date();
+
+  if (isNaN(from.getTime()) || isNaN(to.getTime())) {
+    return c.json({ success: false, error: { message: 'Invalid date format', status: 400 } }, 400);
+  }
+
+  const filter: any = {};
+  if (projectId) filter.project_id = { _eq: projectId };
+  filter.created_at = { _gte: from.toISOString(), _lte: to.toISOString() };
 
   try {
-    const filter: any = {
-      created_at: { _gte: from, _lte: to }
-    };
-    if (projectId) filter.project_id = { _eq: projectId };
-
     const tasks = await client.getItems('tasks', { filter });
-    const counts = groupByCount(tasks.data, 'status');
-    const labels = Object.keys(counts);
-    const series = Object.values(counts);
-
-    return c.json({ success: true, data: { labels, series } });
-  } catch (error: any) {
-    return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
-  }
-});
-
-analyticsRouter.get('/tasksCreatedTrend', async (c) => {
-  const client = createDataClient(c.env);
-  const projectId = c.req.query('projectId');
-  const { from, to } = getDateRange(c.req.query('dateFrom'), c.req.query('dateTo'));
-
-  try {
-    const filter: any = {
-      created_at: { _gte: from, _lte: to }
-    };
-    if (projectId) filter.project_id = { _eq: projectId };
-
-    const tasks = await client.getItems('tasks', { filter });
-    const { labels, series } = trendData(tasks.data, 'created_at', from, to);
-
-    return c.json({ success: true, data: { labels, series } });
-  } catch (error: any) {
-    return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
-  }
-});
-
-analyticsRouter.get('/tasksCompletedTrend', async (c) => {
-  const client = createDataClient(c.env);
-  const projectId = c.req.query('projectId');
-  const { from, to } = getDateRange(c.req.query('dateFrom'), c.req.query('dateTo'));
-
-  try {
-    const filter: any = {
-      completed_at: { _gte: from, _lte: to, _null: false }
-    };
-    if (projectId) filter.project_id = { _eq: projectId };
-
-    const tasks = await client.getItems('tasks', { filter });
-    const { labels, series } = trendData(tasks.data, 'completed_at', from, to);
-
-    return c.json({ success: true, data: { labels, series } });
-  } catch (error: any) {
-    return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
-  }
-});
-
-analyticsRouter.get('/overdueCounts', async (c) => {
-  const client = createDataClient(c.env);
-  const projectId = c.req.query('projectId');
-  const { from, to } = getDateRange(c.req.query('dateFrom'), c.req.query('dateTo'));
-  const now = new Date().toISOString();
-
-  try {
-    const filter: any = {
-      status: { _ne: 'Done' },
-      due_date: { _lt: now, _gte: from, _lte: to, _null: false }
-    };
-    if (projectId) filter.project_id = { _eq: projectId };
-
-    const tasks = await client.getItems('tasks', { filter });
-    const counts = groupByCount(tasks.data, 'priority');
-    const labels = Object.keys(counts);
-    const series = Object.values(counts);
-
-    return c.json({ success: true, data: { labels, series } });
-  } catch (error: any) {
-    return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
-  }
-});
-
-analyticsRouter.get('/assigneeWorkload', async (c) => {
-  const client = createDataClient(c.env);
-  const projectId = c.req.query('projectId');
-  const { from, to } = getDateRange(c.req.query('dateFrom'), c.req.query('dateTo'));
-
-  try {
-    const filter: any = {
-      status: { _ne: 'Done' },
-      created_at: { _gte: from, _lte: to }
-    };
-    if (projectId) filter.project_id = { _eq: projectId };
-
-    const tasks = await client.getItems('tasks', { filter });
-    const grouped: { [assignee: string]: { [status: string]: number } } = {};
-    tasks.data.forEach(task => {
-      const assignee = task.assignee_user_id || 'Unassigned';
-      const status = task.status;
-      if (!grouped[assignee]) grouped[assignee] = {};
-      grouped[assignee][status] = (grouped[assignee][status] || 0) + 1;
+    const statusCounts: Record<string, number> = {};
+    tasks.data.forEach((task: any) => {
+      statusCounts[task.status] = (statusCounts[task.status] || 0) + 1;
     });
+    const labels = Object.keys(statusCounts);
+    const series = labels.map(label => statusCounts[label]);
+    return c.json({ success: true, data: { labels, series } });
+  } catch (error: any) {
+    return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
+  }
+});
 
-    const labels = Object.keys(grouped);
-    const series = Object.values(grouped).map(statusCounts => Object.values(statusCounts));
+analyticsRouter.get('/tasks-created-trend', async (c) => {
+  const { projectId, dateFrom, dateTo } = c.req.query();
+  const client = createDataClient(c.env);
 
+  let from = dateFrom ? new Date(dateFrom) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  let to = dateTo ? new Date(dateTo) : new Date();
+
+  if (isNaN(from.getTime()) || isNaN(to.getTime())) {
+    return c.json({ success: false, error: { message: 'Invalid date format', status: 400 } }, 400);
+  }
+
+  const filter: any = {};
+  if (projectId) filter.project_id = { _eq: projectId };
+  filter.created_at = { _gte: from.toISOString(), _lte: to.toISOString() };
+
+  try {
+    const tasks = await client.getItems('tasks', { filter });
+    const trend: Record<string, number> = {};
+    tasks.data.forEach((task: any) => {
+      const date = new Date(task.created_at).toISOString().split('T')[0];
+      trend[date] = (trend[date] || 0) + 1;
+    });
+    const labels = Object.keys(trend).sort();
+    const series = labels.map(label => trend[label]);
+    return c.json({ success: true, data: { labels, series } });
+  } catch (error: any) {
+    return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
+  }
+});
+
+analyticsRouter.get('/tasks-completed-trend', async (c) => {
+  const { projectId, dateFrom, dateTo } = c.req.query();
+  const client = createDataClient(c.env);
+
+  let from = dateFrom ? new Date(dateFrom) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  let to = dateTo ? new Date(dateTo) : new Date();
+
+  if (isNaN(from.getTime()) || isNaN(to.getTime())) {
+    return c.json({ success: false, error: { message: 'Invalid date format', status: 400 } }, 400);
+  }
+
+  const filter: any = {};
+  if (projectId) filter.project_id = { _eq: projectId };
+  filter.created_at = { _gte: from.toISOString(), _lte: to.toISOString() };
+
+  try {
+    const tasks = await client.getItems('tasks', { filter });
+    const trend: Record<string, number> = {};
+    tasks.data.forEach((task: any) => {
+      if (task.completed_at) {
+        const date = new Date(task.completed_at).toISOString().split('T')[0];
+        trend[date] = (trend[date] || 0) + 1;
+      }
+    });
+    const labels = Object.keys(trend).sort();
+    const series = labels.map(label => trend[label]);
+    return c.json({ success: true, data: { labels, series } });
+  } catch (error: any) {
+    return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
+  }
+});
+
+analyticsRouter.get('/overdue-counts', async (c) => {
+  const { projectId, dateFrom, dateTo } = c.req.query();
+  const client = createDataClient(c.env);
+
+  let from = dateFrom ? new Date(dateFrom) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  let to = dateTo ? new Date(dateTo) : new Date();
+
+  if (isNaN(from.getTime()) || isNaN(to.getTime())) {
+    return c.json({ success: false, error: { message: 'Invalid date format', status: 400 } }, 400);
+  }
+
+  const filter: any = {};
+  if (projectId) filter.project_id = { _eq: projectId };
+  filter.created_at = { _gte: from.toISOString(), _lte: to.toISOString() };
+
+  try {
+    const tasks = await client.getItems('tasks', { filter });
+    const overdue: Record<string, number> = {};
+    const now = new Date();
+    tasks.data.forEach((task: any) => {
+      if (task.status !== 'Done' && task.due_date && new Date(task.due_date) < now) {
+        overdue[task.priority] = (overdue[task.priority] || 0) + 1;
+      }
+    });
+    const labels = Object.keys(overdue);
+    const series = labels.map(label => overdue[label]);
+    return c.json({ success: true, data: { labels, series } });
+  } catch (error: any) {
+    return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
+  }
+});
+
+analyticsRouter.get('/assignee-workload', async (c) => {
+  const { projectId, dateFrom, dateTo } = c.req.query();
+  const client = createDataClient(c.env);
+
+  let from = dateFrom ? new Date(dateFrom) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  let to = dateTo ? new Date(dateTo) : new Date();
+
+  if (isNaN(from.getTime()) || isNaN(to.getTime())) {
+    return c.json({ success: false, error: { message: 'Invalid date format', status: 400 } }, 400);
+  }
+
+  const filter: any = {};
+  if (projectId) filter.project_id = { _eq: projectId };
+  filter.created_at = { _gte: from.toISOString(), _lte: to.toISOString() };
+
+  try {
+    const tasks = await client.getItems('tasks', { filter });
+    const workload: Record<string, Record<string, number>> = {};
+    tasks.data.forEach((task: any) => {
+      if (task.status !== 'Done') {
+        const assignee = task.assignee_user_id || 'Unassigned';
+        if (!workload[assignee]) workload[assignee] = {};
+        workload[assignee][task.status] = (workload[assignee][task.status] || 0) + 1;
+      }
+    });
+    const assigneeIds = Object.keys(workload).filter(id => id !== 'Unassigned');
+    let userMap: Record<string, string> = {};
+    if (assigneeIds.length > 0) {
+      const users = await client.getItems('users', { filter: { id: { _in: assigneeIds } }, fields: ['id', 'display_name'] });
+      userMap = users.data.reduce((acc: Record<string, string>, u: any) => {
+        acc[u.id] = u.display_name;
+        return acc;
+      }, {});
+    }
+    const labels = Object.keys(workload).map(id => id === 'Unassigned' ? 'Unassigned' : userMap[id] || id);
+    const statuses = ['Backlog', 'Todo', 'InProgress', 'Blocked'];
+    const series = statuses.map(status => ({
+      name: status,
+      data: labels.map(label => {
+        const originalId = label === 'Unassigned' ? 'Unassigned' : Object.keys(userMap).find(k => userMap[k] === label) || label;
+        return workload[originalId]?.[status] || 0;
+      })
+    }));
     return c.json({ success: true, data: { labels, series } });
   } catch (error: any) {
     return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);

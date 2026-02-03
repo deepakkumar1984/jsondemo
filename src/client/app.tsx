@@ -37,34 +37,34 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Lazily loads a page config JSON and renders it via JsonPageRenderer.
- * Each page reference (e.g., "departments/list") maps to a config file
+ * Lazily loads a page component (.tsx file) and renders it.
+ * Each page reference (e.g., "dashboard/index") maps to a page component file
  * discovered by import.meta.glob at build time.
  */
 function LazyPage({ page }: { page: string }) {
-  const [config, setConfig] = useState<any>(null);
+  const [Component, setComponent] = useState<React.ComponentType | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loader = getPageLoader(page);
     if (!loader) {
-      setError(`Page config not found: ${page}`);
+      setError(`Page component not found: ${page}`);
       return;
     }
     loader()
-      .then((m) => setConfig(m.default))
+      .then((m) => setComponent(() => m.default))
       .catch((err) => setError(err.message));
   }, [page]);
 
   if (error) return <div className="text-destructive p-4">Error: {error}</div>;
-  if (!config)
+  if (!Component)
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
 
-  return <JsonPageRenderer config={config} />;
+  return <Component />;
 }
 
 export default function App() {

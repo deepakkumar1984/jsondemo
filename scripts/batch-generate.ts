@@ -55,12 +55,13 @@ function loadRequest(requestPath: string): Request {
 
 /**
  * Build the output path based on scope and title
+ * Returns empty string for pages to allow auto-generation in ai-config-generator.ts
  */
 function buildOutputPath(scope: string, title: string): string {
   // Extract resource name from title
   // "Add Project schema to schemas registry" -> "projects"
   // "Configure Project CRUD operations" -> "projects"
-  // "Add Task List page" -> "task-list"
+  // "Add Task List page" -> (auto-generated based on component name)
 
   const normalized = title.toLowerCase()
     .replace(/^(add|create|configure|define|extend|implement|build|register)\s+/i, '')
@@ -84,9 +85,9 @@ function buildOutputPath(scope: string, title: string): string {
     const plural = resourceName.endsWith('s') ? resourceName : `${resourceName}s`;
     return `config/api/${plural}.routes.ts`;
   } else if (scope === 'page') {
-    // Keep descriptive name: "task-list-page" -> "task-list"
-    const pageName = kebabCase.replace(/-page$/, '');
-    return `config/pages/${pageName}.json`;
+    // Remove --output for pages to allow auto-generation logic in ai-config-generator.ts
+    // This enables proper React component naming and folder organization
+    return ''; // Empty string signals ai-config-generator to use auto-path
   } else if (scope === 'app') {
     return `config/apps.json`;
   } else {
@@ -119,7 +120,7 @@ function generateConfig(
   console.log(`   Feature: ${feature.title}`);
   console.log(`   Scope: ${task.scope}`);
   console.log(`   Priority: ${task.priority}`);
-  console.log(`   Output: ${outputPath}`);
+  console.log(`   Output: ${outputPath || '(auto-generated path based on component name)'}`);
   console.log(`${'='.repeat(80)}\n`);
 
   // Call the AI config generator
@@ -128,9 +129,13 @@ function generateConfig(
     '--type', task.scope,
     '--feature', featureName,
     '--tasks', task.description,
-    '--context', `Feature context: ${feature.description}`,
-    '--output', outputPath
+    '--context', `Feature context: ${feature.description}`
   ];
+
+  // Only add --output for non-page types (pages use auto-generation)
+  if (outputPath) {
+    args.push('--output', outputPath);
+  }
 
   // Add skip-existing flag if enabled
   if (skipExisting) {
@@ -155,7 +160,7 @@ function generateConfig(
     return false;
   }
 
-  console.log(`\n✅ Successfully generated: ${outputPath}\n`);
+  console.log(`\n✅ Successfully generated: ${outputPath || task.title}\n`);
   return true;
 }
 
@@ -245,7 +250,7 @@ async function main() {
         console.log(`  Task: ${task.title}`);
         console.log(`  Feature: ${feature.title}`);
         console.log(`  Scope: ${task.scope}`);
-        console.log(`  Output: ${outputPath}\n`);
+        console.log(`  Output: ${outputPath || '(auto-generated path based on component name)'}\n`);
         continue;
       }
 
@@ -408,7 +413,7 @@ Notes:
   - Output paths are auto-generated:
     - schema: config/schema/{table-name}.json
     - api: config/api/{resource-name}.routes.ts
-    - page: config/pages/{descriptive-name}.json
+    - page: auto-generated based on React component name (e.g., ProjectsListPage → config/pages/projects/list.tsx)
     - app: config/apps.json
   - Context is automatically included from existing configs
 `);

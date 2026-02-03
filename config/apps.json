@@ -1,0 +1,215 @@
+{
+  "apps": [
+    {
+      "id": "main",
+      "name": "Project Management App",
+      "description": "Application for managing projects, tasks, board views, and analytics",
+      "prefix": "/",
+      "demoCredentials": {
+        "email": "demo@example.com",
+        "password": "demo123"
+      },
+      "branding": {
+        "logo": "📋",
+        "logoUrl": null,
+        "faviconUrl": null,
+        "companyName": "Project Manager",
+        "tagline": "Manage projects and tasks efficiently",
+        "showPoweredBy": false
+      },
+      "layout": {
+        "type": "sidebar",
+        "sidebarPosition": "left",
+        "sidebarWidth": "280px",
+        "sidebarCollapsible": true,
+        "sidebarDefaultCollapsed": false,
+        "headerPosition": "top",
+        "headerHeight": "56px",
+        "showHeader": true,
+        "showFooter": false,
+        "footerText": "",
+        "contentMaxWidth": null,
+        "contentPadding": "24px",
+        "showBreadcrumbs": true
+      },
+      "theme": {
+        "mode": "light",
+        "allowModeToggle": true,
+        "colors": {
+          "light": {
+            "primary": "221.2 83.2% 53.3%",
+            "primaryForeground": "210 40% 98%",
+            "secondary": "210 40% 96%",
+            "secondaryForeground": "222.2 84% 4.9%",
+            "accent": "210 40% 96%",
+            "accentForeground": "222.2 84% 4.9%",
+            "destructive": "0 84.2% 60.2%",
+            "destructiveForeground": "210 40% 98%",
+            "muted": "210 40% 96%",
+            "mutedForeground": "215.4 16.3% 46.9%",
+            "card": "0 0% 100%",
+            "cardForeground": "222.2 84% 4.9%",
+            "popover": "0 0% 100%",
+            "popoverForeground": "222.2 84% 4.9%",
+            "border": "214.3 31.8% 91.4%",
+            "input": "214.3 31.8% 91.4%",
+            "ring": "221.2 83.2% 53.3%",
+            "background": "0 0% 100%",
+            "foreground": "222.2 84% 4.9%"
+          },
+          "dark": {
+            "primary": "217.2 91.2% 59.8%",
+            "primaryForeground": "222.2 84% 4.9%",
+            "secondary": "217.2 32.6% 17.5%",
+            "secondaryForeground": "210 40% 98%",
+            "accent": "217.2 32.6% 17.5%",
+            "accentForeground": "210 40% 98%",
+            "destructive": "0 62.8% 30.6%",
+            "destructiveForeground": "210 40% 98%",
+            "muted": "217.2 32.6% 17.5%",
+            "mutedForeground": "215 20.2% 65.1%",
+            "card": "217.2 32.6% 17.5%",
+            "cardForeground": "210 40% 98%",
+            "popover": "217.2 32.6% 17.5%",
+            "popoverForeground": "210 40% 98%",
+            "border": "217.2 32.6% 17.5%",
+            "input": "217.2 32.6% 17.5%",
+            "ring": "224.3 76.3% 94.1%",
+            "background": "222.2 84% 4.9%",
+            "foreground": "210 40% 98%"
+          }
+        },
+        "fonts": {
+          "heading": "Inter, sans-serif",
+          "body": "Inter, sans-serif",
+          "mono": "JetBrains Mono, monospace"
+        },
+        "fontSizes": {
+          "xs": "0rem",
+          "sm": "0rem",
+          "base": "1rem",
+          "lg": "1rem",
+          "xl": "1rem",
+          "2xl": "1rem",
+          "3xl": "1rem",
+          "4xl": "1rem"
+        },
+        "spacing": {
+          "scale": 1
+        },
+        "radius": {
+          "sm": "0rem",
+          "md": "0rem",
+          "lg": "0rem",
+          "xl": "0rem"
+        },
+        "shadows": {
+          "sm": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+          "md": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+          "lg": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+          "xl": "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)"
+        }
+      },
+      "icons": {
+        "library": "lucide",
+        "size": "20px",
+        "strokeWidth": 2
+      },
+      "navigation": {
+        "categories": [
+          {
+            "id": "work",
+            "title": "Work",
+            "icon": "BriefcaseIcon",
+            "iconLibrary": "lucide",
+            "order": 1,
+            "items": [
+              {
+                "title": "Projects",
+                "path": "/",
+                "page": "projects",
+                "icon": "FolderIcon"
+              },
+              {
+                "title": "Tasks",
+                "path": "/",
+                "page": "taskList",
+                "icon": "ListIcon"
+              },
+              {
+                "title": "Board",
+                "path": "/",
+                "page": "taskBoard",
+                "icon": "KanbanIcon"
+              },
+              {
+                "title": "Analytics",
+                "path": "/",
+                "page": "analyticsDashboard",
+                "icon": "ChartBarIcon"
+              }
+            ]
+          }
+        ]
+      },
+      "routes": [
+        {
+          "path": "/",
+          "page": "projects"
+        },
+        {
+          "path": "/",
+          "page": "taskList"
+        },
+        {
+          "path": "/",
+          "page": "taskBoard"
+        },
+        {
+          "path": "/",
+          "page": "taskDetail"
+        },
+        {
+          "path": "/",
+          "page": "analyticsDashboard"
+        }
+      ],
+      "defaults": {
+        "table": {
+          "pageSize": 10,
+          "pageSizes": [
+            10,
+            25,
+            50
+          ],
+          "showPagination": true,
+          "showSearch": true,
+          "emptyMessage": "No data available"
+        },
+        "form": {
+          "requiredIndicator": "*",
+          "validationMode": "onBlur",
+          "showCancelButton": true,
+          "cancelButtonText": "Cancel",
+          "submitButtonText": "Submit"
+        },
+        "notifications": {
+          "position": "top-right",
+          "duration": 5000,
+          "showCloseButton": true
+        },
+        "dateFormat": "MM/dd/yyyy",
+        "timeFormat": "HH:mm",
+        "currency": {
+          "code": "USD",
+          "symbol": "$",
+          "position": "before"
+        },
+        "language": "en-US"
+      },
+      "schemaSource": "db/schema.ts",
+      "apiConfigPath": "./api",
+      "pagesConfigPath": "./pages"
+    }
+  ]
+}

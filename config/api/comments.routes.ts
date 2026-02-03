@@ -1,42 +1,18 @@
 import { Hono } from 'hono';
-import type { Env } from '../../src/types';
 import { createDataClient } from '../../src/db/data-client';
 
-export const taskCommentsRouter = new Hono<{ Bindings: Env }>();
+export const taskCommentRouter = new Hono<{ Bindings: Env }>();
 
-// List task comments by task, sorted by createdAt asc
-taskCommentsRouter.get('/', async (c) => {
-  const client = createDataClient(c.env);
-  const taskId = c.req.query('taskId');
-
-  if (!taskId) {
-    return c.json({
-      success: false,
-      error: { message: 'taskId query parameter is required', status: 400 }
-    }, 400);
-  }
-
-  try {
-    const comments = await client.getItems('task_comments', {
-      filter: { task_id: { _eq: taskId } },
-      sort: ['created_at']
-    });
-    return c.json({ success: true, data: comments.data });
-  } catch (error: any) {
-    return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
-  }
-});
-
-// Create a new task comment and emit activity event
-taskCommentsRouter.post('/', async (c) => {
+// Create a task comment
+taskCommentRouter.post('/', async (c) => {
   const body = await c.req.json();
   const client = createDataClient(c.env);
 
-  // Validation: assume TaskComment schema requires taskId, authorUserId, body
-  if (!body.taskId || !body.authorUserId || !body.body || typeof body.body !== 'string' || body.body.trim().length === 0) {
+  // Validation: required fields
+  if (!body.taskId || !body.authorUserId || !body.body || body.body.trim() === '') {
     return c.json({
       success: false,
-      error: { message: 'Missing or invalid required fields: taskId, authorUserId, body (non-empty string)', status: 400 }
+      error: { message: 'Missing or invalid required fields: taskId, authorUserId, body', status: 400 }
     }, 400);
   }
 
@@ -53,10 +29,10 @@ taskCommentsRouter.post('/', async (c) => {
     return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
   }
 
-  // Check if author user exists
+  // Check if author exists
   try {
-    const user = await client.getItem('users', body.authorUserId);
-    if (!user.data) {
+    const author = await client.getItem('users', body.authorUserId);
+    if (!author.data) {
       return c.json({
         success: false,
         error: { message: 'Author user not found', status: 404 }
@@ -83,7 +59,8 @@ taskCommentsRouter.post('/', async (c) => {
       actor_user_id: body.authorUserId,
       event_type: 'Commented',
       metadata: { comment_id: comment.data.id },
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     });
 
     return c.json({
@@ -99,17 +76,40 @@ taskCommentsRouter.post('/', async (c) => {
   }
 });
 
-// Delete a task comment, restricted to author or privileged roles
-taskCommentsRouter.delete('/:id', async (c) => {
+// List comments by task, sorted by createdAt asc
+taskCommentRouter.get('/', async (c) => {
+  const taskId = c.req.query('taskId');
+  const client = createDataClient(c.env);
+
+  if (!taskId) {
+    return c.json({
+      success: false,
+      error: { message: 'taskId query parameter is required', status: 400 }
+    }, 400);
+  }
+
+  try {
+    const comments = await client.getItems('task_comments', {
+      filter: { task_id: { _eq: taskId } },
+      sort: ['created_at']
+    });
+    return c.json({ success: true, data: comments.data });
+  } catch (error: any) {
+    return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
+  }
+});
+
+// Delete a comment (restricted to author or privileged roles)
+taskCommentRouter.delete('/:id', async (c) => {
   const id = c.req.param('id');
   const client = createDataClient(c.env);
 
-  // Assume user ID from request context (e.g., from auth middleware, not shown)
-  const currentUserId = c.req.header('X-User-ID'); // Placeholder for user ID
+  // Assume current user ID is available via header or env; adjust as per auth setup
+  const currentUserId = c.req.header('user-id'); // Placeholder; replace with actual auth logic
   if (!currentUserId) {
     return c.json({
       success: false,
-      error: { message: 'Unauthorized: User ID required', status: 401 }
+      error: { message: 'Unauthorized', status: 401 }
     }, 401);
   }
 
@@ -122,9 +122,18 @@ taskCommentsRouter.delete('/:id', async (c) => {
       }, 404);
     }
 
-    // Check if current user is author or privileged (placeholder for role check)
+    // Check if current user is author or has privileged role
+    const user = await client.getItem('users', currentUserId);
+    if (!user.data) {
+      return c.json({
+        success: false,
+        error: { message: 'User not found', status: 404 }
+      }, 404);
+    }
+
     const isAuthor = comment.data.author_user_id === currentUserId;
-    const isPrivileged = false; // Placeholder: implement role check based on existing patterns
+    const isPrivileged = ['admin', 'moderator'].includes(user.data.role);
+
     if (!isAuthor && !isPrivileged) {
       return c.json({
         success: false,

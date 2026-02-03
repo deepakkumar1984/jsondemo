@@ -167,18 +167,22 @@ export interface AppsConfig {
   apps: AppConfig[];
 }
 
-// Use Vite's import.meta.glob to discover all page configs at build time.
-// Adding a new page JSON is all that's needed — no code changes required.
+// Use Vite's import.meta.glob to discover all page components at build time.
+// Adding a new page .tsx file is all that's needed — no code changes required.
 const pageModules = import.meta.glob(
-  '../../../config/pages/**/*.json'
-) as Record<string, () => Promise<{ default: PageConfig }>>;
+  '../../../config/pages/**/*.{tsx,jsx}'
+) as Record<string, () => Promise<{ default: React.ComponentType }>>;
 
 /**
- * Get a lazy loader for a page config by its reference name (e.g., "departments/list").
+ * Get a lazy loader for a page component by its reference name (e.g., "dashboard/index").
+ * Supports both .tsx and .jsx files organized in module folders.
  */
-export function getPageLoader(page: string): (() => Promise<{ default: PageConfig }>) | undefined {
-  const key = `../../../config/pages/${page}.json`;
-  return pageModules[key];
+export function getPageLoader(page: string): (() => Promise<{ default: React.ComponentType }>) | undefined {
+  // Try .tsx first, then .jsx
+  const tsxKey = `../../../config/pages/${page}.tsx`;
+  const jsxKey = `../../../config/pages/${page}.jsx`;
+
+  return pageModules[tsxKey] || pageModules[jsxKey];
 }
 
 /**

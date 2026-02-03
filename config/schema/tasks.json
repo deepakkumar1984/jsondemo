@@ -1,116 +1,127 @@
 {
   "table": "tasks",
-  "description": "Task records within projects, including status, priority, assignments, timelines, estimates, and tags",
+  "description": "Task records for project management, including assignments, statuses, and timelines",
   "columns": [
     {
       "name": "id",
-      "type": "text",
+      "type": "uuid",
       "primaryKey": true,
       "defaultFn": "uuid",
       "description": "Unique task identifier"
     },
     {
       "name": "project_id",
-      "type": "text",
+      "type": "uuid",
       "notNull": true,
       "references": {
         "table": "projects",
         "column": "id",
         "onDelete": "cascade"
       },
-      "description": "Reference to the parent project"
+      "description": "Reference to the project this task belongs to"
     },
     {
       "name": "title",
       "type": "text",
       "notNull": true,
-      "description": "Task title (required, length validated in application)"
+      "description": "Task title"
     },
     {
       "name": "description",
       "type": "text",
       "notNull": false,
-      "description": "Optional task description (rich text/string)"
+      "description": "Optional task description"
     },
     {
       "name": "status",
       "type": "text",
       "notNull": true,
-      "default": "Todo",
-      "description": "Task status (Backlog, Todo, InProgress, Blocked, Done)"
+      "enum": [
+        "Backlog",
+        "Todo",
+        "InProgress",
+        "Blocked",
+        "Done"
+      ],
+      "description": "Task status"
     },
     {
       "name": "priority",
       "type": "text",
       "notNull": true,
-      "default": "Medium",
-      "description": "Task priority (Low, Medium, High, Urgent)"
+      "enum": [
+        "Low",
+        "Medium",
+        "High",
+        "Urgent"
+      ],
+      "description": "Task priority"
     },
     {
       "name": "assignee_user_id",
-      "type": "text",
+      "type": "uuid",
       "notNull": false,
       "references": {
         "table": "users",
         "column": "id",
         "onDelete": "set null"
       },
-      "description": "Optional user assigned to the task"
+      "description": "Reference to the assigned user"
     },
     {
       "name": "reporter_user_id",
-      "type": "text",
+      "type": "uuid",
       "notNull": true,
       "references": {
         "table": "users",
         "column": "id",
-        "onDelete": "set null"
+        "onDelete": "cascade"
       },
-      "description": "User who reported/created the task"
+      "description": "Reference to the user who reported the task"
     },
     {
       "name": "due_date",
-      "type": "timestamp",
+      "type": "timestamptz",
       "notNull": false,
-      "description": "Task due date-time (must be >= start_date when both present, validated in application)"
+      "description": "Optional due date for the task"
     },
     {
       "name": "start_date",
-      "type": "timestamp",
+      "type": "timestamptz",
       "notNull": false,
-      "description": "Task start date-time"
+      "description": "Optional start date for the task"
     },
     {
       "name": "completed_at",
-      "type": "timestamp",
+      "type": "timestamptz",
       "notNull": false,
-      "description": "Task completion date-time (required when status=Done, cleared otherwise, validated in application)"
+      "description": "Timestamp when the task was completed"
     },
     {
       "name": "estimate_points",
-      "type": "numeric",
+      "type": "integer",
       "notNull": false,
-      "description": "Estimated effort points (minimum 0, validated in application)"
+      "description": "Optional estimate points for the task"
     },
     {
       "name": "tags",
       "type": "jsonb",
       "notNull": false,
-      "description": "Optional array of task tags as strings"
+      "description": "Optional array of tags as JSON"
     },
     {
       "name": "created_at",
-      "type": "timestamp",
+      "type": "timestamptz",
       "notNull": true,
       "default": "CURRENT_TIMESTAMP",
-      "description": "Timestamp when task was created"
+      "description": "Timestamp when the task was created"
     },
     {
       "name": "updated_at",
-      "type": "timestamp",
+      "type": "timestamptz",
       "notNull": true,
       "default": "CURRENT_TIMESTAMP",
-      "description": "Timestamp when task was last updated"
+      "description": "Timestamp when the task was last updated"
     }
   ],
   "indexes": [

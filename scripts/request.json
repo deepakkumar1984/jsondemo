@@ -1,305 +1,455 @@
 {
-  "summary": "Add configuration for a full task management application (projects, tasks, comments, activity tracking, CRUD workflows, and UI pages) plus an analytics dashboard with KPI widgets, trends, and breakdowns by status, assignee, project, and time range.",
+  "summary": "Add Expense Management with analytics dashboards using existing TypeScript (Hono) APIs, JSON schemas, and json-render pages, extending current routers/pages/navigation rather than recreating project scaffolding.",
   "features": [
     {
-      "title": "Task Management Data Model",
-      "description": "Define the schemas, relationships, and validation rules needed to store projects, tasks, comments, and task activity for auditing and analytics.",
+      "title": "Codebase audit & alignment for Expense module",
+      "description": "Identify existing schemas, routers, pages, UI components, auth/user table naming, and response conventions to ensure the Expense module extends current patterns without duplication.",
       "priority": "critical",
-      "estimatedComplexity": "complex",
+      "estimatedComplexity": "simple",
       "order": 0,
       "tasks": [
         {
-          "title": "Add Project schema to schemas registry",
-          "description": "Extend the existing `schemas` registry by adding `schemas.Project` with fields: `id` (primary key), `name` (required, unique within workspace), `description` (optional), `status` (enum: Active/Archived, default Active), `ownerUserId` (required reference to User), `createdAt`/`updatedAt` (system timestamps). Add validation for `name` length and non-empty trim. Add indexes on `status`, `ownerUserId`, and `updatedAt` to support filtering and sorting.",
-          "type": "task",
-          "scope": "schema",
+          "title": "Inventory existing schema/api/page patterns",
+          "description": "Review config/schema/*.json, config/api/*.routes.ts, config/pages/**, and config/apps.json to confirm: (1) timestamp field conventions, (2) primary key type (uuid vs int), (3) how list pagination/search/filter are implemented, (4) how createDataClient is used, (5) auth context fields (e.g., user id available on c.get('user') or similar), and (6) existing shared UI components in src/client/components/ui/ (tables, forms, date pickers, charts). Produce a short checklist used by subsequent tasks to avoid creating duplicates.",
+          "type": "research",
+          "scope": "app",
           "priority": "urgent",
           "order": 0,
-          "estimatedHours": 3
-        },
-        {
-          "title": "Add Task schema with lifecycle fields and references",
-          "description": "Extend the existing `schemas` registry by adding `schemas.Task` with fields: `id` (primary key), `projectId` (required reference to Project), `title` (required), `description` (optional rich text/string), `status` (enum: Backlog/Todo/InProgress/Blocked/Done, default Todo), `priority` (enum: Low/Medium/High/Urgent, default Medium), `assigneeUserId` (optional reference to User), `reporterUserId` (required reference to User), `dueDate` (optional date-time), `startDate` (optional date-time), `completedAt` (optional date-time), `estimatePoints` (optional number with min 0), `tags` (optional array of strings), `createdAt`/`updatedAt` (system timestamps). Add validation rules: title length and required, dueDate >= startDate when both present, completedAt required when status=Done and cleared when status!=Done. Add indexes on `projectId`, `status`, `assigneeUserId`, `priority`, `dueDate`, and `updatedAt`.",
-          "type": "task",
-          "scope": "schema",
-          "priority": "urgent",
-          "order": 1,
-          "estimatedHours": 4
-        },
-        {
-          "title": "Add TaskComment schema for threaded discussion",
-          "description": "Extend the existing `schemas` registry by adding `schemas.TaskComment` with fields: `id` (primary key), `taskId` (required reference to Task), `authorUserId` (required reference to User), `body` (required), `createdAt`/`updatedAt` (system timestamps). Add validation for body non-empty and max length. Add indexes on `taskId` and `createdAt` to support ordered retrieval on task detail views.",
-          "type": "task",
-          "scope": "schema",
-          "priority": "high",
-          "order": 2,
-          "estimatedHours": 2
-        },
-        {
-          "title": "Add TaskActivity schema for audit trail and analytics",
-          "description": "Extend the existing `schemas` registry by adding `schemas.TaskActivity` with fields: `id` (primary key), `taskId` (required reference to Task), `actorUserId` (optional reference to User for automated events), `eventType` (enum: Created/Updated/StatusChanged/Assigned/Unassigned/Commented/DueDateChanged/PriorityChanged/Tagged, required), `fromValue` (optional JSON/string), `toValue` (optional JSON/string), `metadata` (optional JSON), `createdAt` (system timestamp). Add indexes on `taskId`, `eventType`, and `createdAt` for fast timeline queries and aggregation.",
-          "type": "task",
-          "scope": "schema",
-          "priority": "high",
-          "order": 3,
-          "estimatedHours": 3
+          "estimatedHours": 4,
+          "subtasks": [
+            {
+              "title": "Confirm existing Users table/schema name for foreign keys",
+              "description": "Locate the user schema/table (e.g., users, app_users) and standard field name for id; document for created_by references.",
+              "scope": "schema",
+              "estimatedHours": 1
+            },
+            {
+              "title": "Confirm component availability for analytics (charts/date range)",
+              "description": "Check ComponentRegistry for chart components and date-range inputs; document recommended components or fallback to tables + metric cards.",
+              "scope": "page",
+              "estimatedHours": 1
+            }
+          ]
         }
       ],
       "dependencies": []
     },
     {
-      "title": "Task & Project APIs and Workflow Rules",
-      "description": "Expose configurable operations to create, read, update, and manage tasks and projects with validation, filtering, bulk actions, and automatic activity logging.",
+      "title": "Expense data model + core CRUD APIs",
+      "description": "Create the underlying schemas and Hono APIs for expenses, categories, vendors, and payment accounts with consistent pagination/filtering and safe validation.",
       "priority": "critical",
-      "estimatedComplexity": "complex",
+      "estimatedComplexity": "moderate",
       "order": 1,
       "tasks": [
         {
-          "title": "Configure Project CRUD operations and list filters",
-          "description": "Extend the existing `api.operations` registry by adding operations: `project.create`, `project.getById`, `project.update`, `project.archive` (sets Project.status=Archived), and `project.list` with filter params (`status`, `ownerUserId`, `searchByName`) and sort options (`updatedAt desc`, `name asc`). Ensure `project.create` and `project.update` enforce schema validation and uniqueness of `name` within the configured workspace scope (as defined by existing tenant/workspace conventions).",
+          "title": "Define ExpenseCategory schema",
+          "description": "Create (or extend if already present) config/schema/expense_categories.json with fields: id (uuid, primary key), name (text, required), color (text, optional), icon (text, optional), is_active (boolean, default true), sort_order (int, default 0), created_at (timestamp), updated_at (timestamp). Add unique index on name.",
           "type": "task",
-          "scope": "api",
+          "scope": "schema",
           "priority": "urgent",
           "order": 0,
-          "estimatedHours": 3
+          "estimatedHours": 2,
+          "subtasks": [
+            {
+              "title": "Add indexes and constraints for expense_categories",
+              "description": "Ensure unique(name) and an index on is_active/sort_order if used for UI ordering.",
+              "scope": "schema",
+              "estimatedHours": 0.5
+            }
+          ]
         },
         {
-          "title": "Configure Task CRUD operations with server-side filtering",
-          "description": "Extend `api.operations` with `task.create`, `task.getById` (including related Project reference fields), `task.update`, `task.delete` (soft-delete if existing platform uses soft deletion; otherwise hard delete per existing pattern), and `task.list` supporting filters: `projectId`, `status`, `assigneeUserId`, `priority`, `tag`, `dueDateFrom`, `dueDateTo`, `searchText`, plus pagination and sort (`dueDate asc`, `updatedAt desc`, `priority desc`). Bind each operation to `schemas.Task` validation rules and return consistent list envelopes matching existing API response conventions.",
+          "title": "Define Vendor schema",
+          "description": "Create (or extend if already present) config/schema/vendors.json with fields: id (uuid, primary key), name (text, required), website (text, optional), notes (text, optional), created_at (timestamp), updated_at (timestamp). Add unique index on name.",
+          "type": "task",
+          "scope": "schema",
+          "priority": "high",
+          "order": 1,
+          "estimatedHours": 2,
+          "subtasks": [
+            {
+              "title": "Add search-friendly index for vendor name",
+              "description": "Add index on name to support typeahead/search in expense forms.",
+              "scope": "schema",
+              "estimatedHours": 0.5
+            }
+          ]
+        },
+        {
+          "title": "Define PaymentAccount schema",
+          "description": "Create (or extend if already present) config/schema/payment_accounts.json with fields: id (uuid, primary key), name (text, required), type (text, required; e.g., 'cash'|'credit_card'|'bank'|'other'), last4 (text, optional), is_active (boolean, default true), created_at (timestamp), updated_at (timestamp). Add index on is_active and unique(name).",
+          "type": "task",
+          "scope": "schema",
+          "priority": "high",
+          "order": 2,
+          "estimatedHours": 2,
+          "subtasks": []
+        },
+        {
+          "title": "Define Expense schema",
+          "description": "Create config/schema/expenses.json with fields: id (uuid, primary key), expense_date (date or timestamp, required), amount (decimal, required), currency (text, default 'USD'), description (text, optional), category_id (uuid, FK to expense_categories.id, required), vendor_id (uuid, FK to vendors.id, optional), payment_account_id (uuid, FK to payment_accounts.id, optional), reimbursable (boolean, default false), status (text, default 'posted'; values 'draft'|'posted'|'reimbursed'), receipt_url (text, optional), created_by (uuid, required; FK to existing users table discovered in audit), created_at (timestamp), updated_at (timestamp). Add indexes on (created_by, expense_date desc), category_id, vendor_id, status.",
+          "type": "task",
+          "scope": "schema",
+          "priority": "urgent",
+          "order": 3,
+          "estimatedHours": 3,
+          "subtasks": [
+            {
+              "title": "Align field types with existing conventions",
+              "description": "Match decimal/timestamp/date types to existing schema patterns (e.g., numeric precision/scale, ISO timestamps).",
+              "scope": "schema",
+              "estimatedHours": 1
+            }
+          ]
+        },
+        {
+          "title": "Implement ExpenseCategory/Vendor/PaymentAccount CRUD APIs",
+          "description": "Add or extend routers in config/api for reference data: GET /api/expense-categories (list; filter is_active), POST /api/expense-categories, PUT /api/expense-categories/:id, DELETE /api/expense-categories/:id (prefer soft delete via is_active=false if that is the project pattern). Repeat for /api/vendors and /api/payment-accounts. Use createDataClient(c.env), validate required fields, enforce unique name with friendly errors, and return consistent { success, data, error } payloads.",
+          "type": "task",
+          "scope": "api",
+          "priority": "high",
+          "order": 4,
+          "estimatedHours": 4,
+          "subtasks": [
+            {
+              "title": "Add list search support for vendors",
+              "description": "Support query params like ?q= to search vendor name; limit results for typeahead use.",
+              "scope": "api",
+              "estimatedHours": 1
+            }
+          ]
+        },
+        {
+          "title": "Implement Expenses CRUD API with filtering/pagination",
+          "description": "Create or extend config/api/expenses.routes.ts with: GET /api/expenses (pagination: page/pageSize or limit/offset; filters: date_from/date_to, category_id, vendor_id, payment_account_id, status, reimbursable; search: q over description/vendor), GET /api/expenses/:id, POST /api/expenses (validate amount>0, required fields, attach created_by from auth context if available), PUT /api/expenses/:id, DELETE /api/expenses/:id. Ensure user scoping by created_by for all reads/writes if the app is multi-user.",
           "type": "task",
           "scope": "api",
           "priority": "urgent",
-          "order": 1,
-          "estimatedHours": 4
-        },
-        {
-          "title": "Add task status transition rules and derived field behavior",
-          "description": "Extend the existing `api.rules` or equivalent validation/workflow rules configuration by adding Task lifecycle rules: allow status changes only among configured pipeline values; when setting status to Done, auto-set `completedAt` if empty; when moving away from Done, clear `completedAt`; when `startDate` is set after `dueDate`, reject update; enforce `estimatePoints >= 0`. Apply rules to `task.update` and any bulk status updates so behavior is consistent across endpoints.",
-          "type": "task",
-          "scope": "api",
-          "priority": "high",
-          "order": 2,
-          "estimatedHours": 3
-        },
-        {
-          "title": "Configure Task bulk operations (status, assignee, priority, tags)",
-          "description": "Extend `api.operations` with `task.bulkUpdate` that accepts `taskIds` and a patch object supporting: `status`, `assigneeUserId`, `priority`, `tagsAdd`, `tagsRemove`, and `dueDate`. Ensure it reuses the same rule set as single-task updates and returns a per-task success/error result array following existing bulk-operation patterns.",
-          "type": "task",
-          "scope": "api",
-          "priority": "high",
-          "order": 3,
-          "estimatedHours": 3
-        },
-        {
-          "title": "Configure comment APIs for task discussion",
-          "description": "Extend `api.operations` with `taskComment.create`, `taskComment.listByTask` (sorted by createdAt asc), and `taskComment.delete` (restricted to author or privileged roles per existing permission patterns). Bind create to `schemas.TaskComment` validation and ensure `taskComment.create` also emits an activity event of type `Commented` tied to the task.",
-          "type": "task",
-          "scope": "api",
-          "priority": "medium",
-          "order": 4,
-          "estimatedHours": 3
-        },
-        {
-          "title": "Configure automatic TaskActivity logging on key task events",
-          "description": "Extend the existing `api.workflows` / `eventHooks` configuration by registering triggers for `task.create` and `task.update` to write `schemas.TaskActivity` records for: Created, StatusChanged, Assigned/Unassigned, DueDateChanged, PriorityChanged, Tagged, and generic Updated (when non-tracked fields change). Include `fromValue`/`toValue` payload mapping for tracked fields and ensure actor identity is captured from the authenticated context.",
-          "type": "task",
-          "scope": "api",
-          "priority": "high",
           "order": 5,
-          "estimatedHours": 4
+          "estimatedHours": 6,
+          "subtasks": [
+            {
+              "title": "Normalize amount/currency handling",
+              "description": "Ensure amount is stored consistently; if multi-currency is in scope, validate currency format (ISO 4217) and keep analytics grouped by currency.",
+              "scope": "api",
+              "estimatedHours": 1
+            }
+          ]
         }
       ],
       "dependencies": [
-        "Task Management Data Model"
+        "Codebase audit & alignment for Expense module"
       ]
     },
     {
-      "title": "Task Management UI (Pages, Forms, and Views)",
-      "description": "Provide configurable pages for managing projects and tasks, including list, board, detail view, create/edit forms, comments, filters, and bulk actions bound to the configured APIs.",
+      "title": "Expense management UI (CRUD pages)",
+      "description": "Deliver json-render pages for listing, creating, editing, viewing, and deleting expenses with filters and reference-data management.",
       "priority": "high",
-      "estimatedComplexity": "complex",
+      "estimatedComplexity": "moderate",
       "order": 2,
       "tasks": [
         {
-          "title": "Add Projects page with create/edit/archive actions",
-          "description": "Extend the existing `pages` registry by adding `pages.projects` with a table bound to `api.operations.project.list`, showing columns `name`, `status`, `owner`, `updatedAt`. Add page actions: Create Project (form bound to `project.create`), Edit (bound to `project.update`), Archive (confirmation bound to `project.archive`). Add a project selector control that sets a global/app-level `currentProjectId` state used by task pages per existing global state conventions.",
+          "title": "Create Expenses List page",
+          "description": "Create config/pages/expenses/list.tsx using json-render Renderer with: PageHeader (title 'Expenses', primary action 'Add Expense' → /expenses/new), filter row (date range, category, vendor, status, reimbursable), SearchBar (q), DataTable (columns: expense_date, description, category, vendor, amount, status badge, reimbursable), row actions (view → /expenses/{{id}}, edit → /expenses/{{id}}/edit, delete → delete_confirm calling DELETE /api/expenses/{{id}} then refresh_data). DataSource fetch from GET /api/expenses with bound filters + pagination.",
           "type": "task",
           "scope": "page",
           "priority": "high",
           "order": 0,
-          "estimatedHours": 4
+          "estimatedHours": 4,
+          "subtasks": [
+            {
+              "title": "Wire reference dropdowns to APIs",
+              "description": "Populate category/vendor/payment account dropdown options from their list endpoints; cache via page-level dataSources if supported.",
+              "scope": "page",
+              "estimatedHours": 1
+            }
+          ]
         },
         {
-          "title": "Add Task List page with filters, sorting, and bulk actions",
-          "description": "Add `pages.taskList` with a searchable, paginated table bound to `api.operations.task.list`. Include filter controls for `projectId` (defaulted from `currentProjectId`), `status`, `assigneeUserId`, `priority`, `tag`, and due date range. Add row actions: View (navigates to task detail), Edit (opens edit form), Delete (calls `task.delete`). Add bulk selection with bulk actions bound to `task.bulkUpdate` for status, assignee, priority, tags, and due date changes. Ensure the page persists filter state in URL/query params following existing routing patterns.",
+          "title": "Create Expense Create/Edit pages",
+          "description": "Create config/pages/expenses/create.tsx and config/pages/expenses/edit.tsx with a Form: expense_date (date), amount (number), currency (select/text), category_id (select), vendor_id (select with optional), payment_account_id (select optional), reimbursable (switch), status (select), description (textarea), receipt_url (text). Actions: submit_form POST /api/expenses (create) and PUT /api/expenses/:id (edit), on success navigate back to list or detail; include client-side required validation consistent with existing form patterns.",
           "type": "task",
           "scope": "page",
-          "priority": "urgent",
+          "priority": "high",
           "order": 1,
-          "estimatedHours": 4
+          "estimatedHours": 6,
+          "subtasks": [
+            {
+              "title": "Prefill edit form from GET /api/expenses/:id",
+              "description": "Bind form initial values from a dataSource; handle loading and not-found states using existing patterns.",
+              "scope": "page",
+              "estimatedHours": 1
+            }
+          ]
         },
         {
-          "title": "Add Kanban Board page grouped by task status",
-          "description": "Add `pages.taskBoard` configured as a board view grouped by `Task.status`, with columns for each configured status value. Bind card data source to `api.operations.task.list` filtered by `currentProjectId` and optional assignee/tag filters. Configure drag-and-drop (or status-change UI control per platform capability) to call `api.operations.task.update` (or `task.bulkUpdate` for multi-select) updating only the `status` field, and ensure the status transition rules are enforced with user-facing error messaging mapping.",
-          "type": "task",
-          "scope": "page",
-          "priority": "high",
-          "order": 2,
-          "estimatedHours": 4
-        },
-        {
-          "title": "Add Task Detail page with editable fields, comments, and activity timeline",
-          "description": "Add `pages.taskDetail` bound to `api.operations.task.getById` for the primary record, with editable sections for `title`, `description`, `status`, `priority`, `assigneeUserId`, `dueDate`, `startDate`, `estimatePoints`, and `tags` bound to `api.operations.task.update`. Add a comments panel bound to `taskComment.listByTask` and `taskComment.create`. Add an activity timeline panel bound to a new read operation for TaskActivity (configured in the same page task via existing generic list operation patterns), sorted by createdAt desc and rendered with event-specific labels using `eventType` plus `fromValue`/`toValue` mappings.",
-          "type": "task",
-          "scope": "page",
-          "priority": "high",
-          "order": 3,
-          "estimatedHours": 4
-        },
-        {
-          "title": "Add Task create/edit form configuration with validation bindings",
-          "description": "Extend `forms` (or the platform’s form configuration area) by adding `forms.taskCreate` and `forms.taskEdit` bound to `api.operations.task.create` and `api.operations.task.update`. Ensure fields map 1:1 to `schemas.Task` with UI validation mirroring schema rules (required title, date constraints, points min 0). Default `projectId` to `currentProjectId` and `reporterUserId` to the authenticated user context mapping used elsewhere in the app.",
+          "title": "Create Expense Detail page",
+          "description": "Create config/pages/expenses/detail.tsx showing key fields in Cards (amount, date, category, vendor, status, reimbursable) plus receipt link. Include actions: Edit (navigate), Delete (delete_confirm), Back to list. DataSource: GET /api/expenses/:id.",
           "type": "task",
           "scope": "page",
           "priority": "medium",
+          "order": 2,
+          "estimatedHours": 3,
+          "subtasks": []
+        },
+        {
+          "title": "Create Reference Data management pages (Categories, Vendors, Payment Accounts)",
+          "description": "Create config/pages/expense-categories/list.tsx, config/pages/vendors/list.tsx, config/pages/payment-accounts/list.tsx with DataTables + inline actions to add/edit/delete. Use modal form pattern if it exists; otherwise separate create/edit pages. Ensure options used by expenses stay consistent (prefer soft delete is_active=false).",
+          "type": "task",
+          "scope": "page",
+          "priority": "medium",
+          "order": 3,
+          "estimatedHours": 6,
+          "subtasks": [
+            {
+              "title": "Add quick-create vendor/category from Expense form (optional, if supported by components)",
+              "description": "If existing UI supports it, add a 'Create new' action beside selects calling POST endpoints then refresh_data and set selected value.",
+              "scope": "page",
+              "estimatedHours": 1
+            }
+          ]
+        },
+        {
+          "title": "Register Expense module routes & navigation",
+          "description": "Update config/apps.json to add routes: /expenses → expenses/list, /expenses/new → expenses/create, /expenses/:id → expenses/detail, /expenses/:id/edit → expenses/edit, /expense-categories → expense-categories/list, /vendors → vendors/list, /payment-accounts → payment-accounts/list. Add navigation group 'Expenses' with links and an appropriate icon per existing conventions; apply permissions if the project uses them (e.g., expenses:read/write).",
+          "type": "task",
+          "scope": "app",
+          "priority": "high",
           "order": 4,
-          "estimatedHours": 3
+          "estimatedHours": 2,
+          "subtasks": []
         }
       ],
       "dependencies": [
-        "Task Management Data Model",
-        "Task & Project APIs and Workflow Rules"
+        "Expense data model + core CRUD APIs"
       ]
     },
     {
-      "title": "Analytics Dashboard (KPIs, Trends, and Breakdown Views)",
-      "description": "Deliver a configurable analytics dashboard with time range controls and widgets showing task volume, completion performance, overdue risk, and distributions by status, project, and assignee.",
+      "title": "Expense analytics (dashboard + aggregate APIs)",
+      "description": "Provide analytics endpoints and a dashboard page for spend trends, category breakdowns, and vendor insights with date range filtering.",
       "priority": "high",
-      "estimatedComplexity": "complex",
+      "estimatedComplexity": "moderate",
       "order": 3,
       "tasks": [
         {
-          "title": "Configure analytics API operations for KPI cards and breakdown charts",
-          "description": "Extend `api.operations` with analytics read operations scoped by `projectId` (optional) and `dateFrom/dateTo` (required, default to last 30 days on the page): `analytics.tasksByStatus` (counts grouped by status), `analytics.tasksCreatedTrend` (daily/weekly buckets), `analytics.tasksCompletedTrend` (daily/weekly buckets using completedAt), `analytics.overdueCounts` (overdue open tasks grouped by priority), and `analytics.assigneeWorkload` (open tasks grouped by assignee and status). Ensure operations return chart-friendly datasets (labels + series arrays) using existing analytics response conventions.",
+          "title": "Implement Expense analytics API endpoints",
+          "description": "Create (or extend) config/api/expense-analytics.routes.ts providing: GET /api/expense-analytics/summary?date_from&date_to&currency (total_spend, transaction_count, avg_transaction, top_category, top_vendor), GET /api/expense-analytics/by-category?date_from&date_to (rows: category_id, category_name, total, count), GET /api/expense-analytics/by-vendor?date_from&date_to (rows: vendor_id, vendor_name, total, count), GET /api/expense-analytics/timeseries?date_from&date_to&interval=day|week|month (rows: period, total, count). Scope by created_by if applicable. Use createDataClient aggregate/query support per existing patterns; if aggregates require custom SQL-like capabilities, implement via the supported Data API query mechanisms and document limitations.",
           "type": "task",
           "scope": "api",
-          "priority": "urgent",
+          "priority": "high",
           "order": 0,
-          "estimatedHours": 4
+          "estimatedHours": 6,
+          "subtasks": [
+            {
+              "title": "Add server-side validation for date ranges and interval",
+              "description": "Reject invalid ranges (date_from > date_to) and unsupported interval values with consistent error payloads.",
+              "scope": "api",
+              "estimatedHours": 1
+            }
+          ]
         },
         {
-          "title": "Configure cycle time and completion rate metrics using TaskActivity/Task timestamps",
-          "description": "Extend `api.operations` with `analytics.cycleTime` (avg/median time from startDate to completedAt, plus distribution buckets) and `analytics.completionRate` (completed tasks / created tasks over time). If startDate is missing, define a configurable fallback rule for cycle-time start (e.g., first transition into InProgress from TaskActivity) and document it within the operation configuration metadata so the dashboard labels match the metric definition.",
+          "title": "Create Analytics Dashboard page",
+          "description": "Create config/pages/expenses/analytics.tsx using json-render with: PageHeader (title 'Expense Analytics'), date range controls (default last 30 days), currency selector (if multi-currency), metric cards bound to /summary, and visualizations bound to /timeseries and /by-category. If chart components exist, render Line/Bar + Pie/Donut; otherwise render tables with sparklines/mini-metrics if available. Include actions: quick presets (This month, Last month, YTD) that refresh_data.",
           "type": "task",
-          "scope": "api",
+          "scope": "page",
           "priority": "high",
           "order": 1,
-          "estimatedHours": 4
+          "estimatedHours": 6,
+          "subtasks": [
+            {
+              "title": "Add 'Drill down' navigation from analytics rows",
+              "description": "Clicking a category/vendor row navigates to /expenses with filters applied via query params.",
+              "scope": "page",
+              "estimatedHours": 1
+            }
+          ]
         },
         {
-          "title": "Add Analytics Dashboard page with global filters and widget layout",
-          "description": "Add `pages.analyticsDashboard` with a top filter bar containing: `projectId` selector (default `currentProjectId` with option 'All Projects'), date range picker (default last 30 days), and optional assignee filter. Configure dashboard widgets: KPI cards (Open Tasks, Completed in Range, Overdue Open, Avg Cycle Time), charts (Tasks by Status donut/bar, Created vs Completed trend lines, Assignee workload stacked bar, Overdue by Priority bar). Bind each widget to the corresponding analytics operations and pass filter values as params.",
+          "title": "Register Analytics route & navigation entry",
+          "description": "Update config/apps.json to add route /expenses/analytics → expenses/analytics and add a navigation item under the Expenses group (e.g., 'Analytics').",
           "type": "task",
-          "scope": "page",
-          "priority": "urgent",
+          "scope": "app",
+          "priority": "medium",
           "order": 2,
-          "estimatedHours": 4
-        },
-        {
-          "title": "Add dashboard drill-down navigation from widgets to Task List",
-          "description": "Extend `pages.analyticsDashboard` widget configuration to include click/drill actions that navigate to `pages.taskList` with pre-applied URL/query filters. Examples: clicking 'Overdue Open' sets `dueDateTo=now` and `status!=Done`; clicking a status segment sets `status=<segment>`; clicking an assignee bar sets `assigneeUserId=<assignee>`; clicking a project label sets `projectId=<project>`.",
-          "type": "task",
-          "scope": "page",
-          "priority": "high",
-          "order": 3,
-          "estimatedHours": 2
+          "estimatedHours": 1,
+          "subtasks": []
         }
       ],
       "dependencies": [
-        "Task Management Data Model",
-        "Task & Project APIs and Workflow Rules",
-        "Task Management UI (Pages, Forms, and Views)"
+        "Expense management UI (CRUD pages)"
       ]
     },
     {
-      "title": "App Navigation, Roles, and Permissions",
-      "description": "Integrate the new pages into the app shell and enforce role-based access for project/task management and analytics viewing.",
-      "priority": "high",
+      "title": "Budgets vs actuals",
+      "description": "Add budgeting per period and category with comparisons against actual spend, enabling simple financial planning alongside analytics.",
+      "priority": "medium",
       "estimatedComplexity": "moderate",
       "order": 4,
       "tasks": [
         {
-          "title": "Register routes and navigation items for projects, tasks, board, and analytics",
-          "description": "Extend the existing `app.routes` and `app.navigation` configuration by registering routes for `pages.projects`, `pages.taskList`, `pages.taskBoard`, `pages.taskDetail`, and `pages.analyticsDashboard`. Add navigation items under a new or existing 'Work' section: Projects, Tasks, Board, Analytics. Set a sensible default landing route (e.g., Tasks) while preserving any existing default-route behavior patterns.",
+          "title": "Define Budget schema",
+          "description": "Create config/schema/budgets.json with fields: id (uuid, primary key), period_start (date, required), period_end (date, required), category_id (uuid, FK to expense_categories.id, optional for overall budget), amount (decimal, required), currency (text, default 'USD'), notes (text, optional), created_by (uuid, required; FK to users table from audit), created_at (timestamp), updated_at (timestamp). Add indexes on (created_by, period_start) and category_id; add uniqueness constraint on (created_by, period_start, period_end, category_id, currency) to prevent duplicates.",
           "type": "task",
-          "scope": "app",
+          "scope": "schema",
           "priority": "high",
           "order": 0,
-          "estimatedHours": 2
+          "estimatedHours": 3,
+          "subtasks": []
         },
         {
-          "title": "Define role-based permissions for task management and analytics access",
-          "description": "Extend the existing `app.permissions` (or equivalent access control config) by adding capabilities: `project.read/write/archive`, `task.read/write/delete`, `task.bulkUpdate`, `comment.create/delete`, `analytics.view`. Map them to roles consistent with existing role patterns (e.g., Admin: all; Manager: all except system-level; Member: read/write tasks and comments, no delete unless owner; Viewer: read-only plus analytics.view if allowed). Bind permissions to API operations and page access guards so unauthorized users cannot invoke operations or view restricted pages.",
+          "title": "Implement Budgets CRUD API",
+          "description": "Create or extend config/api/budgets.routes.ts with: GET /api/budgets (filter by period_start/period_end/currency/category_id), GET /api/budgets/:id, POST /api/budgets, PUT /api/budgets/:id, DELETE /api/budgets/:id. Validate period_start <= period_end and amount > 0; scope by created_by.",
           "type": "task",
-          "scope": "app",
-          "priority": "urgent",
+          "scope": "api",
+          "priority": "high",
           "order": 1,
-          "estimatedHours": 4
+          "estimatedHours": 4,
+          "subtasks": []
         },
         {
-          "title": "Add configurable enums/settings for status pipeline and priority labels",
-          "description": "Extend existing `app.settings` (or shared configuration area) by adding `taskStatusPipeline` (ordered list of allowed statuses with display labels/colors), `taskPriorityOptions` (labels/colors), and `defaultTaskFilters` (e.g., exclude Done by default). Update page configs (`taskList`, `taskBoard`, `taskDetail`, forms) to reference these shared settings instead of hardcoding values, ensuring consistent UI labels and analytics grouping.",
+          "title": "Create Budgets List/Create/Edit pages",
+          "description": "Create config/pages/budgets/list.tsx and create/edit pages (or modal pattern): DataTable columns period_start, period_end, category, amount, currency; actions add/edit/delete. Forms include period_start/end pickers, category select (optional), amount, currency, notes. Use submit_form and refresh_data patterns.",
           "type": "task",
-          "scope": "app",
+          "scope": "page",
           "priority": "medium",
           "order": 2,
-          "estimatedHours": 3
+          "estimatedHours": 6,
+          "subtasks": []
+        },
+        {
+          "title": "Add Budget vs Actuals to analytics",
+          "description": "Extend analytics API and page: add GET /api/expense-analytics/budget-vs-actual?date_from&date_to&currency returning per-category planned/actual/variance; display as table and (if available) bar chart. Ensure drill-down links to filtered expenses.",
+          "type": "enhancement",
+          "scope": "api",
+          "priority": "medium",
+          "order": 3,
+          "estimatedHours": 3,
+          "subtasks": [
+            {
+              "title": "Render variance formatting in UI",
+              "description": "Add conditional formatting (over/under budget) using existing Badge/Color utilities in json-render components.",
+              "scope": "page",
+              "estimatedHours": 1
+            }
+          ]
+        },
+        {
+          "title": "Register Budgets routes & navigation",
+          "description": "Update config/apps.json to add /budgets routes and navigation item (e.g., under Expenses group).",
+          "type": "task",
+          "scope": "app",
+          "priority": "low",
+          "order": 4,
+          "estimatedHours": 1,
+          "subtasks": []
         }
       ],
       "dependencies": [
-        "Task Management UI (Pages, Forms, and Views)",
-        "Analytics Dashboard (KPIs, Trends, and Breakdown Views)"
+        "Expense analytics (dashboard + aggregate APIs)"
+      ]
+    },
+    {
+      "title": "CSV import/export for expenses",
+      "description": "Enable basic interoperability by exporting filtered expenses and importing CSV statements with mapping to categories/vendors.",
+      "priority": "low",
+      "estimatedComplexity": "moderate",
+      "order": 5,
+      "tasks": [
+        {
+          "title": "Add Expenses CSV export endpoint",
+          "description": "Extend expenses API with GET /api/expenses/export.csv supporting the same filters as /api/expenses and returning CSV with columns: expense_date, amount, currency, description, category, vendor, payment_account, reimbursable, status, receipt_url. Ensure user scoping by created_by.",
+          "type": "enhancement",
+          "scope": "api",
+          "priority": "medium",
+          "order": 0,
+          "estimatedHours": 3,
+          "subtasks": []
+        },
+        {
+          "title": "Add Expenses CSV import endpoint",
+          "description": "Add POST /api/expenses/import (multipart or JSON text) that parses CSV rows, validates required fields, resolves category/vendor/payment_account by name (create missing vendors optionally behind a flag), and returns a result summary { created, skipped, errors[] }. Provide a dry_run=true mode to preview before committing.",
+          "type": "task",
+          "scope": "api",
+          "priority": "low",
+          "order": 1,
+          "estimatedHours": 5,
+          "subtasks": [
+            {
+              "title": "Define import mapping rules and error reporting structure",
+              "description": "Document accepted headers, date formats, and how unknown categories/vendors are handled; return row-level errors with row number and message.",
+              "scope": "api",
+              "estimatedHours": 1
+            }
+          ]
+        },
+        {
+          "title": "Create Import/Export UI utilities on Expenses List",
+          "description": "Enhance config/pages/expenses/list.tsx with buttons: 'Export CSV' (navigate to export URL with current filters) and 'Import CSV' (navigate to /expenses/import). Create config/pages/expenses/import.tsx with file picker + dry run preview table + confirm import action.",
+          "type": "enhancement",
+          "scope": "page",
+          "priority": "low",
+          "order": 2,
+          "estimatedHours": 4,
+          "subtasks": []
+        },
+        {
+          "title": "Register Import route",
+          "description": "Update config/apps.json to add /expenses/import route and (optional) hide from main nav while keeping accessible from Expenses page actions.",
+          "type": "task",
+          "scope": "app",
+          "priority": "low",
+          "order": 3,
+          "estimatedHours": 1,
+          "subtasks": []
+        }
+      ],
+      "dependencies": [
+        "Expense management UI (CRUD pages)"
       ]
     }
   ],
   "metadata": {
-    "totalEstimatedHours": 57,
+    "totalEstimatedHours": 60,
     "recommendedOrder": [
-      "Task Management Data Model",
-      "Task & Project APIs and Workflow Rules",
-      "Task Management UI (Pages, Forms, and Views)",
-      "Analytics Dashboard (KPIs, Trends, and Breakdown Views)",
-      "App Navigation, Roles, and Permissions"
+      "Codebase audit & alignment for Expense module",
+      "Expense data model + core CRUD APIs",
+      "Expense management UI (CRUD pages)",
+      "Expense analytics (dashboard + aggregate APIs)",
+      "Budgets vs actuals",
+      "CSV import/export for expenses"
     ],
     "riskAreas": [
-      "Consistency between schema validation rules and UI form validation bindings (especially date constraints and Done/completedAt behavior)",
-      "Analytics aggregation performance on large task/activity datasets without configured indexes and time-range constraints",
-      "Permissions alignment across page guards and API operation access to prevent unauthorized bulk updates or deletes",
-      "Cycle time definition ambiguity when startDate is missing; requires a clear, configured fallback rule"
+      "Unknown existing user/auth table naming and how to reliably scope created_by across APIs",
+      "Availability of chart/date-range components in the current json-render ComponentRegistry (may require fallback to tables or adding a new component)",
+      "Aggregate query support/limitations in the underlying Blazorly Data API client for timeseries and grouped sums",
+      "Decimal precision/rounding and multi-currency behavior (analytics should not mix currencies unintentionally)",
+      "Timezone boundaries for date filtering (expense_date vs created_at; day/month bucketing consistency)"
     ],
     "suggestedMilestones": [
       {
         "name": "MVP",
         "features": [
-          "Task Management Data Model",
-          "Task & Project APIs and Workflow Rules",
-          "Task Management UI (Pages, Forms, and Views)"
+          "Codebase audit & alignment for Expense module",
+          "Expense data model + core CRUD APIs",
+          "Expense management UI (CRUD pages)",
+          "Expense analytics (dashboard + aggregate APIs)"
         ],
-        "description": "Minimum working task management app with projects, task CRUD, list/board/detail views, comments, and activity logging."
+        "description": "Working expense CRUD with categories/vendors/payment accounts and a basic analytics dashboard (summary, trends, category breakdown) registered in navigation."
       },
       {
-        "name": "Analytics",
+        "name": "V1",
         "features": [
-          "Analytics Dashboard (KPIs, Trends, and Breakdown Views)"
+          "Budgets vs actuals"
         ],
-        "description": "Operational dashboard with KPIs, trends, and drill-downs to task lists with time range and project filtering."
+        "description": "Budget creation and budget-vs-actual analytics integrated into the dashboard."
       },
       {
-        "name": "Governance",
+        "name": "V1.1",
         "features": [
-          "App Navigation, Roles, and Permissions"
+          "CSV import/export for expenses"
         ],
-        "description": "Finalize navigation integration, role-based access, and shared settings for consistent task lifecycle behavior across the app."
+        "description": "CSV export for filtered expenses and an import workflow with dry-run preview and error reporting."
       }
     ]
   }

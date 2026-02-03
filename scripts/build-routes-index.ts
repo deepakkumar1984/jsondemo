@@ -55,7 +55,7 @@ function findRouteFiles(): RouteFile[] {
 
 function generateIndexFile(routes: RouteFile[]): string {
   const imports = routes
-    .map(route => `import { ${route.routerName} } from '${route.importPath}';`)
+    .map(route => `import { ${route.routerName} } from '${route.importPath.replace(/\.ts$/, '')}';`)
     .join('\n');
 
   const routesList = routes

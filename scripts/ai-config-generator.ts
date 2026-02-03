@@ -24,11 +24,8 @@ import { buildContext } from './dsl-converters';
 import Ajv from 'ajv';
 import {
   COMPREHENSIVE_SCHEMA_EXAMPLES,
-  COMPREHENSIVE_PAGE_EXAMPLES,
   COMPREHENSIVE_APPS_EXAMPLES
 } from './comprehensive-examples';
-import { generateCatalogPrompt } from '@json-render/core';
-import { catalog } from '../src/client/lib/catalog';
 
 /**
  * Load environment variables from .env file
@@ -189,7 +186,6 @@ Query parameters for getItems:
 --- Example 1: Basic CRUD ---
 
 import { Hono } from 'hono';
-import type { Env } from '../../src/types';
 import { createDataClient } from '../../src/db/data-client';
 
 export const employeesRouter = new Hono<{ Bindings: Env }>();
@@ -259,25 +255,276 @@ OUTPUT REQUIREMENTS:
 `;
   }
 
-  // For page configs, use json-render's catalog-based prompt generation
+  // For page type, generate React components (pure code approach)
   if (type === 'page') {
-    const catalogPrompt = generateCatalogPrompt(catalog);
-    const pageInstructions = `
+    return `You are an expert React developer specializing in building data-driven UI pages.
+Your task is to generate production-ready React component pages based on user requirements.
 
-=== PAGE CONFIGURATION FORMAT ===
+=== ARCHITECTURE ===
 
-Generate a page configuration with nested component hierarchy.
-Use the catalog components below and follow these rules:
+We use React component files (.tsx) instead of JSON configs for pages. Each page file:
+- Is a standard React functional component
+- Uses shadcn/ui components for UI elements
+- Calls the API client for data fetching
+- Exports a default function component
+- Uses React hooks (useState, useEffect, useNavigate, useParams)
 
-1. Use nested "children" arrays for component hierarchy (NOT flat UITree)
-2. Component props must match the catalog schemas exactly
-3. Use dataPath to reference data from dataSources
-4. Use valuePath for nested data access
-5. Use template syntax {{variable}} for dynamic values
-6. Return ONLY valid JSON matching this structure
+=== FILE STRUCTURE ===
 
+File naming: config/pages/{module}/{page}.tsx
+Export pattern: export default function {PageName}Page() { ... }
+
+=== AVAILABLE COMPONENTS ===
+
+Import from 'src/client/components/ui/':
+- Card, CardHeader, CardTitle, CardContent, CardDescription
+- Button
+- Input, Textarea
+- Select, SelectTrigger, SelectValue, SelectContent, SelectItem
+- Table, TableHeader, TableRow, TableHead, TableBody, TableCell
+- Badge
+- Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle
+- Tabs, TabsList, TabsTrigger, TabsContent
+- Alert, AlertDescription
+- Checkbox, Switch, RadioGroup
+
+=== API CLIENT ===
+
+Import from 'src/client/lib/api':
+- api.get(url) - GET request
+- api.post(url, data) - POST request
+- api.put(url, data) - PUT request
+- api.delete(url) - DELETE request
+
+All API calls return: { success: boolean, data?: any, error?: { message: string } }
+
+=== ROUTING ===
+
+Import from 'react-router-dom':
+- useNavigate() - Programmatic navigation
+- useParams() - URL parameters
+- useLocation() - Current location
+
+=== REACT PAGE EXAMPLES ===
+
+--- Example 1: List Page with Data Fetching ---
+
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card } from '../../../src/client/components/ui/card';
+import { Button } from '../../../src/client/components/ui/button';
+import api from '../../../src/client/lib/api';
+
+export default function ProjectsListPage() {
+  const navigate = useNavigate();
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/projects').then(res => {
+      if (res.success) {
+        setProjects(res.data || []);
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) return <div>Loading...</div>;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Projects</h1>
+        <Button onClick={() => navigate('/projects/new')}>New Project</Button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {projects.map((project: any) => (
+          <Card key={project.id} className="cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => navigate(\`/projects/\${project.id}\`)}>
+            <CardHeader>
+              <CardTitle>{project.name}</CardTitle>
+              <CardDescription>{project.description}</CardDescription>
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+--- Example 2: Detail Page with URL Parameters ---
+
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Card, CardHeader, CardTitle, CardContent } from '../../../src/client/components/ui/card';
+import { Button } from '../../../src/client/components/ui/button';
+import { Badge } from '../../../src/client/components/ui/badge';
+import api from '../../../src/client/lib/api';
+
+export default function TaskDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [task, setTask] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get(\`/tasks/\${id}\`).then(res => {
+      if (res.success) {
+        setTask(res.data);
+      }
+      setLoading(false);
+    });
+  }, [id]);
+
+  const handleDelete = async () => {
+    if (confirm('Are you sure?')) {
+      const res = await api.delete(\`/tasks/\${id}\`);
+      if (res.success) {
+        navigate('/tasks');
+      }
+    }
+  };
+
+  if (loading) return <div>Loading...</div>;
+  if (!task) return <div>Task not found</div>;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">{task.title}</h1>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate(\`/tasks/\${id}/edit\`)}>Edit</Button>
+          <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+        </div>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <span className="font-medium">Status:</span>
+            <Badge className="ml-2">{task.status}</Badge>
+          </div>
+          <div>
+            <span className="font-medium">Description:</span>
+            <p className="mt-1">{task.description}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+--- Example 3: Form Page with State Management ---
+
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardHeader, CardTitle, CardContent } from '../../../src/client/components/ui/card';
+import { Button } from '../../../src/client/components/ui/button';
+import { Input } from '../../../src/client/components/ui/input';
+import { Textarea } from '../../../src/client/components/ui/textarea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../src/client/components/ui/select';
+import api from '../../../src/client/lib/api';
+
+export default function TaskFormPage() {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    status: 'Todo',
+    priority: 'Medium'
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    const res = await api.post('/tasks', formData);
+    if (res.success) {
+      navigate('/tasks');
+    } else {
+      alert(res.error?.message || 'Failed to create task');
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      <h1 className="text-3xl font-bold">Create Task</h1>
+      <Card>
+        <CardHeader>
+          <CardTitle>Task Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Title</label>
+              <Input
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Description</label>
+              <Textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Status</label>
+              <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Todo">Todo</SelectItem>
+                  <SelectItem value="InProgress">In Progress</SelectItem>
+                  <SelectItem value="Done">Done</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" disabled={submitting}>
+                {submitting ? 'Creating...' : 'Create Task'}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => navigate('/tasks')}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+=== IMPORTANT GUIDELINES ===
+
+1. ALWAYS export a default function component
+2. Use TypeScript types for props and state (use 'any' for API data if types are unknown)
+3. Handle loading states with conditional rendering
+4. Handle error states (empty data, API failures)
+5. Use proper className for Tailwind styling (space-y-*, grid, flex, etc.)
+6. Import only components that are actually used
+7. Use async/await for API calls
+8. Include proper form validation and error handling
+9. Use React.FormEvent for form submit handlers
+10. Follow consistent naming: {Module}{PageType}Page (e.g., ProjectsListPage, TaskDetailPage, ProjectsFormPage)
+    - Component names should include the page type suffix (List, Detail, Form, Create, Edit, View, Dashboard, Index)
+    - This determines the file location: ProjectsListPage → config/pages/projects/list.tsx
+    - TaskDetailPage → config/pages/tasks/detail.tsx
+
+OUTPUT REQUIREMENTS:
+- Return ONLY TypeScript/React code for a single page component
+- Do NOT add markdown code fences (the output will be written directly to a .tsx file)
+- Do NOT add explanatory comments outside the code
+- Include all necessary imports at the top
+- Follow the exact patterns shown in the examples
 `;
-    return pageInstructions + catalogPrompt;
   }
 
   // For other config types, use schema-driven approach with examples
@@ -325,7 +572,7 @@ function getExamplesForType(type: string): Array<{ description: string; config: 
     case 'api':
       return []; // TypeScript code generated from examples in system prompt
     case 'page':
-      return COMPREHENSIVE_PAGE_EXAMPLES;
+      return []; // React component code generated from examples in system prompt
     case 'app':
       return COMPREHENSIVE_APPS_EXAMPLES;
     default:
@@ -378,16 +625,21 @@ function buildUserPrompt(type: string, feature: string, tasks?: string, context?
 
 Remember: Output ONLY TypeScript code, NO markdown fences, NO explanatory text.`;
   } else if (type === 'page') {
-    prompt += `\nGenerate a complete page configuration with:
-- Data sources with VALID non-empty URLs pointing to EXISTING APIs from the context
-- If no relevant APIs exist in context, use empty dataSources object: {}
-- URLs must be in format: /{resource} or /{resource}/{path} (no /api prefix)
-- Appropriate layout and components from the catalog
-- Forms for data entry if needed
-- Tables for data display if needed
-- Interactive actions (navigation, submission, etc.)
+    prompt += `\nGenerate a complete React page component with:
+- Imports for required shadcn/ui components
+- API calls to EXISTING endpoints from the context (use api.get, api.post, etc.)
+- If no relevant APIs exist, create a placeholder page with static content
+- Proper TypeScript types (use 'any' for unknown API data structures)
+- Loading and error states
+- Responsive layout using Tailwind CSS classes
+- React hooks (useState, useEffect) for state management
+- Navigation using useNavigate, useParams from react-router-dom
+- Form handling with proper validation if needed
+- Component name MUST include page type suffix: {Module}{Type}Page
+  Examples: ProjectsListPage, TaskDetailPage, ProjectsFormPage, DashboardPage
+  This determines file location: ProjectsListPage → config/pages/projects/list.tsx
 
-CRITICAL: Every dataSource must have a non-empty "url" field pointing to a real API endpoint from the context!`;
+Remember: Output ONLY React/TypeScript code, NO markdown fences, NO explanatory text.`;
   }
 
   return prompt;
@@ -447,15 +699,13 @@ async function generateConfig(options: GenerateOptions): Promise<any> {
   const endpoint = `https://api.x.ai/v1/chat/completions`;
 
   // Headers for Cloudflare AI Gateway
-  
-
   const headers = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${process.env.XAI_API_KEY || ''}`,
   };
 
-  // Load format schema (not needed for API type - generating TypeScript code)
-  const formatSchema = options.type === 'api' ? null : loadFormatSchema(options.type);
+  // Load format schema (not needed for API or page types - generating TypeScript code)
+  const formatSchema = (options.type === 'api' || options.type === 'page') ? null : loadFormatSchema(options.type);
 
   // Auto-build context from existing configs (prevents AI hallucination)
   const autoContext = buildContext(options.type, {
@@ -514,7 +764,7 @@ async function generateConfig(options: GenerateOptions): Promise<any> {
     console.log(`   - Prompt chars: ${request.messages[0].content.length + request.messages[1].content.length}`);
     console.log(`   - Max tokens: ${request.max_tokens}`);
     console.log(`   - Temperature: ${request.temperature}`);
-    console.log(`   - Approach: ${formatSchema ? 'Structured output (JSON Schema enforced)' : 'Free-form (TypeScript code)'}`);
+    console.log(`   - Approach: ${formatSchema ? 'Structured output (JSON Schema enforced)' : `Free-form (${options.type === 'page' ? 'React/TypeScript' : 'TypeScript'} code)`}`);
 
     // Log full request payload if debug mode
     if (options.debug) {
@@ -590,27 +840,27 @@ async function generateConfig(options: GenerateOptions): Promise<any> {
     // Declare config variable at the top
     let config: any;
 
-    // For API type, content is TypeScript code (not JSON)
-    if (options.type === 'api') {
+    // For API and page types, content is TypeScript/React code (not JSON)
+    if (options.type === 'api' || options.type === 'page') {
       // Strip markdown code blocks if present
-      let tsContent = content.trim();
+      let codeContent = content.trim();
 
-      // Remove ```typescript ... ``` or ``` ... ```
-      if (tsContent.startsWith('```')) {
-        const lines = tsContent.split('\n');
-        // Remove first line (```typescript, ```ts, or ```)
+      // Remove ```typescript ... ``` or ```tsx ... ``` or ``` ... ```
+      if (codeContent.startsWith('```')) {
+        const lines = codeContent.split('\n');
+        // Remove first line (```typescript, ```tsx, ```ts, ```react, or ```)
         lines.shift();
         // Remove last line (```)
         if (lines[lines.length - 1].trim() === '```') {
           lines.pop();
         }
-        tsContent = lines.join('\n').trim();
+        codeContent = lines.join('\n').trim();
         console.log(`🔧 Stripped markdown code blocks`);
       }
 
-      // For TypeScript routes, the content IS the config
-      config = tsContent;
-      console.log(`✅ TypeScript route code generated successfully!`);
+      // For TypeScript/React code, the content IS the config
+      config = codeContent;
+      console.log(`✅ ${options.type === 'page' ? 'React component' : 'TypeScript route'} code generated successfully!`);
       validConfig = config;
       break;
     }
@@ -718,17 +968,65 @@ function saveConfig(config: any, type: string, output?: string, skipExisting?: b
     // Auto-generate output path based on type
     let configName: string;
 
-    if (type === 'api') {
-      // For API type, config is TypeScript code (string), extract resource name from export
-      // Pattern: export const projectsRouter = new Hono...
-      const exportMatch = config.match(/export\s+const\s+(\w+)Router/);
-      configName = exportMatch ? exportMatch[1] : 'generated';
+    if (type === 'api' || type === 'page') {
+      // For API/page types, config is TypeScript code (string), extract name from export/function
+      if (type === 'api') {
+        // Pattern: export const projectsRouter = new Hono...
+        const exportMatch = config.match(/export\s+const\s+(\w+)Router/);
+        configName = exportMatch ? exportMatch[1] : 'generated';
+      } else {
+        // Pattern: export default function ProjectsListPage() ...
+        const funcMatch = config.match(/export\s+default\s+function\s+(\w+?)(?:Page)?\s*\(/);
+        if (funcMatch) {
+          const componentName = funcMatch[1];
+          // Extract module and page type from patterns like:
+          // - ProjectsListPage -> projects/list
+          // - TaskDetailPage -> tasks/detail
+          // - ProjectsFormPage -> projects/form
+          // - DashboardPage -> dashboard/index
+
+          // Common page type suffixes
+          const pageTypes = ['List', 'Detail', 'Form', 'Create', 'Edit', 'View', 'Dashboard', 'Index'];
+          let moduleName = componentName;
+          let pageType = 'index';
+
+          // Try to extract page type suffix
+          for (const suffix of pageTypes) {
+            if (componentName.endsWith(suffix)) {
+              moduleName = componentName.slice(0, -suffix.length);
+              pageType = suffix.toLowerCase();
+              break;
+            }
+          }
+
+          // If no suffix found but name ends with common module names, treat as index
+          if (pageType === 'index' && moduleName === componentName) {
+            // e.g., ProjectsPage -> projects/index
+            moduleName = componentName;
+          }
+
+          // Convert PascalCase to kebab-case for both module and page
+          const moduleKebab = moduleName
+            .replace(/([A-Z])/g, '-$1')
+            .toLowerCase()
+            .replace(/^-/, '');
+
+          configName = `${moduleKebab}/${pageType}`;
+        } else {
+          configName = 'generated/index';
+        }
+      }
     } else {
       // For JSON configs, extract from object properties
       configName = config.table || config.name || config.resource || 'generated';
     }
 
-    const fileName = configName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    // For pages, keep forward slashes for folder structure; for others, convert to kebab-case
+    const fileName = type === 'page'
+      ? configName.toLowerCase().replace(/\s+/g, '-')
+      : configName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+    console.log(`🐛 DEBUG saveConfig: type="${type}", configName="${configName}", fileName="${fileName}"`);
 
     if (type === 'schema') {
       outputPath = join(process.cwd(), 'config', 'schema', `${fileName}.json`);
@@ -736,10 +1034,16 @@ function saveConfig(config: any, type: string, output?: string, skipExisting?: b
       // For API, save as TypeScript route file
       outputPath = join(process.cwd(), 'config', 'api', `${fileName}.routes.ts`);
     } else if (type === 'page') {
-      outputPath = join(process.cwd(), 'config', 'pages', `${fileName}.json`);
+      // For page, save as React component file
+      console.log(`🐛 DEBUG: type === 'page' matched, using .tsx extension`);
+      outputPath = join(process.cwd(), 'config', 'pages', `${fileName}.tsx`);
     } else {
+      console.log(`🐛 DEBUG: fell through to else case, type="${type}"`);
       outputPath = join(process.cwd(), 'config', `${fileName}.json`);
     }
+
+    console.log(`🐛 DEBUG saveConfig: final outputPath="${outputPath}"`);
+
   }
 
   // Check if file exists and skip if requested
@@ -754,8 +1058,8 @@ function saveConfig(config: any, type: string, output?: string, skipExisting?: b
     mkdirSync(dir, { recursive: true });
   }
 
-  // For API type, config is TypeScript code (string), not JSON
-  if (type === 'api') {
+  // For API and page types, config is TypeScript/React code (string), not JSON
+  if (type === 'api' || type === 'page') {
     writeFileSync(outputPath, config, 'utf-8');
   } else {
     // Write file with pretty formatting for JSON configs
@@ -842,9 +1146,9 @@ async function main() {
 
     console.log(`✅ Configuration saved to: ${outputPath}`);
 
-    // Show preview (TypeScript code for API, JSON for others)
-    if (options.type === 'api') {
-      console.log(`\n📄 Generated TypeScript route preview:`);
+    // Show preview (TypeScript/React code for API/page, JSON for others)
+    if (options.type === 'api' || options.type === 'page') {
+      console.log(`\n📄 Generated ${options.type === 'page' ? 'React component' : 'TypeScript route'} preview:`);
       const codeLines = config.split('\n');
       console.log(codeLines.slice(0, 30).join('\n'));
       if (codeLines.length > 30) {
@@ -870,9 +1174,10 @@ async function main() {
       console.log(`   3. Restart dev server`);
       console.log(`   4. Generate page config to display this data`);
     } else if (options.type === 'page') {
-      console.log(`   1. Review the generated page: ${outputPath}`);
-      console.log(`   2. Add route to config/apps.json`);
-      console.log(`   3. Refresh browser to see changes`);
+      console.log(`   1. Review the generated React component: ${outputPath}`);
+      console.log(`   2. Add route to config/apps.json navigation items`);
+      console.log(`   3. Restart dev server (Vite will pick up new files)`);
+      console.log(`   4. Navigate to the page in browser`);
     }
 
   } catch (error) {
