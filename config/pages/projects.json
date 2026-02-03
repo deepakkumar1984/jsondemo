@@ -1,0 +1,152 @@
+{
+  "dataSources": {
+    "projects": {
+      "url": "/projects"
+    }
+  },
+  "children": [
+    {
+      "type": "PageHeader",
+      "props": {
+        "title": "Projects"
+      }
+    },
+    {
+      "type": "Tabs",
+      "props": {
+        "defaultTab": "list"
+      },
+      "children": [
+        {
+          "type": "TabPanel",
+          "props": {
+            "id": "list",
+            "label": "Projects"
+          },
+          "children": [
+            {
+              "type": "Stack",
+              "props": {
+                "direction": "vertical",
+                "gap": "md"
+              },
+              "children": [
+                {
+                  "type": "SelectField",
+                  "props": {
+                    "name": "currentProjectId",
+                    "label": "Current Project",
+                    "optionsPath": "projects",
+                    "optionLabel": "name",
+                    "optionValue": "id"
+                  }
+                },
+                {
+                  "type": "DataTable",
+                  "props": {
+                    "dataPath": "projects",
+                    "columns": [
+                      {
+                        "key": "name",
+                        "header": "Name",
+                        "sortable": true
+                      },
+                      {
+                        "key": "status",
+                        "header": "Status"
+                      },
+                      {
+                        "key": "owner",
+                        "header": "Owner"
+                      },
+                      {
+                        "key": "updatedAt",
+                        "header": "Updated At",
+                        "format": "datetime"
+                      },
+                      {
+                        "key": "actions",
+                        "header": "Actions",
+                        "render": {
+                          "type": "Stack",
+                          "props": {
+                            "direction": "horizontal",
+                            "gap": "sm"
+                          },
+                          "children": [
+                            {
+                              "type": "Button",
+                              "props": {
+                                "label": "Edit",
+                                "variant": "secondary",
+                                "action": {
+                                  "type": "navigate",
+                                  "to": "/projects/{{row.id}}/edit"
+                                }
+                              }
+                            },
+                            {
+                              "type": "Button",
+                              "props": {
+                                "label": "Archive",
+                                "variant": "danger",
+                                "action": {
+                                  "type": "api_call",
+                                  "method": "PUT",
+                                  "url": "/projects/{{row.id}}/archive"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "TabPanel",
+          "props": {
+            "id": "create",
+            "label": "Create Project"
+          },
+          "children": [
+            {
+              "type": "Form",
+              "props": {
+                "action": {
+                  "type": "submit_form",
+                  "url": "/projects",
+                  "method": "POST",
+                  "redirectTo": "/projects"
+                },
+                "actions": {
+                  "buttons": [
+                    {
+                      "label": "Create",
+                      "variant": "primary",
+                      "buttonType": "submit"
+                    }
+                  ]
+                }
+              },
+              "children": [
+                {
+                  "type": "TextField",
+                  "props": {
+                    "name": "name",
+                    "label": "Name",
+                    "required": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

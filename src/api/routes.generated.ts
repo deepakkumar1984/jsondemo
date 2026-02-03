@@ -4,12 +4,18 @@
  * Run: npm run build:routes-index
  */
 
-import { departmentsRouter } from '../../config/api/departments.routes';
-import { employeesRouter } from '../../config/api/employees.routes';
+import { automaticsRouter } from '../../config/api/automatics.routes.ts';
+import { commentsRouter } from '../../config/api/comments.routes.ts';
+import { cyclesRouter } from '../../config/api/cycles.routes.ts';
+import { projectsRouter } from '../../config/api/projects.routes.ts';
+import { tasksRouter } from '../../config/api/tasks.routes.ts';
 
 export const apiRoutes = [
-  { path: '/departments', router: departmentsRouter },
-  { path: '/employees', router: employeesRouter }
+  { path: '/automatics', router: automaticsRouter },
+  { path: '/comments', router: commentsRouter },
+  { path: '/cycles', router: cyclesRouter },
+  { path: '/projects', router: projectsRouter },
+  { path: '/tasks', router: tasksRouter }
 ];
 
 export type ApiRoutesType = typeof apiRoutes;

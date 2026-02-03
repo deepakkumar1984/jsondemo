@@ -82,7 +82,7 @@ function buildOutputPath(scope: string, title: string): string {
     // Extract resource: "project crud operations" -> "projects"
     const resourceName = kebabCase.split('-')[0];
     const plural = resourceName.endsWith('s') ? resourceName : `${resourceName}s`;
-    return `config/api/${plural}.json`;
+    return `config/api/${plural}.routes.ts`;
   } else if (scope === 'page') {
     // Keep descriptive name: "task-list-page" -> "task-list"
     const pageName = kebabCase.replace(/-page$/, '');
@@ -108,7 +108,8 @@ function generateConfig(
   task: Task,
   feature: Feature,
   index: number,
-  total: number
+  total: number,
+  skipExisting: boolean = false
 ): boolean {
   const outputPath = buildOutputPath(task.scope, task.title);
   const featureName = extractFeatureName(task.title);
@@ -122,16 +123,23 @@ function generateConfig(
   console.log(`${'='.repeat(80)}\n`);
 
   // Call the AI config generator
+  const args = [
+    'scripts/ai-config-generator.ts',
+    '--type', task.scope,
+    '--feature', featureName,
+    '--tasks', task.description,
+    '--context', `Feature context: ${feature.description}`,
+    '--output', outputPath
+  ];
+
+  // Add skip-existing flag if enabled
+  if (skipExisting) {
+    args.push('--skip-existing');
+  }
+
   const result = spawnSync(
     'tsx',
-    [
-      'scripts/ai-config-generator.ts',
-      '--type', task.scope,
-      '--feature', featureName,
-      '--tasks', task.description,
-      '--context', `Feature context: ${feature.description}`,
-      '--output', outputPath
-    ],
+    args,
     {
       stdio: 'inherit',
       cwd: process.cwd()
@@ -179,6 +187,7 @@ async function main() {
   const args = process.argv.slice(2);
   let requestPath = join(process.cwd(), 'scripts/request.json');
   let dryRun = false;
+  let skipExisting = false;
 
   // Parse arguments
   for (let i = 0; i < args.length; i++) {
@@ -186,6 +195,8 @@ async function main() {
       requestPath = args[++i];
     } else if (args[i] === '--dry-run') {
       dryRun = true;
+    } else if (args[i] === '--skip-existing') {
+      skipExisting = true;
     } else if (args[i] === '--help' || args[i] === '-h') {
       printUsage();
       process.exit(0);
@@ -238,7 +249,7 @@ async function main() {
         continue;
       }
 
-      const success = generateConfig(task, feature, i, flatTasks.length);
+      const success = generateConfig(task, feature, i, flatTasks.length, skipExisting);
 
       if (success) {
         successCount++;
@@ -253,8 +264,8 @@ async function main() {
 
       // Small delay between requests to avoid rate limiting
       if (i < flatTasks.length - 1) {
-        console.log(`\n⏳ Waiting 2 seconds before next generation...\n`);
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log(`\n⏳ Waiting 0.5 seconds before next generation...\n`);
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
 
@@ -331,6 +342,7 @@ Usage:
 Options:
   --request, -r <path>    Path to request.json file (default: scripts/request.json)
   --dry-run               Show what would be generated without actually generating
+  --skip-existing         Skip generation if output file already exists
   --help, -h              Show this help message
 
 Request JSON Format (New Structure):
@@ -395,7 +407,7 @@ Notes:
   - Failed generations are logged but don't stop the batch
   - Output paths are auto-generated:
     - schema: config/schema/{table-name}.json
-    - api: config/api/{resource-name}.json
+    - api: config/api/{resource-name}.routes.ts
     - page: config/pages/{descriptive-name}.json
     - app: config/apps.json
   - Context is automatically included from existing configs

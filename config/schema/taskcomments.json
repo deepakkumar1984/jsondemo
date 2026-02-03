@@ -1,0 +1,70 @@
+{
+  "table": "task_comments",
+  "description": "Task comments allowing users to discuss and collaborate on tasks",
+  "columns": [
+    {
+      "name": "id",
+      "type": "text",
+      "primaryKey": true,
+      "defaultFn": "uuid",
+      "description": "Unique task comment identifier"
+    },
+    {
+      "name": "task_id",
+      "type": "text",
+      "notNull": true,
+      "references": {
+        "table": "tasks",
+        "column": "id",
+        "onDelete": "cascade"
+      },
+      "description": "Reference to the parent task"
+    },
+    {
+      "name": "author_user_id",
+      "type": "text",
+      "notNull": true,
+      "references": {
+        "table": "users",
+        "column": "id",
+        "onDelete": "restrict"
+      },
+      "description": "User who authored the comment"
+    },
+    {
+      "name": "body",
+      "type": "text",
+      "notNull": true,
+      "description": "Comment body text (non-empty, max length validated in application)"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "notNull": true,
+      "default": "CURRENT_TIMESTAMP",
+      "description": "Timestamp when comment was created"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp",
+      "notNull": true,
+      "default": "CURRENT_TIMESTAMP",
+      "description": "Timestamp when comment was last updated"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_task_comments_task_id",
+      "columns": [
+        "task_id"
+      ]
+    },
+    {
+      "name": "idx_task_comments_task_created_at",
+      "columns": [
+        "task_id",
+        "created_at"
+      ]
+    }
+  ]
+}

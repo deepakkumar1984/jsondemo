@@ -85,28 +85,36 @@ export function getAllSchemasDSL(schemaDir: string = 'config/schema'): string {
 }
 
 /**
- * Convert API config to compact DSL
- * Format: API /base/path { GET /path -> description, POST /path -> description }
+ * Convert API TypeScript route file to compact DSL
+ * Extracts route definitions from TypeScript code
  */
 export function apiToDSL(apiPath: string): string {
   try {
-    const api = JSON.parse(readFileSync(apiPath, 'utf-8'));
+    const content = readFileSync(apiPath, 'utf-8');
     const lines: string[] = [];
 
-    lines.push(`API ${api.basePath} {`);
-    lines.push(`  name: "${api.name}"`);
+    // Extract resource name from filename (e.g., employees.routes.ts -> employees)
+    const resourceName = apiPath.split('/').pop()?.replace('.routes.ts', '') || 'unknown';
 
-    if (api.operations && api.operations.length > 0) {
+    lines.push(`API /${resourceName} {`);
+
+    // Extract route definitions using regex
+    const routePattern = /(?:router|Router)\.(get|post|put|patch|delete)\s*\(\s*['"`]([^'"`]+)['"`]/g;
+    const routes: Array<{method: string, path: string}> = [];
+
+    let match;
+    while ((match = routePattern.exec(content)) !== null) {
+      routes.push({
+        method: match[1].toUpperCase(),
+        path: match[2]
+      });
+    }
+
+    if (routes.length > 0) {
       lines.push('  operations:');
-      for (const op of api.operations) {
-        const desc = op.description || op.id;
-        lines.push(`    ${op.method} ${op.path} -> ${desc}`);
-
-        // Show main action types
-        if (op.actions && op.actions.length > 0) {
-          const actionTypes = op.actions.map((a: any) => a.type).join(' > ');
-          lines.push(`      flow: ${actionTypes}`);
-        }
+      for (const route of routes) {
+        const fullPath = route.path === '/' ? `/${resourceName}` : `/${resourceName}${route.path}`;
+        lines.push(`    ${route.method} ${fullPath}`);
       }
     }
 
@@ -125,7 +133,7 @@ export function getAllAPIsDSL(apiDir: string = 'config/api'): string {
     return '// No existing APIs';
   }
 
-  const files = readdirSync(apiDir).filter(f => f.endsWith('.json'));
+  const files = readdirSync(apiDir).filter(f => f.endsWith('.routes.ts'));
 
   if (files.length === 0) {
     return '// No existing APIs';
@@ -210,7 +218,7 @@ export function getSchemaContext(): string {
 
 /**
  * Get context for API generation
- * Returns: relevant schema in DSL format + existing API if regenerating
+ * Returns: schemas + existing route file content if regenerating + other APIs summary
  */
 export function getAPIContext(resourceName: string, isRegenerate: boolean = false): string {
   const parts: string[] = [];
@@ -219,12 +227,19 @@ export function getAPIContext(resourceName: string, isRegenerate: boolean = fals
   parts.push(getAllSchemasDSL());
   parts.push('');
 
-  // If regenerating, include current API config
+  // Add summary of other existing APIs
+  parts.push(getAllAPIsDSL());
+  parts.push('');
+
+  // If regenerating, include full current TypeScript file content
   if (isRegenerate) {
-    const apiPath = join('config/api', `${resourceName}.json`);
+    const apiPath = join('config/api', `${resourceName}.routes.ts`);
     if (existsSync(apiPath)) {
-      parts.push('// === CURRENT API CONFIGURATION (for update) ===');
-      parts.push(apiToDSL(apiPath));
+      const currentContent = readFileSync(apiPath, 'utf-8');
+      parts.push('// === CURRENT ROUTE FILE (for update/modification) ===');
+      parts.push('// Review this code and make necessary changes based on user requirements');
+      parts.push('');
+      parts.push(currentContent);
       parts.push('');
     }
   }
@@ -233,15 +248,88 @@ export function getAPIContext(resourceName: string, isRegenerate: boolean = fals
 }
 
 /**
+ * Extract request/response info from TypeScript route file
+ */
+function extractAPIRequestResponse(apiPath: string): string {
+  try {
+    const content = readFileSync(apiPath, 'utf-8');
+    const lines: string[] = [];
+
+    const resourceName = apiPath.split('/').pop()?.replace('.routes.ts', '') || 'unknown';
+    lines.push(`API /${resourceName} {`);
+
+    // Extract route methods and analyze request/response patterns
+    const routePattern = /(?:router|Router)\.(get|post|put|patch|delete)\s*\(\s*['"`]([^'"`]+)['"`][^{]*\{([^}]*(?:\{[^}]*\}[^}]*)*)\}/gs;
+
+    let match;
+    while ((match = routePattern.exec(content)) !== null) {
+      const method = match[1].toUpperCase();
+      const path = match[2];
+      const body = match[3];
+
+      const fullPath = path === '/' ? `/${resourceName}` : `/${resourceName}${path}`;
+      lines.push(`  ${method} ${fullPath}`);
+
+      // Extract request body fields (look for body.fieldName patterns)
+      const bodyFields = new Set<string>();
+      const bodyPattern = /body\.(\w+)/g;
+      let bodyMatch;
+      while ((bodyMatch = bodyPattern.exec(body)) !== null) {
+        bodyFields.add(bodyMatch[1]);
+      }
+
+      if (bodyFields.size > 0) {
+        lines.push(`    Request: { ${Array.from(bodyFields).join(', ')} }`);
+      }
+
+      // Extract response structure (look for c.json patterns)
+      const jsonPattern = /c\.json\s*\(\s*\{([^}]+)\}/g;
+      const jsonMatch = jsonPattern.exec(body);
+      if (jsonMatch) {
+        const responseFields = jsonMatch[1]
+          .split(',')
+          .map(s => s.trim().split(':')[0].trim())
+          .filter(s => s.length > 0);
+        lines.push(`    Response: { ${responseFields.join(', ')} }`);
+      }
+    }
+
+    lines.push('}');
+    return lines.join('\n');
+  } catch (error) {
+    return `// Error parsing API: ${apiPath}`;
+  }
+}
+
+/**
  * Get context for page generation
- * Returns: all APIs in DSL format so page knows correct endpoints
+ * Returns: all APIs with request/response info so pages know how to call them
  */
 export function getPageContext(): string {
   const parts: string[] = [];
 
-  // Add all APIs (pages need to know available endpoints)
-  parts.push(getAllAPIsDSL());
+  parts.push('// === AVAILABLE API ENDPOINTS ===');
+  parts.push('// Use these endpoints in dataSources');
   parts.push('');
+
+  const apiDir = 'config/api';
+  if (!existsSync(apiDir)) {
+    parts.push('// No existing APIs');
+    return parts.join('\n');
+  }
+
+  const files = readdirSync(apiDir).filter(f => f.endsWith('.routes.ts'));
+
+  if (files.length === 0) {
+    parts.push('// No existing APIs');
+    return parts.join('\n');
+  }
+
+  for (const file of files) {
+    const apiPath = join(apiDir, file);
+    parts.push(extractAPIRequestResponse(apiPath));
+    parts.push('');
+  }
 
   return parts.join('\n');
 }

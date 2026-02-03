@@ -85,6 +85,7 @@ interface GenerateOptions {
   context?: string;
   debug?: boolean;
   skipValidation?: boolean;
+  skipExisting?: boolean;
 }
 
 interface AIMessage {
@@ -135,7 +136,7 @@ interface AIResponse {
  * Load JSON schema format for the specified config type
  */
 function loadFormatSchema(type: string): any {
-  const schemaPath = join(process.cwd(), 'config', `${type}-format.json`);
+  const schemaPath = join(process.cwd(), 'config', `${type == 'app' ? 'apps' : type}-format.json`);
 
   if (!existsSync(schemaPath)) {
     throw new Error(`Format schema not found: ${schemaPath}`);
@@ -172,7 +173,7 @@ Export pattern: export const {resource}Router = new Hono<{ Bindings: Env }>();
 Available methods on the data client:
 - createItem(collection, data) - Create a new item
 - getItems(collection, params) - Query items with filters
-- getItemById(collection, id) - Get single item by ID
+- getItem(collection, id) - Get single item by ID
 - updateItem(collection, id, data) - Update an item
 - deleteItem(collection, id) - Delete an item
 
@@ -279,26 +280,30 @@ Use the catalog components below and follow these rules:
     return pageInstructions + catalogPrompt;
   }
 
-  // For other config types, use example-driven approach
+  // For other config types, use schema-driven approach with examples
   const basePrompt = `You are an expert software engineer specializing in config-driven application development.
 Your task is to generate high-quality, production-ready configuration files based on user requirements.
 
 CRITICAL RULES:
-1. Follow the EXACT structure and patterns shown in the examples
+1. Follow the EXACT JSON Schema structure (enforced via structured output)
 2. Use snake_case for database table/column names
 3. Use camelCase for JavaScript identifiers
 4. Use kebab-case for file names and paths
 5. Include proper descriptions for documentation
+6. For UUID primary keys and foreign keys, ALWAYS use type "uuid", not "text"
+7. NEVER create fictional API endpoints or table references - only use what exists in the provided context
+8. All dataSource URLs must be non-empty and point to real API endpoints from the context
 
 OUTPUT REQUIREMENTS:
-- Return ONLY valid JSON that matches the examples
+- The output will be validated against the JSON Schema automatically
+- Return valid JSON matching the schema structure
 - Do NOT add markdown code fences
 - Do NOT add explanatory text before or after the JSON`;
 
   const examples = getExamplesForType(type);
 
   let examplesSection = '\n\n=== COMPREHENSIVE EXAMPLES ===\n\n';
-  examplesSection += 'Study these examples carefully.\n\n';
+  examplesSection += 'Study these examples carefully to understand patterns and best practices.\n\n';
 
   for (let i = 0; i < examples.length; i++) {
     const example = examples[i];
@@ -340,24 +345,32 @@ function buildUserPrompt(type: string, feature: string, tasks?: string, context?
   }
 
   if (context) {
-    prompt += `\n${context}\n`;
-    prompt += `\nIMPORTANT: Use the existing schemas/APIs/pages shown above. Do NOT create fictional table names, API endpoints, or page references. Only reference what exists in the context provided.\n`;
+    prompt += `\n=== EXISTING RESOURCES (USE ONLY THESE) ===\n\n${context}\n`;
+    prompt += `\n=== CRITICAL CONSTRAINTS ===
+- ONLY reference tables, APIs, and pages shown in the context above
+- Do NOT invent or hallucinate any table names, API endpoints, or page references
+- All foreign keys must reference tables that exist in the schema context
+- All dataSource URLs must point to APIs that exist in the API context
+- If the context shows no APIs, create minimal/empty dataSources
+- When in doubt, leave optional fields empty rather than guessing\n`;
   }
 
   // Add type-specific guidance
   if (type === 'schema') {
     prompt += `\nGenerate a complete database table schema with:
-- Appropriate columns and data types
-- Primary key and foreign keys if needed
-- Timestamps (created_at, updated_at)
-- Indexes for performance
-- Proper constraints (NOT NULL, UNIQUE, etc.)`;
+- Appropriate columns and data types (CRITICAL: use "uuid" for UUID primary keys and foreign keys, NOT "text")
+- Primary key with type "uuid" and defaultFn "uuid"
+- Foreign keys referencing existing tables (check the context!) with type "uuid" matching the referenced column
+- Timestamps: created_at and updated_at with type "timestamptz"
+- Indexes for foreign keys and frequently queried columns
+- Proper constraints (NOT NULL, UNIQUE, etc.)
+- Snake_case for all column names`;
   } else if (type === 'api') {
     prompt += `\nGenerate a complete TypeScript route file with:
 - Hono router exported as {resource}Router
 - RESTful operations (GET, POST, PUT, DELETE as needed)
 - Input validation for all request fields
-- Database operations using Data API client
+- Database operations using Data API client with EXISTING tables only
 - Proper error handling with try/catch
 - Business logic checks (duplicate prevention, referential integrity)
 - Consistent response format: { success, data?, error?, message? }
@@ -366,11 +379,15 @@ function buildUserPrompt(type: string, feature: string, tasks?: string, context?
 Remember: Output ONLY TypeScript code, NO markdown fences, NO explanatory text.`;
   } else if (type === 'page') {
     prompt += `\nGenerate a complete page configuration with:
-- Data sources connecting to relevant APIs
-- Appropriate layout and components
+- Data sources with VALID non-empty URLs pointing to EXISTING APIs from the context
+- If no relevant APIs exist in context, use empty dataSources object: {}
+- URLs must be in format: /{resource} or /{resource}/{path} (no /api prefix)
+- Appropriate layout and components from the catalog
 - Forms for data entry if needed
 - Tables for data display if needed
-- Interactive actions (navigation, submission, etc.)`;
+- Interactive actions (navigation, submission, etc.)
+
+CRITICAL: Every dataSource must have a non-empty "url" field pointing to a real API endpoint from the context!`;
   }
 
   return prompt;
@@ -453,28 +470,41 @@ async function generateConfig(options: GenerateOptions): Promise<any> {
   const systemPrompt = buildSystemPrompt(options.type);
   const userPrompt = buildUserPrompt(options.type, options.feature, options.tasks, fullContext);
 
-  // EXAMPLE-DRIVEN GENERATION (no structured output mode)
-  // We generate WITHOUT response_format, then validate afterwards
-  // Default to skip validation unless explicitly enabled
-  const skipValidation = options.skipValidation !== false; // Default true
-  const maxValidationRetries = skipValidation ? 1 : 3;
+  // STRUCTURED OUTPUT GENERATION with JSON Schema
+  // For non-API types, use response_format to enforce schema compliance
+  // Validation is still done as a safety check
+  const maxValidationRetries = 3;
   let validConfig: any = null;
   let currentUserPrompt = userPrompt;
 
   for (let validationAttempt = 1; validationAttempt <= maxValidationRetries; validationAttempt++) {
     console.log(`\n🔄 Generation attempt ${validationAttempt}/${maxValidationRetries}`);
 
-    // Prepare request WITHOUT response_format (example-driven approach)
-    const request: AIRequest = {
+    // Prepare request with structured output when format schema is available
+    const request: any = {
       model: model,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: currentUserPrompt }
       ],
-      // NO response_format - let AI learn from examples!
-      temperature: 0.2, // Lower temperature for more consistency
-      max_tokens: 16000
+      temperature: 0.1, // Lower temperature for more consistency
+      max_tokens: 128000,
+      config: {
+        requestTimeout: 300000 // 5 minutes timeout in milliseconds
+      }
     };
+
+    // Add response_format for structured output (non-API types only)
+    if (formatSchema) {
+      request.response_format = {
+        type: 'json_schema',
+        json_schema: {
+          name: `${options.type}_config`,
+          strict: true,
+          schema: formatSchema
+        }
+      };
+    }
 
     console.log(`🤖 Calling Cloudflare AI Gateway (${model})...`);
     console.log(`📝 Generating ${options.type} configuration for: ${options.feature}`);
@@ -482,7 +512,7 @@ async function generateConfig(options: GenerateOptions): Promise<any> {
     console.log(`   - Prompt chars: ${request.messages[0].content.length + request.messages[1].content.length}`);
     console.log(`   - Max tokens: ${request.max_tokens}`);
     console.log(`   - Temperature: ${request.temperature}`);
-    console.log(`   - Approach: Example-driven (no structured output)`);
+    console.log(`   - Approach: ${formatSchema ? 'Structured output (JSON Schema enforced)' : 'Free-form (TypeScript code)'}`);
 
     // Log full request payload if debug mode
     if (options.debug) {
@@ -507,7 +537,8 @@ async function generateConfig(options: GenerateOptions): Promise<any> {
         response = await fetch(endpoint, {
           method: 'POST',
           headers: headers,
-          body: JSON.stringify(request)
+          body: JSON.stringify(request),
+          signal: AbortSignal.timeout(300000) // 5 minutes timeout
         });
 
         // If fetch succeeded, break out of retry loop
@@ -627,12 +658,7 @@ async function generateConfig(options: GenerateOptions): Promise<any> {
 
     // VALIDATE with full JSON Schema (no limitations!)
     // Note: API type already handled above and broke out of loop
-    if (skipValidation) {
-      console.log(`\n⚠️  Skipping validation (default behavior)`);
-      validConfig = config;
-      break;
-    }
-
+    // With structured output, validation should almost always pass
     console.log(`\n🔍 Validating against JSON schema...`);
     const ajv = new Ajv({
       strict: false,
@@ -681,14 +707,25 @@ async function generateConfig(options: GenerateOptions): Promise<any> {
 /**
  * Save generated config to file
  */
-function saveConfig(config: any, type: string, output?: string): string {
+function saveConfig(config: any, type: string, output?: string, skipExisting?: boolean): string {
   let outputPath: string;
 
   if (output) {
     outputPath = output;
   } else {
     // Auto-generate output path based on type
-    const configName = config.table || config.name || config.resource || 'generated';
+    let configName: string;
+
+    if (type === 'api') {
+      // For API type, config is TypeScript code (string), extract resource name from export
+      // Pattern: export const projectsRouter = new Hono...
+      const exportMatch = config.match(/export\s+const\s+(\w+)Router/);
+      configName = exportMatch ? exportMatch[1] : 'generated';
+    } else {
+      // For JSON configs, extract from object properties
+      configName = config.table || config.name || config.resource || 'generated';
+    }
+
     const fileName = configName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
     if (type === 'schema') {
@@ -701,6 +738,12 @@ function saveConfig(config: any, type: string, output?: string): string {
     } else {
       outputPath = join(process.cwd(), 'config', `${fileName}.json`);
     }
+  }
+
+  // Check if file exists and skip if requested
+  if (skipExisting && existsSync(outputPath)) {
+    console.log(`⏭️  Skipped: ${outputPath} (already exists)`);
+    return outputPath;
   }
 
   // Ensure directory exists
@@ -753,6 +796,8 @@ async function main() {
       options.skipValidation = true;
     } else if (arg === '--validate') {
       options.skipValidation = false;
+    } else if (arg === '--skip-existing') {
+      options.skipExisting = true;
     } else if (arg === '--help' || arg === '-h') {
       printUsage();
       process.exit(0);
@@ -778,11 +823,20 @@ async function main() {
   }
 
   try {
+    // Check if file exists and skip if requested
+    if (options.skipExisting && options.output && existsSync(options.output)) {
+      console.log(`⏭️  Skipping: ${options.output} already exists`);
+      return;
+    }
+
+    // For auto-generated paths, we need to check after determining the filename
+    // This will be handled in saveConfig
+
     // Generate config
     const config = await generateConfig(options as GenerateOptions);
 
-    // Save to file
-    const outputPath = saveConfig(config, options.type, options.output);
+    // Save to file (includes skip-existing check for auto-generated paths)
+    const outputPath = saveConfig(config, options.type, options.output, options.skipExisting);
 
     console.log(`✅ Configuration saved to: ${outputPath}`);
 
@@ -850,6 +904,7 @@ Optional Arguments:
   --debug                     Enable debug logging (shows raw API response)
   --validate                  Enable JSON schema validation with retries (disabled by default)
   --skip-validation           Skip validation (default behavior, kept for compatibility)
+  --skip-existing             Skip generation if output file already exists
   --help, -h                  Show this help message
 
 Environment Variables:

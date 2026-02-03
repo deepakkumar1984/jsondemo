@@ -1,0 +1,84 @@
+{
+  "table": "task_activities",
+  "description": "Task activity log for auditing task changes and events",
+  "columns": [
+    {
+      "name": "id",
+      "type": "text",
+      "primaryKey": true,
+      "defaultFn": "uuid",
+      "description": "Unique task activity identifier"
+    },
+    {
+      "name": "task_id",
+      "type": "text",
+      "notNull": true,
+      "references": {
+        "table": "tasks",
+        "column": "id"
+      },
+      "description": "Reference to the parent task"
+    },
+    {
+      "name": "actor_user_id",
+      "type": "text",
+      "notNull": false,
+      "references": {
+        "table": "users",
+        "column": "id"
+      },
+      "description": "Optional user who triggered the event (null for automated events)"
+    },
+    {
+      "name": "event_type",
+      "type": "text",
+      "notNull": true,
+      "description": "Event type (Created, Updated, StatusChanged, Assigned, Unassigned, Commented, DueDateChanged, PriorityChanged, Tagged)"
+    },
+    {
+      "name": "from_value",
+      "type": "jsonb",
+      "notNull": false,
+      "description": "Optional previous value before the change"
+    },
+    {
+      "name": "to_value",
+      "type": "jsonb",
+      "notNull": false,
+      "description": "Optional new value after the change"
+    },
+    {
+      "name": "metadata",
+      "type": "jsonb",
+      "notNull": false,
+      "description": "Optional additional event metadata"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "notNull": true,
+      "default": "CURRENT_TIMESTAMP",
+      "description": "Timestamp when the activity was recorded"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_task_activities_task_id",
+      "columns": [
+        "task_id"
+      ]
+    },
+    {
+      "name": "idx_task_activities_event_type",
+      "columns": [
+        "event_type"
+      ]
+    },
+    {
+      "name": "idx_task_activities_created_at",
+      "columns": [
+        "created_at"
+      ]
+    }
+  ]
+}

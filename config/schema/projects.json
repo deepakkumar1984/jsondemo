@@ -1,0 +1,85 @@
+{
+  "table": "projects",
+  "description": "Project records for managing tasks, comments, and activities",
+  "columns": [
+    {
+      "name": "id",
+      "type": "text",
+      "primaryKey": true,
+      "defaultFn": "uuid",
+      "description": "Unique project identifier"
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "notNull": true,
+      "unique": true,
+      "description": "Project name, required and unique within workspace (length validated, trimmed non-empty)"
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "notNull": false,
+      "description": "Optional project description"
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "notNull": true,
+      "default": "Active",
+      "description": "Project status (Active, Archived)"
+    },
+    {
+      "name": "owner_user_id",
+      "type": "text",
+      "notNull": true,
+      "references": {
+        "table": "users",
+        "column": "id",
+        "onDelete": "restrict"
+      },
+      "description": "Reference to the owning user"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "notNull": true,
+      "default": "CURRENT_TIMESTAMP",
+      "description": "Timestamp when project was created"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp",
+      "notNull": true,
+      "default": "CURRENT_TIMESTAMP",
+      "description": "Timestamp when project was last updated"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_projects_name",
+      "columns": [
+        "name"
+      ],
+      "unique": true
+    },
+    {
+      "name": "idx_projects_status",
+      "columns": [
+        "status"
+      ]
+    },
+    {
+      "name": "idx_projects_owner_user_id",
+      "columns": [
+        "owner_user_id"
+      ]
+    },
+    {
+      "name": "idx_projects_updated_at",
+      "columns": [
+        "updated_at"
+      ]
+    }
+  ]
+}

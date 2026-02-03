@@ -40,7 +40,7 @@ function findRouteFiles(): RouteFile[] {
     const relativePath = path.relative(
       path.resolve(process.cwd(), 'src/api'),
       routePath
-    ).replace(/\\/g, '/').replace('.ts', '');
+    ).replace(/\\/g, '/');
 
     routes.push({
       path: routePath,
