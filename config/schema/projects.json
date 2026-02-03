@@ -1,10 +1,10 @@
 {
   "table": "projects",
-  "description": "Project records for managing tasks, comments, and activities",
+  "description": "Projects table for storing project information including name, description, status, and ownership",
   "columns": [
     {
       "name": "id",
-      "type": "text",
+      "type": "uuid",
       "primaryKey": true,
       "defaultFn": "uuid",
       "description": "Unique project identifier"
@@ -14,7 +14,7 @@
       "type": "text",
       "notNull": true,
       "unique": true,
-      "description": "Project name, required and unique within workspace (length validated, trimmed non-empty)"
+      "description": "Project name, required and unique"
     },
     {
       "name": "description",
@@ -27,42 +27,39 @@
       "type": "text",
       "notNull": true,
       "default": "Active",
-      "description": "Project status (Active, Archived)"
+      "enum": [
+        "Active",
+        "Archived"
+      ],
+      "description": "Project status, either Active or Archived"
     },
     {
       "name": "owner_user_id",
-      "type": "text",
+      "type": "uuid",
       "notNull": true,
       "references": {
         "table": "users",
         "column": "id",
-        "onDelete": "restrict"
+        "onDelete": "cascade"
       },
-      "description": "Reference to the owning user"
+      "description": "Reference to the user who owns the project"
     },
     {
       "name": "created_at",
-      "type": "timestamp",
+      "type": "timestamptz",
       "notNull": true,
       "default": "CURRENT_TIMESTAMP",
-      "description": "Timestamp when project was created"
+      "description": "Timestamp when the project was created"
     },
     {
       "name": "updated_at",
-      "type": "timestamp",
+      "type": "timestamptz",
       "notNull": true,
       "default": "CURRENT_TIMESTAMP",
-      "description": "Timestamp when project was last updated"
+      "description": "Timestamp when the project was last updated"
     }
   ],
   "indexes": [
-    {
-      "name": "idx_projects_name",
-      "columns": [
-        "name"
-      ],
-      "unique": true
-    },
     {
       "name": "idx_projects_status",
       "columns": [

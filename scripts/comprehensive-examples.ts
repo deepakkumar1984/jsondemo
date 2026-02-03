@@ -760,232 +760,51 @@ export const COMPREHENSIVE_API_EXAMPLES = [
 ];
 
 export const COMPREHENSIVE_PAGE_EXAMPLES = [
-  // Example 1: Simple list page with DataTable
+  // Example 1: Dashboard with Stats, DataTable, Buttons, and Badges
   {
-    "description": "Basic list page with search, filters, and row actions using DataTable",
+    "description": "Dashboard: PageHeader, Grid with StatCards, DataTable (search, pagination, Badge, row actions), Button, Alert",
     "config": {
       "dataSources": {
-        "items": {
-          "url": "/items"
-        }
-      },
-      "children": [
-        {
-          "type": "PageHeader",
-          "props": {
-            "title": "Items",
-            "subtitle": "Manage your items"
-          }
-        },
-        {
-          "type": "Card",
-          "children": [
-            {
-              "type": "DataTable",
-              "props": {
-                "dataPath": "items",
-                "searchable": true,
-                "searchPlaceholder": "Search items...",
-                "paginated": true,
-                "columns": [
-                  {
-                    "key": "name",
-                    "header": "Name"
-                  },
-                  {
-                    "key": "status",
-                    "header": "Status",
-                    "render": "badge"
-                  },
-                  {
-                    "key": "createdAt",
-                    "header": "Created",
-                    "format": "date"
-                  }
-                ],
-                "rowClickAction": {
-                  "to": "/items/:id"
-                },
-                "emptyMessage": "No items found"
-              }
-            }
-          ]
-        }
-      ]
-    }
-  },
-  // Example 2: Form page with various field types
-  {
-    "description": "Form with TextField, TextArea, SelectField, DateField, and submit action",
-    "config": {
-      "dataSources": {
-        "item": {
-          "url": "/items/:id"
-        },
-        "categories": {
-          "url": "/categories"
-        }
-      },
-      "children": [
-        {
-          "type": "PageHeader",
-          "props": {
-            "title": "Edit Item"
-          }
-        },
-        {
-          "type": "Card",
-          "children": [
-            {
-              "type": "Form",
-              "props": {
-                "action": {
-                  "type": "submit_form",
-                  "url": "/items/:id",
-                  "method": "PUT",
-                  "onSuccess": {
-                    "type": "navigate",
-                    "to": "/items"
-                  }
-                }
-              },
-              "children": [
-                {
-                  "type": "TextField",
-                  "props": {
-                    "label": "Name",
-                    "bindPath": "name",
-                    "validation": {
-                      "checks": [
-                        { "fn": "required", "message": "Name is required" },
-                        { "fn": "minLength", "args": 3, "message": "Min 3 characters" },
-                        { "fn": "maxLength", "args": 100 }
-                      ],
-                      "validateOn": "blur"
-                    }
-                  }
-                },
-                {
-                  "type": "TextArea",
-                  "props": {
-                    "label": "Description",
-                    "bindPath": "description",
-                    "rows": 4,
-                    "validation": {
-                      "checks": [
-                        { "fn": "maxLength", "args": 500, "message": "Max 500 characters" }
-                      ]
-                    }
-                  }
-                },
-                {
-                  "type": "SelectField",
-                  "props": {
-                    "label": "Category",
-                    "bindPath": "categoryId",
-                    "optionsPath": "categories",
-                    "validation": {
-                      "checks": [
-                        { "fn": "required", "message": "Please select a category" }
-                      ]
-                    }
-                  }
-                },
-                {
-                  "type": "DateField",
-                  "props": {
-                    "label": "Due Date",
-                    "bindPath": "dueDate",
-                    "validation": {
-                      "checks": [
-                        { "fn": "required" }
-                      ]
-                    }
-                  }
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    }
-  },
-  // Example 3: Dashboard with StatCards and Grid layout
-  {
-    "description": "Dashboard page with statistics, grid layout, and multiple data sources",
-    "config": {
-      "dataSources": {
-        "stats": {
-          "url": "/dashboard/stats"
-        },
-        "recentItems": {
-          "url": "/items?limit=5"
-        }
+        "stats": { "url": "/stats" },
+        "tasks": { "url": "/tasks?limit=10" }
       },
       "children": [
         {
           "type": "PageHeader",
           "props": {
             "title": "Dashboard",
-            "subtitle": "Overview of your data"
+            "subtitle": "Overview and recent tasks",
+            "actions": [
+              { "type": "Button", "props": { "label": "New Task", "action": { "type": "navigate", "to": "/tasks/new" } } }
+            ]
           }
         },
         {
           "type": "Grid",
-          "props": {
-            "columns": 3,
-            "gap": "4"
-          },
+          "props": { "columns": 3, "gap": "4" },
           "children": [
-            {
-              "type": "StatCard",
-              "props": {
-                "label": "Total Items",
-                "valuePath": "stats.totalItems"
-              }
-            },
-            {
-              "type": "StatCard",
-              "props": {
-                "label": "Active",
-                "valuePath": "stats.activeItems"
-              }
-            },
-            {
-              "type": "StatCard",
-              "props": {
-                "label": "Completed",
-                "valuePath": "stats.completedItems"
-              }
-            }
+            { "type": "StatCard", "props": { "label": "Total", "valuePath": "stats.total" } },
+            { "type": "StatCard", "props": { "label": "Active", "valuePath": "stats.active" } },
+            { "type": "StatCard", "props": { "label": "Completed", "valuePath": "stats.completed" } }
           ]
         },
         {
           "type": "Card",
-          "props": {
-            "title": "Recent Items"
-          },
+          "props": { "title": "Recent Tasks" },
           "children": [
             {
               "type": "DataTable",
               "props": {
-                "dataPath": "recentItems",
+                "dataPath": "tasks",
+                "searchable": true,
+                "paginated": true,
                 "columns": [
-                  {
-                    "key": "name",
-                    "header": "Name"
-                  },
-                  {
-                    "key": "status",
-                    "header": "Status",
-                    "render": "badge"
-                  },
-                  {
-                    "key": "updatedAt",
-                    "header": "Updated",
-                    "format": "date"
-                  }
-                ]
+                  { "key": "title", "header": "Title" },
+                  { "key": "status", "header": "Status", "render": "badge" },
+                  { "key": "priority", "header": "Priority", "render": "badge" },
+                  { "key": "dueDate", "header": "Due Date", "format": "date" }
+                ],
+                "rowClickAction": { "type": "navigate", "to": "/tasks/:id" }
               }
             }
           ]
@@ -993,236 +812,195 @@ export const COMPREHENSIVE_PAGE_EXAMPLES = [
       ]
     }
   },
-  // Example 4: Visibility conditions with logic expressions
+  // Example 2: Form page with all field types, validation, and DetailSection
   {
-    "description": "Conditional rendering using visible property with path, auth, and logic expressions",
+    "description": "Form page: PageHeader, Form (TextField, TextArea, SelectField, DateField with validation), Stack, Divider, DetailSection, DetailRow, Avatar, Tabs",
     "config": {
       "dataSources": {
-        "user": {
-          "url": "/auth/me"
-        },
-        "item": {
-          "url": "/items/:id"
-        }
+        "task": { "url": "/tasks/:id" },
+        "projects": { "url": "/projects" },
+        "users": { "url": "/users" }
       },
       "children": [
         {
           "type": "PageHeader",
           "props": {
-            "title": "Item Details"
+            "title": "{{task.title}}",
+            "breadcrumbs": [
+              { "label": "Tasks", "path": "/tasks" },
+              { "label": "{{task.title}}" }
+            ]
           }
         },
         {
-          "type": "Alert",
-          "visible": { "auth": "signedIn" },
-          "props": {
-            "title": "Welcome",
-            "message": "You are signed in"
-          }
-        },
-        {
-          "type": "Card",
-          "visible": { "path": "/item" },
-          "props": {
-            "title": "Item Information"
-          },
+          "type": "Grid",
+          "props": { "columns": 2, "gap": "6" },
           "children": [
             {
-              "type": "DetailSection",
-              "props": {
-                "title": "Details"
-              },
+              "type": "Card",
+              "props": { "title": "Edit Task" },
               "children": [
                 {
-                  "type": "DetailRow",
+                  "type": "Form",
                   "props": {
-                    "label": "Name",
-                    "valuePath": "item.name"
-                  }
-                },
-                {
-                  "type": "DetailRow",
-                  "props": {
-                    "label": "Status",
-                    "valuePath": "item.status"
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "Button",
-          "visible": {
-            "and": [
-              { "path": "/user/isAdmin" },
-              { "eq": [{ "path": "/item/status" }, "draft"] }
-            ]
-          },
-          "props": {
-            "label": "Publish Draft",
-            "action": {
-              "type": "api_call",
-              "method": "POST",
-              "url": "/items/:id/publish"
-            }
-          }
-        },
-        {
-          "type": "Button",
-          "visible": {
-            "or": [
-              { "path": "/user/isAdmin" },
-              { "eq": [{ "path": "/item/createdBy" }, { "path": "/user/id" }] }
-            ]
-          },
-          "props": {
-            "label": "Edit",
-            "action": {
-              "type": "navigate",
-              "to": "/items/:id/edit"
-            }
-          }
-        },
-        {
-          "type": "Alert",
-          "visible": {
-            "not": { "path": "/item/isPublished" }
-          },
-          "props": {
-            "variant": "destructive",
-            "message": "This item is not published yet"
-          }
-        },
-        {
-          "type": "Card",
-          "visible": {
-            "and": [
-              { "path": "/user/isAdmin" },
-              { "gt": [{ "path": "/item/views" }, 100] }
-            ]
-          },
-          "props": {
-            "title": "Popular Item"
-          },
-          "children": [
-            {
-              "type": "Text",
-              "props": {
-                "content": "This item has over 100 views"
-              }
-            }
-          ]
-        }
-      ]
-    }
-  },
-  // Example 5: Action enhancements with confirm, onSuccess, onError
-  {
-    "description": "Demonstrates confirm dialogs and action chaining with onSuccess/onError",
-    "config": {
-      "dataSources": {
-        "item": {
-          "url": "/items/:id"
-        }
-      },
-      "children": [
-        {
-          "type": "PageHeader",
-          "props": {
-            "title": "Advanced Actions"
-          }
-        },
-        {
-          "type": "Card",
-          "props": {
-            "title": "Action Examples"
-          },
-          "children": [
-            {
-              "type": "Stack",
-              "props": {
-                "direction": "vertical",
-                "gap": "4"
-              },
-              "children": [
-                {
-                  "type": "Button",
-                  "props": {
-                    "label": "Delete with Confirmation",
-                    "variant": "destructive",
-                    "action": {
-                      "type": "delete_confirm",
-                      "url": "/items/:id",
-                      "confirm": {
-                        "title": "Delete Item",
-                        "message": "Are you sure you want to delete this item? This action cannot be undone.",
-                        "variant": "destructive"
-                      },
-                      "onSuccess": {
-                        "type": "navigate",
-                        "to": "/items"
-                      }
-                    }
-                  }
-                },
-                {
-                  "type": "Button",
-                  "props": {
-                    "label": "Publish with Success Action",
-                    "action": {
-                      "type": "api_call",
-                      "method": "POST",
-                      "url": "/items/:id/publish",
-                      "confirm": {
-                        "message": "Publish this item now?"
-                      },
-                      "onSuccess": {
-                        "type": "refresh_data"
-                      }
-                    }
-                  }
-                },
-                {
-                  "type": "Button",
-                  "props": {
-                    "label": "Submit with Error Handling",
-                    "action": {
-                      "type": "api_call",
-                      "method": "POST",
-                      "url": "/items/:id/validate",
-                      "onSuccess": {
-                        "type": "navigate",
-                        "to": "/items/:id/success"
-                      },
-                      "onError": {
-                        "type": "refresh_data"
-                      }
-                    }
-                  }
-                },
-                {
-                  "type": "Button",
-                  "props": {
-                    "label": "Complex Chain",
                     "action": {
                       "type": "submit_form",
-                      "url": "/items",
-                      "method": "POST",
-                      "confirm": {
-                        "title": "Create Item",
-                        "message": "Create this new item?"
-                      },
-                      "onSuccess": {
-                        "type": "api_call",
-                        "method": "POST",
-                        "url": "/notifications/send",
-                        "onSuccess": {
-                          "type": "navigate",
-                          "to": "/items"
+                      "url": "/tasks/:id",
+                      "method": "PUT",
+                      "redirectTo": "/tasks/:id"
+                    }
+                  },
+                  "children": [
+                    {
+                      "type": "TextField",
+                      "props": {
+                        "label": "Title",
+                        "bindPath": "title",
+                        "required": true,
+                        "validation": {
+                          "checks": [
+                            { "fn": "required", "message": "Title required" },
+                            { "fn": "minLength", "args": 3 }
+                          ]
                         }
                       }
+                    },
+                    {
+                      "type": "TextArea",
+                      "props": {
+                        "label": "Description",
+                        "bindPath": "description",
+                        "rows": 4
+                      }
+                    },
+                    {
+                      "type": "Grid",
+                      "props": { "columns": 2 },
+                      "children": [
+                        {
+                          "type": "SelectField",
+                          "props": {
+                            "label": "Project",
+                            "bindPath": "projectId",
+                            "optionsPath": "projects",
+                            "required": true
+                          }
+                        },
+                        {
+                          "type": "SelectField",
+                          "props": {
+                            "label": "Assignee",
+                            "bindPath": "assigneeUserId",
+                            "optionsPath": "users"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "Grid",
+                      "props": { "columns": 3 },
+                      "children": [
+                        {
+                          "type": "SelectField",
+                          "props": {
+                            "label": "Status",
+                            "bindPath": "status",
+                            "options": [
+                              { "value": "Todo", "label": "To Do" },
+                              { "value": "InProgress", "label": "In Progress" },
+                              { "value": "Done", "label": "Done" }
+                            ]
+                          }
+                        },
+                        {
+                          "type": "SelectField",
+                          "props": {
+                            "label": "Priority",
+                            "bindPath": "priority",
+                            "options": [
+                              { "value": "Low", "label": "Low" },
+                              { "value": "Medium", "label": "Medium" },
+                              { "value": "High", "label": "High" }
+                            ]
+                          }
+                        },
+                        {
+                          "type": "DateField",
+                          "props": {
+                            "label": "Due Date",
+                            "bindPath": "dueDate"
+                          }
+                        }
+                      ]
+                    },
+                    { "type": "Divider" },
+                    {
+                      "type": "Stack",
+                      "props": { "direction": "row", "gap": "2" },
+                      "children": [
+                        { "type": "Button", "props": { "label": "Save", "type": "submit", "variant": "primary" } },
+                        { "type": "Button", "props": { "label": "Cancel", "variant": "secondary", "action": { "type": "navigate", "to": "/tasks" } } }
+                      ]
                     }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "Stack",
+              "props": { "gap": "6" },
+              "children": [
+                {
+                  "type": "Card",
+                  "children": [
+                    {
+                      "type": "DetailSection",
+                      "props": { "title": "Task Details" },
+                      "children": [
+                        { "type": "DetailRow", "props": { "label": "Created", "value": "{{task.createdAt}}", "format": "date" } },
+                        { "type": "DetailRow", "props": { "label": "Updated", "value": "{{task.updatedAt}}", "format": "date" } },
+                        { "type": "DetailRow", "props": { "label": "Reporter", "value": "{{task.reporterName}}" } }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "Card",
+                  "props": { "title": "Activity" },
+                  "children": [
+                    {
+                      "type": "Tabs",
+                      "props": {
+                        "tabs": [
+                          { "id": "comments", "label": "Comments" },
+                          { "id": "history", "label": "History" }
+                        ]
+                      },
+                      "children": [
+                        {
+                          "type": "TabPanel",
+                          "props": { "tabId": "comments" },
+                          "children": [
+                            { "type": "Text", "props": { "content": "Comments will appear here" } }
+                          ]
+                        },
+                        {
+                          "type": "TabPanel",
+                          "props": { "tabId": "history" },
+                          "children": [
+                            { "type": "Text", "props": { "content": "Activity history will appear here" } }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "Alert",
+                  "props": {
+                    "variant": "warning",
+                    "title": "Reminder",
+                    "message": "Task is due soon. Please update status."
                   }
                 }
               ]

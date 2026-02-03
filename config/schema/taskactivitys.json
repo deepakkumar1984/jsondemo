@@ -1,64 +1,77 @@
 {
   "table": "task_activities",
-  "description": "Task activity log for auditing task changes and events",
+  "description": "Audit log for task activities to track changes and events",
   "columns": [
     {
       "name": "id",
-      "type": "text",
+      "type": "uuid",
       "primaryKey": true,
       "defaultFn": "uuid",
-      "description": "Unique task activity identifier"
+      "description": "Unique activity identifier"
     },
     {
       "name": "task_id",
-      "type": "text",
+      "type": "uuid",
       "notNull": true,
       "references": {
         "table": "tasks",
-        "column": "id"
+        "column": "id",
+        "onDelete": "cascade"
       },
-      "description": "Reference to the parent task"
+      "description": "Reference to the task this activity belongs to"
     },
     {
       "name": "actor_user_id",
-      "type": "text",
+      "type": "uuid",
       "notNull": false,
       "references": {
         "table": "users",
-        "column": "id"
+        "column": "id",
+        "onDelete": "set null"
       },
-      "description": "Optional user who triggered the event (null for automated events)"
+      "description": "Reference to the user who performed the activity, optional for automated events"
     },
     {
       "name": "event_type",
       "type": "text",
       "notNull": true,
-      "description": "Event type (Created, Updated, StatusChanged, Assigned, Unassigned, Commented, DueDateChanged, PriorityChanged, Tagged)"
+      "enum": [
+        "Created",
+        "Updated",
+        "StatusChanged",
+        "Assigned",
+        "Unassigned",
+        "Commented",
+        "DueDateChanged",
+        "PriorityChanged",
+        "Tagged"
+      ],
+      "description": "Type of event that occurred"
     },
     {
       "name": "from_value",
       "type": "jsonb",
       "notNull": false,
-      "description": "Optional previous value before the change"
+      "description": "Previous value before the change, optional"
     },
     {
       "name": "to_value",
       "type": "jsonb",
       "notNull": false,
-      "description": "Optional new value after the change"
+      "description": "New value after the change, optional"
     },
     {
       "name": "metadata",
       "type": "jsonb",
       "notNull": false,
-      "description": "Optional additional event metadata"
+      "description": "Additional metadata for the activity"
     },
     {
       "name": "created_at",
-      "type": "timestamp",
+      "type": "timestamptz",
       "notNull": true,
       "default": "CURRENT_TIMESTAMP",
-      "description": "Timestamp when the activity was recorded"
+      "description": "Timestamp when the activity was created"
     }
   ],
   "indexes": [

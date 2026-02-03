@@ -1,55 +1,55 @@
 {
   "table": "task_comments",
-  "description": "Task comments allowing users to discuss and collaborate on tasks",
+  "description": "Comments on tasks, including author, body, and timestamps",
   "columns": [
     {
       "name": "id",
-      "type": "text",
+      "type": "uuid",
       "primaryKey": true,
       "defaultFn": "uuid",
-      "description": "Unique task comment identifier"
+      "description": "Unique comment identifier"
     },
     {
       "name": "task_id",
-      "type": "text",
+      "type": "uuid",
       "notNull": true,
       "references": {
         "table": "tasks",
         "column": "id",
         "onDelete": "cascade"
       },
-      "description": "Reference to the parent task"
+      "description": "Reference to the task this comment belongs to"
     },
     {
       "name": "author_user_id",
-      "type": "text",
+      "type": "uuid",
       "notNull": true,
       "references": {
         "table": "users",
         "column": "id",
-        "onDelete": "restrict"
+        "onDelete": "cascade"
       },
-      "description": "User who authored the comment"
+      "description": "Reference to the user who authored the comment"
     },
     {
       "name": "body",
       "type": "text",
       "notNull": true,
-      "description": "Comment body text (non-empty, max length validated in application)"
+      "description": "Comment body text, required and non-empty with max length validation in application"
     },
     {
       "name": "created_at",
-      "type": "timestamp",
+      "type": "timestamptz",
       "notNull": true,
       "default": "CURRENT_TIMESTAMP",
-      "description": "Timestamp when comment was created"
+      "description": "Timestamp when the comment was created"
     },
     {
       "name": "updated_at",
-      "type": "timestamp",
+      "type": "timestamptz",
       "notNull": true,
       "default": "CURRENT_TIMESTAMP",
-      "description": "Timestamp when comment was last updated"
+      "description": "Timestamp when the comment was last updated"
     }
   ],
   "indexes": [
@@ -60,9 +60,8 @@
       ]
     },
     {
-      "name": "idx_task_comments_task_created_at",
+      "name": "idx_task_comments_created_at",
       "columns": [
-        "task_id",
         "created_at"
       ]
     }

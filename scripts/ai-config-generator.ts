@@ -444,12 +444,14 @@ async function generateConfig(options: GenerateOptions): Promise<any> {
   }
 
   // Build endpoint: {gateway_url}/compat/chat/completions
-  const endpoint = `${gatewayUrl.replace(/\/$/, '')}/compat/chat/completions`;
+  const endpoint = `https://api.x.ai/v1/chat/completions`;
 
   // Headers for Cloudflare AI Gateway
+  
+
   const headers = {
     'Content-Type': 'application/json',
-    'cf-aig-authorization': `Bearer ${apiKey}`,
+    'Authorization': `Bearer ${process.env.XAI_API_KEY || ''}`,
   };
 
   // Load format schema (not needed for API type - generating TypeScript code)
@@ -482,7 +484,7 @@ async function generateConfig(options: GenerateOptions): Promise<any> {
 
     // Prepare request with structured output when format schema is available
     const request: any = {
-      model: model,
+      model: "grok-code-fast-1",
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: currentUserPrompt }

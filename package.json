@@ -49,6 +49,7 @@
     "@types/node": "^25.2.0",
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
+    "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "^10.4.24",
     "postcss": "^8.5.6",
@@ -56,6 +57,7 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
-    "wrangler": "^4.61.1"
+    "wrangler": "^4.61.1",
+    "ws": "^8.19.0"
   }
 }

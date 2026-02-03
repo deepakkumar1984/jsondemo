@@ -4,7 +4,6 @@ import { createDataClient } from '../../src/db/data-client';
 
 export const projectsRouter = new Hono<{ Bindings: Env }>();
 
-// GET / - List projects with filters and sorting
 projectsRouter.get('/', async (c) => {
   const client = createDataClient(c.env);
   const query = c.req.query();
@@ -17,28 +16,22 @@ projectsRouter.get('/', async (c) => {
     filter.owner_user_id = { _eq: query.ownerUserId };
   }
   if (query.searchByName) {
-    filter.name = { _like: `%${query.searchByName}%` };
+    filter.name = { _eq: query.searchByName }; // Assuming exact match; adjust if partial search is needed
   }
 
-  const params = {
-    filter,
-    sort: ['-updated_at', 'name'],
-    limit: query.limit ? parseInt(query.limit) : undefined,
-    offset: query.offset ? parseInt(query.offset) : undefined,
-  };
+  const sort = query.sort === 'updatedAt desc' ? ['-updated_at'] : query.sort === 'name asc' ? ['name'] : ['-updated_at'];
 
   try {
-    const projects = await client.getItems('projects', params);
+    const projects = await client.getItems('projects', { filter, sort });
     return c.json({ success: true, data: projects.data });
   } catch (error: any) {
     return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
   }
 });
 
-// GET /:id - Get project by ID
 projectsRouter.get('/:id', async (c) => {
-  const client = createDataClient(c.env);
   const id = c.req.param('id');
+  const client = createDataClient(c.env);
 
   try {
     const project = await client.getItem('projects', id);
@@ -51,32 +44,25 @@ projectsRouter.get('/:id', async (c) => {
   }
 });
 
-// POST / - Create a new project
 projectsRouter.post('/', async (c) => {
   const body = await c.req.json();
   const client = createDataClient(c.env);
 
-  // Validation
-  if (!body.name || typeof body.name !== 'string' || body.name.trim().length === 0) {
-    return c.json({ success: false, error: { message: 'Name is required and must be a non-empty string', status: 400 } }, 400);
-  }
-  if (!body.ownerUserId || typeof body.ownerUserId !== 'string') {
-    return c.json({ success: false, error: { message: 'Owner user ID is required', status: 400 } }, 400);
-  }
-  if (body.description && typeof body.description !== 'string') {
-    return c.json({ success: false, error: { message: 'Description must be a string', status: 400 } }, 400);
-  }
-  if (body.status && !['Active', 'Archived'].includes(body.status)) {
-    return c.json({ success: false, error: { message: 'Status must be Active or Archived', status: 400 } }, 400);
+  if (!body.name || !body.ownerUserId) {
+    return c.json({
+      success: false,
+      error: { message: 'Missing required fields: name and ownerUserId', status: 400 }
+    }, 400);
   }
 
-  // Check uniqueness within owner (assuming owner as workspace scope)
+  // Check for duplicate name
   try {
-    const existing = await client.getItems('projects', {
-      filter: { name: { _eq: body.name.trim() }, owner_user_id: { _eq: body.ownerUserId } }
-    });
+    const existing = await client.getItems('projects', { filter: { name: { _eq: body.name } } });
     if (existing.data && existing.data.length > 0) {
-      return c.json({ success: false, error: { message: 'Project name must be unique within the workspace', status: 400 } }, 400);
+      return c.json({
+        success: false,
+        error: { message: 'Project name must be unique', status: 400 }
+      }, 400);
     }
   } catch (error: any) {
     return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
@@ -85,9 +71,9 @@ projectsRouter.post('/', async (c) => {
   try {
     const project = await client.createItem('projects', {
       id: crypto.randomUUID(),
-      name: body.name.trim(),
+      name: body.name,
       description: body.description || null,
-      status: body.status || 'Active',
+      status: 'Active',
       owner_user_id: body.ownerUserId,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -106,24 +92,16 @@ projectsRouter.post('/', async (c) => {
   }
 });
 
-// PUT /:id - Update a project
 projectsRouter.put('/:id', async (c) => {
+  const id = c.req.param('id');
   const body = await c.req.json();
   const client = createDataClient(c.env);
-  const id = c.req.param('id');
 
-  // Validation
-  if (body.name && (typeof body.name !== 'string' || body.name.trim().length === 0)) {
-    return c.json({ success: false, error: { message: 'Name must be a non-empty string', status: 400 } }, 400);
-  }
-  if (body.ownerUserId && typeof body.ownerUserId !== 'string') {
-    return c.json({ success: false, error: { message: 'Owner user ID must be a string', status: 400 } }, 400);
-  }
-  if (body.description && typeof body.description !== 'string') {
-    return c.json({ success: false, error: { message: 'Description must be a string', status: 400 } }, 400);
-  }
-  if (body.status && !['Active', 'Archived'].includes(body.status)) {
-    return c.json({ success: false, error: { message: 'Status must be Active or Archived', status: 400 } }, 400);
+  if (!body.name && !body.description && !body.ownerUserId) {
+    return c.json({
+      success: false,
+      error: { message: 'At least one field to update is required', status: 400 }
+    }, 400);
   }
 
   // Check if project exists
@@ -132,30 +110,33 @@ projectsRouter.put('/:id', async (c) => {
     if (!existingProject.data) {
       return c.json({ success: false, error: { message: 'Project not found', status: 404 } }, 404);
     }
-
-    // Check uniqueness if name is being updated
-    if (body.name) {
-      const ownerId = body.ownerUserId || existingProject.data.owner_user_id;
-      const existing = await client.getItems('projects', {
-        filter: { name: { _eq: body.name.trim() }, owner_user_id: { _eq: ownerId }, id: { _ne: id } }
-      });
-      if (existing.data && existing.data.length > 0) {
-        return c.json({ success: false, error: { message: 'Project name must be unique within the workspace', status: 400 } }, 400);
-      }
-    }
   } catch (error: any) {
     return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
   }
 
+  // Check for duplicate name if updating name
+  if (body.name) {
+    try {
+      const existing = await client.getItems('projects', { filter: { name: { _eq: body.name } } });
+      if (existing.data && existing.data.length > 0 && existing.data[0].id !== id) {
+        return c.json({
+          success: false,
+          error: { message: 'Project name must be unique', status: 400 }
+        }, 400);
+      }
+    } catch (error: any) {
+      return c.json({ success: false, error: { message: error.message, status: 500 } }, 500);
+    }
+  }
+
+  const updateData: any = {};
+  if (body.name) updateData.name = body.name;
+  if (body.description !== undefined) updateData.description = body.description;
+  if (body.ownerUserId) updateData.owner_user_id = body.ownerUserId;
+  updateData.updated_at = new Date().toISOString();
+
   try {
-    const updateData: any = { updated_at: new Date().toISOString() };
-    if (body.name) updateData.name = body.name.trim();
-    if (body.description !== undefined) updateData.description = body.description;
-    if (body.status) updateData.status = body.status;
-    if (body.ownerUserId) updateData.owner_user_id = body.ownerUserId;
-
     const project = await client.updateItem('projects', id, updateData);
-
     return c.json({
       success: true,
       data: project.data,
@@ -169,10 +150,9 @@ projectsRouter.put('/:id', async (c) => {
   }
 });
 
-// PUT /:id/archive - Archive a project
 projectsRouter.put('/:id/archive', async (c) => {
-  const client = createDataClient(c.env);
   const id = c.req.param('id');
+  const client = createDataClient(c.env);
 
   // Check if project exists
   try {
@@ -189,7 +169,6 @@ projectsRouter.put('/:id/archive', async (c) => {
       status: 'Archived',
       updated_at: new Date().toISOString()
     });
-
     return c.json({
       success: true,
       data: project.data,
