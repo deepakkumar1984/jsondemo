@@ -1,44 +1,35 @@
 {
   "table": "vendors",
-  "description": "Defines vendor information including name, website, and notes",
+  "description": "Table for storing vendor information including name, website, notes, and timestamps.",
   "columns": [
     {
       "name": "id",
       "type": "uuid",
       "primaryKey": true,
-      "notNull": true,
-      "defaultFn": "uuid",
-      "description": "Unique identifier for the vendor"
+      "defaultFn": "uuid"
     },
     {
       "name": "name",
       "type": "text",
-      "notNull": true,
-      "description": "Name of the vendor"
+      "notNull": true
     },
     {
       "name": "website",
       "type": "text",
-      "notNull": false,
-      "description": "Website URL of the vendor"
+      "notNull": false
     },
     {
       "name": "notes",
       "type": "text",
-      "notNull": false,
-      "description": "Additional notes about the vendor"
+      "notNull": false
     },
     {
       "name": "created_at",
-      "type": "timestamptz",
-      "notNull": true,
-      "description": "Timestamp when the vendor was created"
+      "type": "timestamptz"
     },
     {
       "name": "updated_at",
-      "type": "timestamptz",
-      "notNull": true,
-      "description": "Timestamp when the vendor was last updated"
+      "type": "timestamptz"
     }
   ],
   "indexes": [

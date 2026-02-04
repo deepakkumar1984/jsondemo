@@ -1,0 +1,216 @@
+{
+  "apps": [
+    {
+      "id": "expense-management",
+      "name": "Expense Management",
+      "subtitle": "Manage your expenses efficiently",
+      "shortName": "Expenses",
+      "description": "A comprehensive UI for managing expenses, categories, vendors, and payment accounts.",
+      "prefix": "/",
+      "demoCredentials": {
+        "email": "demo@example.com",
+        "password": "demo123"
+      },
+      "branding": {
+        "logo": "expense-logo",
+        "logoUrl": null,
+        "faviconUrl": null,
+        "companyName": "Expense Corp",
+        "tagline": "Track and manage expenses",
+        "showPoweredBy": false
+      },
+      "layout": {
+        "type": "sidebar",
+        "sidebarPosition": "left",
+        "sidebarWidth": "250px",
+        "sidebarCollapsible": true,
+        "sidebarDefaultCollapsed": false,
+        "headerPosition": "top",
+        "headerHeight": "60px",
+        "showHeader": true,
+        "showFooter": true,
+        "footerText": "© 2023 Expense Management",
+        "contentMaxWidth": null,
+        "contentPadding": "16px",
+        "showBreadcrumbs": true
+      },
+      "theme": {
+        "mode": "light",
+        "allowModeToggle": true,
+        "colors": {
+          "light": {
+            "primary": "#007bff",
+            "secondary": "#6c757d"
+          },
+          "dark": {
+            "primary": "#007bff",
+            "secondary": "#6c757d"
+          }
+        },
+        "fonts": {
+          "heading": "Inter",
+          "body": "Inter",
+          "mono": "Fira Code"
+        },
+        "fontSizes": {
+          "xs": "0.75rem",
+          "sm": "0.875rem",
+          "md": "1rem",
+          "lg": "1.125rem",
+          "xl": "1.25rem"
+        },
+        "spacing": {
+          "scale": 1.2
+        },
+        "radius": {
+          "sm": "4px",
+          "md": "6px",
+          "lg": "8px"
+        },
+        "shadows": {
+          "sm": "0 1px 2px rgba(0,0,0,0.1)",
+          "md": "0 4px 6px rgba(0,0,0,0.1)"
+        }
+      },
+      "icons": {
+        "library": "lucide",
+        "size": "16px",
+        "strokeWidth": 2
+      },
+      "navigation": {
+        "categories": [
+          {
+            "id": "expenses",
+            "title": "Expenses",
+            "icon": "dollar-sign",
+            "iconLibrary": "lucide",
+            "order": 1,
+            "items": [
+              {
+                "title": "All Expenses",
+                "path": "/",
+                "page": "expenses/list"
+              },
+              {
+                "title": "New Expense",
+                "path": "/",
+                "page": "expenses/create"
+              },
+              {
+                "title": "Expense Categories",
+                "path": "/",
+                "page": "expense-categories/list"
+              },
+              {
+                "title": "Vendors",
+                "path": "/",
+                "page": "vendors/list"
+              },
+              {
+                "title": "Payment Accounts",
+                "path": "/",
+                "page": "payment-accounts/list"
+              },
+              {
+                "title": "Analytics",
+                "path": "/expenses/analytics",
+                "page": "expenses/analytics"
+              },
+              {
+                "title": "Budgets",
+                "path": "/budgets",
+                "page": "budgets/list"
+              }
+            ]
+          }
+        ]
+      },
+      "routes": [
+        {
+          "path": "/",
+          "page": "expenses/list"
+        },
+        {
+          "path": "/",
+          "page": "expenses/create"
+        },
+        {
+          "path": "/",
+          "page": "expenses/detail"
+        },
+        {
+          "path": "/",
+          "page": "expenses/edit"
+        },
+        {
+          "path": "/",
+          "page": "expense-categories/list"
+        },
+        {
+          "path": "/",
+          "page": "vendors/list"
+        },
+        {
+          "path": "/",
+          "page": "payment-accounts/list"
+        },
+        {
+          "path": "/expenses/analytics",
+          "page": "expenses/analytics"
+        },
+        {
+          "path": "/budgets",
+          "page": "budgets/list"
+        },
+        {
+          "path": "/budgets/new",
+          "page": "budgets/create"
+        },
+        {
+          "path": "/budgets/:id/edit",
+          "page": "budgets/edit"
+        },
+        {
+          "path": "/expenses/import",
+          "page": "expenses/import"
+        }
+      ],
+      "defaults": {
+        "table": {
+          "pageSize": 10,
+          "pageSizes": [
+            10,
+            25,
+            50
+          ],
+          "showPagination": true,
+          "showSearch": true,
+          "emptyMessage": "No data available"
+        },
+        "form": {
+          "requiredIndicator": "*",
+          "validationMode": "onBlur",
+          "showCancelButton": true,
+          "cancelButtonText": "Cancel",
+          "submitButtonText": "Submit"
+        },
+        "notifications": {
+          "position": "top-right",
+          "duration": 5000,
+          "showCloseButton": true
+        },
+        "dateFormat": "YYYY-MM-DD",
+        "timeFormat": "HH:mm:ss",
+        "currency": {
+          "code": "USD",
+          "symbol": "$",
+          "position": "before"
+        },
+        "language": "en-US"
+      },
+      "schemaSource": "",
+      "apiConfigPath": "",
+      "pagesConfigPath": ""
+    }
+  ]
+}

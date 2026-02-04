@@ -17,6 +17,14 @@ interface RouteFile {
   routerName: string;
 }
 
+/**
+ * Convert kebab-case or snake_case to camelCase
+ * Examples: expense-analytics -> expenseAnalytics, payment_accounts -> paymentAccounts
+ */
+function toCamelCase(str: string): string {
+  return str.replace(/[-_]([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
 function findRouteFiles(): RouteFile[] {
   const routes: RouteFile[] = [];
   const fullPath = path.resolve(process.cwd(), CONFIG_DIR);
@@ -42,11 +50,14 @@ function findRouteFiles(): RouteFile[] {
       routePath
     ).replace(/\\/g, '/');
 
+    // Convert baseName to camelCase for valid JavaScript variable name
+    const camelBaseName = toCamelCase(baseName);
+
     routes.push({
       path: routePath,
       importPath: relativePath,
       basePath: `/${baseName}`,
-      routerName: `${baseName}Router`
+      routerName: `${camelBaseName}Router`
     });
   }
 

@@ -12,7 +12,7 @@
 
 import { tool } from 'ai';
 import { z } from 'zod';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, access } from 'fs/promises';
 import { dirname, join } from 'path';
 import { buildContext } from '../../../democonfig/scripts/dsl-converters.js';
 import { generateConfig, generateStructuredConfig } from '../generators/ai-client.js';
@@ -20,6 +20,7 @@ import { buildSystemPrompt, buildUserPrompt } from '../generators/prompts.js';
 import { validateConfig, parseConfigResponse } from '../generators/validator.js';
 import { resolveSandboxPath, getDisplayPath } from '../utils/sandbox.js';
 import * as logger from '../utils/logger.js';
+import { constants } from 'fs';
 
 /**
  * Extract resource name from feature description

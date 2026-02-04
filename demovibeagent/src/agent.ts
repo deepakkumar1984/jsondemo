@@ -11,6 +11,14 @@ import { buildAgentSystemPrompt } from './config/prompts.js';
 import { allTools } from './tools/index.js';
 import * as logger from './utils/logger.js';
 
+/**
+ * Check if error is a non-fatal XAI reasoning error that should be ignored
+ */
+function isIgnorableReasoningError(errorMsg: string): boolean {
+  const msg = errorMsg.toLowerCase();
+  return msg.includes('reasoning part') && msg.includes('not found');
+}
+
 export interface StreamChunk {
   type: 'text' | 'tool-call' | 'tool-result' | 'error';
   content?: string;
@@ -44,7 +52,9 @@ export class VibeAgent {
         model: model.modelId
       });
 
-      // Stream with tools
+      // Stream with tools (AI SDK automatically handles tool calling loop)
+      // CRITICAL: The loop stops when model generates "finish reasoning" instead of tool calls
+      // We FORCE tool calling at every step using toolChoice: 'required'
       const result = streamText({
         model,
         messages: [
@@ -52,7 +62,17 @@ export class VibeAgent {
           ...this.conversationHistory
         ],
         tools: allTools,
-        maxSteps: 10, // Allow multi-step tool calling
+        toolChoice: 'required', // FORCE model to call tools (prevents premature finish)
+        stopWhen: ({ steps }) => {
+          // Stop when complete_task is called or after 10 steps
+          if (steps.length >= 10) return true;
+
+          const lastStep = steps[steps.length - 1];
+          if (lastStep?.toolCalls) {
+            return lastStep.toolCalls.some((tc: any) => tc.toolName === 'complete_task');
+          }
+          return false;
+        },
         temperature: 0.1,
         onError: ({ error }: { error: unknown }) => {
           const errorMessage = error instanceof Error ? error.message : String(error);
@@ -92,49 +112,89 @@ export class VibeAgent {
             // Tool execution completed
             logger.debug('Tool result', {
               toolName: chunk.toolName,
-              result: chunk.result
+              result: (chunk as any).result
             });
 
             yield {
               type: 'tool-result',
               toolName: chunk.toolName,
-              toolResult: chunk.result
+              toolResult: (chunk as any).result
             };
             break;
 
           case 'error':
             // Error occurred
-            logger.error('Stream chunk error', { error: chunk.error });
+            const errorMsg = String(chunk.error);
+
+            // Ignore non-fatal XAI reasoning errors
+            if (isIgnorableReasoningError(errorMsg)) {
+              logger.warn('Ignoring non-fatal XAI reasoning error', { error: errorMsg });
+              break;
+            }
+
+            logger.error('Stream chunk error', { error: errorMsg });
 
             yield {
               type: 'error',
-              error: String(chunk.error)
+              error: errorMsg
             };
             break;
         }
       }
 
-      // Add assistant response to history
-      if (fullAssistantText) {
-        this.conversationHistory.push({
-          role: 'assistant',
-          content: fullAssistantText
-        });
+      // Save assistant response to history (text only)
+      // Note: AI SDK handles multi-step tool calling automatically within a single streamText call
+      // Tool calls and results don't need to be manually preserved - they're managed by the SDK
+      let toolCalls: any[] = [];
+      let toolResults: any[] = [];
+
+      try {
+        toolCalls = await result.toolCalls;
+        toolResults = await result.toolResults;
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+
+        // Ignore non-fatal XAI reasoning errors when fetching results
+        if (isIgnorableReasoningError(errorMsg)) {
+          logger.warn('Ignoring reasoning error when fetching tool results', { error: errorMsg });
+        } else {
+          // Re-throw if it's not an ignorable error
+          throw error;
+        }
       }
 
-      // Also save tool calls/results to history if needed
-      const toolCalls = await result.toolCalls;
-      const toolResults = await result.toolResults;
+      // Just save text response for conversation continuity across tasks
+      if (fullAssistantText || toolCalls.length > 0) {
+        let summaryText = fullAssistantText;
 
-      if (toolCalls.length > 0) {
-        logger.debug('Stream completed', {
-          toolCallsCount: toolCalls.length,
-          toolResultsCount: toolResults.length
+        // If there were tool calls but no text, summarize what happened
+        if (toolCalls.length > 0 && !fullAssistantText) {
+          const toolNames = toolCalls.map((tc: any) => tc.toolName).join(', ');
+          summaryText = `[Used tools: ${toolNames}]`;
+        }
+
+        this.conversationHistory.push({
+          role: 'assistant',
+          content: summaryText
         });
+
+        if (toolCalls.length > 0) {
+          logger.debug('Tool interactions completed', {
+            toolCallsCount: toolCalls.length,
+            toolResultsCount: toolResults.length
+          });
+        }
       }
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+
+      // Ignore non-fatal XAI reasoning errors
+      if (isIgnorableReasoningError(errorMessage)) {
+        logger.warn('Ignoring reasoning error in main catch', { error: errorMessage });
+        return; // Exit gracefully without yielding error
+      }
+
       logger.error('Agent chat error', { error: errorMessage });
 
       yield {

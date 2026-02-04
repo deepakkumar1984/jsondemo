@@ -1,6 +1,6 @@
 {
   "table": "expenses",
-  "description": "Schema for expense records",
+  "description": "Table for storing expense records including details like amount, category, vendor, and status.",
   "columns": [
     {
       "name": "id",
@@ -8,32 +8,30 @@
       "primaryKey": true,
       "notNull": true,
       "defaultFn": "uuid",
-      "description": "Unique identifier for the expense"
+      "description": "Unique identifier for the expense record."
     },
     {
       "name": "expense_date",
       "type": "date",
       "notNull": true,
-      "description": "Date of the expense"
+      "description": "Date when the expense occurred."
     },
     {
       "name": "amount",
       "type": "decimal",
       "notNull": true,
-      "description": "Amount of the expense"
+      "description": "Monetary amount of the expense."
     },
     {
       "name": "currency",
       "type": "text",
-      "notNull": false,
       "default": "USD",
-      "description": "Currency of the expense"
+      "description": "Currency code for the expense amount."
     },
     {
       "name": "description",
       "type": "text",
-      "notNull": false,
-      "description": "Description of the expense"
+      "description": "Optional description of the expense."
     },
     {
       "name": "category_id",
@@ -43,52 +41,47 @@
         "table": "expense_categories",
         "column": "id"
       },
-      "description": "Foreign key to expense_categories table"
+      "description": "Foreign key to the expense category."
     },
     {
       "name": "vendor_id",
       "type": "uuid",
-      "notNull": false,
       "references": {
         "table": "vendors",
         "column": "id"
       },
-      "description": "Foreign key to vendors table"
+      "description": "Optional foreign key to the vendor."
     },
     {
       "name": "payment_account_id",
       "type": "uuid",
-      "notNull": false,
       "references": {
         "table": "payment_accounts",
         "column": "id"
       },
-      "description": "Foreign key to payment_accounts table"
+      "description": "Optional foreign key to the payment account."
     },
     {
       "name": "reimbursable",
       "type": "boolean",
-      "notNull": false,
       "default": false,
-      "description": "Whether the expense is reimbursable"
+      "description": "Indicates if the expense is reimbursable."
     },
     {
       "name": "status",
       "type": "text",
-      "notNull": false,
       "default": "posted",
       "enum": [
         "draft",
         "posted",
         "reimbursed"
       ],
-      "description": "Status of the expense"
+      "description": "Status of the expense."
     },
     {
       "name": "receipt_url",
       "type": "text",
-      "notNull": false,
-      "description": "URL to the receipt"
+      "description": "Optional URL to the receipt image or document."
     },
     {
       "name": "created_by",
@@ -98,19 +91,19 @@
         "table": "users",
         "column": "id"
       },
-      "description": "Foreign key to users table for creator"
+      "description": "Foreign key to the user who created the expense."
     },
     {
       "name": "created_at",
       "type": "timestamptz",
       "notNull": true,
-      "description": "Timestamp when the expense was created"
+      "description": "Timestamp when the expense was created."
     },
     {
       "name": "updated_at",
       "type": "timestamptz",
       "notNull": true,
-      "description": "Timestamp when the expense was last updated"
+      "description": "Timestamp when the expense was last updated."
     }
   ],
   "indexes": [

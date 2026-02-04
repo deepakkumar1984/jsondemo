@@ -202,6 +202,6 @@ export const editFileTool = tool({
 // Export all file operation tools
 export const fileTools = {
   read_file: readFileTool,
-  //write_file: writeFileTool,
+  write_file: writeFileTool,
   edit_file: editFileTool,
 };

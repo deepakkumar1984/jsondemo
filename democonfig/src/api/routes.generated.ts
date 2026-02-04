@@ -4,18 +4,20 @@
  * Run: npm run build:routes-index
  */
 
-import { analyticsRouter } from '../../config/api/analytics.routes';
-import { commentsRouter } from '../../config/api/comments.routes';
-import { cyclesRouter } from '../../config/api/cycles.routes';
-import { projectsRouter } from '../../config/api/projects.routes';
-import { tasksRouter } from '../../config/api/tasks.routes';
+import { budgetsRouter } from '../../config/api/budgets.routes';
+import { expenseAnalyticsRouter } from '../../config/api/expense-analytics.routes';
+import { expenseCategoriesRouter } from '../../config/api/expense-categories.routes';
+import { expensesRouter } from '../../config/api/expenses.routes';
+import { paymentAccountsRouter } from '../../config/api/payment-accounts.routes';
+import { vendorsRouter } from '../../config/api/vendors.routes';
 
 export const apiRoutes = [
-  { path: '/analytics', router: analyticsRouter },
-  { path: '/comments', router: commentsRouter },
-  { path: '/cycles', router: cyclesRouter },
-  { path: '/projects', router: projectsRouter },
-  { path: '/tasks', router: tasksRouter }
+  { path: '/budgets', router: budgetsRouter },
+  { path: '/expense-analytics', router: expenseAnalyticsRouter },
+  { path: '/expense-categories', router: expenseCategoriesRouter },
+  { path: '/expenses', router: expensesRouter },
+  { path: '/payment-accounts', router: paymentAccountsRouter },
+  { path: '/vendors', router: vendorsRouter }
 ];
 
 export type ApiRoutesType = typeof apiRoutes;

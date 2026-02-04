@@ -21,34 +21,31 @@
       "name": "type",
       "type": "text",
       "notNull": true,
-      "description": "Type of the payment account (e.g., 'cash', 'credit_card', 'bank', 'other')"
+      "description": "Type of the payment account (e.g., cash, credit_card, bank, other)"
     },
     {
       "name": "last4",
       "type": "text",
-      "notNull": false,
-      "description": "Last four digits of the payment account (optional)"
+      "description": "Last four digits of the account (optional)"
     },
     {
       "name": "is_active",
       "type": "boolean",
       "notNull": true,
       "default": true,
-      "description": "Indicates if the payment account is active"
+      "description": "Whether the payment account is active"
     },
     {
       "name": "created_at",
       "type": "timestamptz",
       "notNull": true,
-      "default": "now()",
-      "description": "Timestamp when the payment account was created"
+      "description": "Timestamp when the record was created"
     },
     {
       "name": "updated_at",
       "type": "timestamptz",
       "notNull": true,
-      "default": "now()",
-      "description": "Timestamp when the payment account was last updated"
+      "description": "Timestamp when the record was last updated"
     }
   ],
   "indexes": [
