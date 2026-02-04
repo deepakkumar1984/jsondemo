@@ -24,7 +24,7 @@ import * as logger from '../utils/logger.js';
  */
 export const readFileTool = tool({
   description: 'Read file contents from the config directory. Path must be relative to config directory.',
-  parameters: z.object({
+  inputSchema: z.object({
     path: z.string().describe('Path relative to config directory (e.g., "schemas/user.json")'),
   }),
   execute: async ({ path }) => {
@@ -70,7 +70,7 @@ export const readFileTool = tool({
  */
 export const writeFileTool = tool({
   description: 'Create or overwrite a file in the config directory. Creates parent directories if needed. Path must be relative to config directory.',
-  parameters: z.object({
+  inputSchema: z.object({
     path: z.string().describe('Path relative to config directory (e.g., "schemas/user.json")'),
     content: z.string().describe('Content to write to the file'),
   }),
@@ -122,7 +122,7 @@ export const writeFileTool = tool({
  */
 export const editFileTool = tool({
   description: 'Search and replace text in a file within the config directory. Returns error if search text not found. Path must be relative to config directory.',
-  parameters: z.object({
+  inputSchema: z.object({
     path: z.string().describe('Path relative to config directory (e.g., "schemas/user.json")'),
     old_string: z.string().describe('Exact text to search for (must exist in file)'),
     new_string: z.string().describe('Text to replace it with'),
@@ -202,6 +202,6 @@ export const editFileTool = tool({
 // Export all file operation tools
 export const fileTools = {
   read_file: readFileTool,
-  write_file: writeFileTool,
+  //write_file: writeFileTool,
   edit_file: editFileTool,
 };

@@ -1,0 +1,79 @@
+{
+  "table": "expense_categories",
+  "description": "Expense categories for organizing and classifying expenses",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "notNull": true,
+      "defaultFn": "uuid",
+      "description": "Unique identifier for the expense category"
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "notNull": true,
+      "description": "Name of the expense category"
+    },
+    {
+      "name": "color",
+      "type": "text",
+      "description": "Color code for visual representation of the category"
+    },
+    {
+      "name": "icon",
+      "type": "text",
+      "description": "Icon identifier for the category"
+    },
+    {
+      "name": "is_active",
+      "type": "boolean",
+      "notNull": true,
+      "default": true,
+      "description": "Whether the category is currently active"
+    },
+    {
+      "name": "sort_order",
+      "type": "integer",
+      "notNull": true,
+      "default": 0,
+      "description": "Order in which categories should be displayed"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "notNull": true,
+      "default": "now()",
+      "description": "Timestamp when the category was created"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "notNull": true,
+      "default": "now()",
+      "description": "Timestamp when the category was last updated"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_expense_categories_name",
+      "columns": [
+        "name"
+      ],
+      "unique": true
+    },
+    {
+      "name": "idx_expense_categories_is_active",
+      "columns": [
+        "is_active"
+      ]
+    },
+    {
+      "name": "idx_expense_categories_sort_order",
+      "columns": [
+        "sort_order"
+      ]
+    }
+  ]
+}

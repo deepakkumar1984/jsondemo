@@ -34,13 +34,13 @@
               "completedAt": null
             }
           ],
-          "status": "pending",
-          "completedAt": null
+          "status": "completed",
+          "completedAt": "2026-02-04T00:55:11.234Z"
         }
       ],
       "dependencies": [],
-      "status": "pending",
-      "completedAt": null
+      "status": "completed",
+      "completedAt": "2026-02-04T00:55:11.234Z"
     },
     {
       "title": "Expense data model + core CRUD APIs",
@@ -67,8 +67,8 @@
               "completedAt": null
             }
           ],
-          "status": "pending",
-          "completedAt": null
+          "status": "completed",
+          "completedAt": "2026-02-04T01:02:22.351Z"
         },
         {
           "title": "Define Vendor schema",
@@ -88,8 +88,8 @@
               "completedAt": null
             }
           ],
-          "status": "pending",
-          "completedAt": null
+          "status": "completed",
+          "completedAt": "2026-02-04T01:03:07.537Z"
         },
         {
           "title": "Define PaymentAccount schema",
@@ -100,8 +100,8 @@
           "order": 2,
           "estimatedHours": 2,
           "subtasks": [],
-          "status": "pending",
-          "completedAt": null
+          "status": "completed",
+          "completedAt": "2026-02-04T01:03:20.355Z"
         },
         {
           "title": "Define Expense schema",
@@ -121,8 +121,8 @@
               "completedAt": null
             }
           ],
-          "status": "pending",
-          "completedAt": null
+          "status": "completed",
+          "completedAt": "2026-02-04T01:03:37.371Z"
         },
         {
           "title": "Implement ExpenseCategory/Vendor/PaymentAccount CRUD APIs",
@@ -142,7 +142,7 @@
               "completedAt": null
             }
           ],
-          "status": "pending",
+          "status": "in_progress",
           "completedAt": null
         },
         {
@@ -543,11 +543,11 @@
   },
   "tracking": {
     "startedAt": "2026-02-04T00:00:18.942Z",
-    "lastUpdatedAt": "2026-02-04T00:00:18.943Z",
-    "overallStatus": "in_progress",
-    "completedFeatures": 0,
+    "lastUpdatedAt": "2026-02-04T01:03:37.371Z",
+    "overallStatus": "pending",
+    "completedFeatures": 1,
     "totalFeatures": 6,
-    "completedTasks": 0,
+    "completedTasks": 5,
     "totalTasks": 24
   }
 }

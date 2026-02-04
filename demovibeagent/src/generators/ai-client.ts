@@ -5,10 +5,10 @@
  * Supports streaming and structured output generation.
  */
 
-import { streamText, streamObject } from 'ai';
+import { streamText, Output } from 'ai';
 import { xai } from '@ai-sdk/xai';
+import { anthropic } from '@ai-sdk/anthropic';
 // Easy to add other providers:
-// import { anthropic } from '@ai-sdk/anthropic';
 // import { openai } from '@ai-sdk/openai';
 import * as logger from '../utils/logger.js';
 import { appConfigSchema, databaseConfigSchema } from '../config/zod-formats.js';
@@ -38,8 +38,9 @@ function getConfigModel() {
   switch (provider) {
     case 'xai':
       return xai(modelName);
+    case 'anthropic':
+      return anthropic(modelName);
     // Easy to add:
-    // case 'anthropic': return anthropic(modelName);
     // case 'openai': return openai(modelName);
     default:
       throw new Error(`Unknown AI provider: ${provider}`);
@@ -56,8 +57,9 @@ export function getAgentModel() {
   switch (provider) {
     case 'xai':
       return xai(modelName);
+    case 'anthropic':
+      return anthropic(modelName);
     // Easy to add:
-    // case 'anthropic': return anthropic(modelName);
     // case 'openai': return openai(modelName);
     default:
       throw new Error(`Unknown AI provider: ${provider}`);
@@ -65,7 +67,7 @@ export function getAgentModel() {
 }
 
 /**
- * Generate structured config using streamObject for schema/app types
+ * Generate structured config using streamText with Output.object() for XAI compatibility
  *
  * This uses Zod schemas for type-safe structured output with automatic validation
  */
@@ -81,40 +83,45 @@ export async function generateStructuredConfig(options: GenerateStructuredOption
   const startTime = Date.now();
 
   try {
-    // Use streamObject for structured generation
-    // Handle each type separately for proper type inference
-    const result = options.type === 'schema'
-      ? streamObject({
-          model,
-          system: options.systemPrompt,
-          prompt: options.userPrompt,
-          schema: databaseConfigSchema,
-          temperature: options.temperature ?? 0.1,
-        })
-      : streamObject({
-          model,
-          system: options.systemPrompt,
-          prompt: options.userPrompt,
-          schema: appConfigSchema,
-          temperature: options.temperature ?? 0.1,
-        });
+    // Use streamText with Output.object() for structured generation
+    const zodSchema = options.type === 'schema' ? databaseConfigSchema : appConfigSchema;
 
-    // Wait for the complete object
-    const finalObject = await result.object;
+    const { partialOutputStream } = streamText({
+      model,
+      messages: [
+        { role: 'system', content: options.systemPrompt },
+        { role: 'user', content: options.userPrompt }
+      ],
+      output: Output.object({
+        schema: zodSchema,
+      }),
+      temperature: options.temperature ?? 0.1,
+    });
 
-    // Get usage info
-    const usage = await result.usage;
+    // Iterate through the stream to get the final object
+    let finalObject: any = null;
+    for await (const partialObject of partialOutputStream) {
+      finalObject = partialObject;
+    }
+
+    if (!finalObject) {
+      throw new Error('No object generated from stream');
+    }
+
+    logger.debug('Received structured output', {
+      type: options.type,
+      hasSchema: !!finalObject?.schema
+    });
+
     const duration = Date.now() - startTime;
 
-    logger.logAPICall(
-      'AI SDK streamObject',
-      model.modelId,
-      usage?.promptTokens || 0,
-      usage?.completionTokens || 0,
-      duration
-    );
+    logger.info('Structured generation completed', {
+      type: options.type,
+      duration: `${duration}ms`
+    });
 
-    return finalObject;
+    // Unwrap the schema from the wrapper object
+    return finalObject.schema || finalObject;
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

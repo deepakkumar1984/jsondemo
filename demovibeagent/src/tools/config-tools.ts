@@ -163,8 +163,8 @@ function getPreview(config: any, type: string): string {
  * - NO SILENT FAILURES
  */
 export const generateConfigTool = tool({
-  description: 'Generate schema/api/page/app configuration using AI. Auto-generates configs based on feature description with validation and retry logic.',
-  parameters: z.object({
+  description: 'REQUIRED: Create a new schema/api/page/app config file using AI generation. This tool actually creates the file - you MUST call this, not just describe what the file should contain.',
+  inputSchema: z.object({
     type: z.enum(['schema', 'api', 'page', 'app'])
       .describe('Type of config to generate: schema (database), api (TypeScript routes), page (React components), app (navigation/routing)'),
     feature: z.string()

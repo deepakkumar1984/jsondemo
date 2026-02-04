@@ -8,9 +8,13 @@
 
 import 'dotenv/config';
 import { readFile, writeFile } from 'fs/promises';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { VibeAgent } from './agent.js';
 import * as logger from './utils/logger.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const REQUEST_FILE = resolve(__dirname, '../../democonfig/config/request.json');
 
@@ -120,7 +124,12 @@ class RequestProcessor {
       for (const task of feature.tasks) {
         if (task.status === 'completed') continue;
 
-        // Check for pending subtasks
+        // If task itself is pending (not started), do it first before subtasks
+        if (task.status === 'pending') {
+          return { feature, task };
+        }
+
+        // Task is in_progress, check for pending subtasks
         if (task.subtasks && task.subtasks.length > 0) {
           const pendingSubtask = task.subtasks.find(st => st.status === 'pending');
           if (pendingSubtask) {
@@ -128,7 +137,7 @@ class RequestProcessor {
           }
         }
 
-        // If no subtasks or all subtasks done, return the task
+        // All subtasks done, return task to complete it
         return { feature, task };
       }
     }
@@ -154,27 +163,36 @@ class RequestProcessor {
       prompt += `This is a research task. Please:\n`;
       prompt += `1. Investigate the codebase as described\n`;
       prompt += `2. Document your findings\n`;
-      prompt += `3. Create a summary file at democonfig/config/expense-audit-findings.md\n\n`;
+      prompt += `3. Create a summary file at democonfig/config/docs/research-findings.md`;
     } else if (task.scope === 'schema') {
-      prompt += `This is a schema task. Please:\n`;
-      prompt += `1. Review existing schema files to understand conventions\n`;
-      prompt += `2. Create the schema file as specified\n`;
-      prompt += `3. Follow existing patterns for field types, indexes, etc.\n\n`;
+      prompt += `**YOUR ONLY TASK:** Call the generate_config tool right now.\n\n`;
+      prompt += `Parameters to use:\n`;
+      prompt += `  - type: 'schema'\n`;
+      prompt += `  - feature: Extract from the task description above\n`;
+      prompt += `  - tasks: Include all requirements from the description\n\n`;
+      prompt += `DO NOT: describe what you will do, explore the codebase, or call other tools.\n`;
+      prompt += `DO: Call generate_config immediately to create the file.\n\n`;
     } else if (task.scope === 'api') {
-      prompt += `This is an API task. Please:\n`;
-      prompt += `1. Review existing API routes to understand patterns\n`;
-      prompt += `2. Create the API route file as specified\n`;
-      prompt += `3. Use createDataClient and follow existing error handling patterns\n\n`;
+      prompt += `**YOUR ONLY TASK:** Call the generate_config tool right now.\n\n`;
+      prompt += `Parameters to use:\n`;
+      prompt += `  - type: 'api'\n`;
+      prompt += `  - feature: Extract from the task description above\n`;
+      prompt += `  - tasks: Include all requirements from the description\n\n`;
+      prompt += `DO NOT: describe what you will do, explore the codebase, or call other tools.\n`;
+      prompt += `DO: Call generate_config immediately to create the file.\n\n`;
     } else if (task.scope === 'page') {
-      prompt += `This is a page task. Please:\n`;
-      prompt += `1. Review existing page files to understand the json-render patterns\n`;
-      prompt += `2. Create the page file as specified\n`;
-      prompt += `3. Follow existing component usage and action patterns\n\n`;
+      prompt += `**YOUR ONLY TASK:** Call the generate_config tool right now.\n\n`;
+      prompt += `Parameters to use:\n`;
+      prompt += `  - type: 'page'\n`;
+      prompt += `  - feature: Extract from the task description above\n`;
+      prompt += `  - tasks: Include all requirements from the description\n\n`;
+      prompt += `DO NOT: describe what you will do, explore the codebase, or call other tools.\n`;
+      prompt += `DO: Call generate_config immediately to create the file.\n\n`;
     } else if (task.scope === 'app') {
-      prompt += `This is an app configuration task. Please:\n`;
-      prompt += `1. Review the existing apps.json structure\n`;
-      prompt += `2. Make the updates as specified\n`;
-      prompt += `3. Follow existing navigation and routing patterns\n\n`;
+      prompt += `This is an app configuration task:\n`;
+      prompt += `1. Use read_file to read apps.json\n`;
+      prompt += `2. Use edit_file to update it\n`;
+      prompt += `3. Follow existing routing patterns\n\n`;
     }
 
     prompt += `**Important:**\n`;
@@ -209,18 +227,53 @@ class RequestProcessor {
       console.log('🤖 Agent working...\n');
 
       let responseText = '';
+      let lastError: any = null;
+      const toolsCalled = new Set<string>();
+
       for await (const chunk of this.agent.chat(prompt)) {
         if (chunk.type === 'text' && chunk.content) {
           process.stdout.write(chunk.content);
           responseText += chunk.content;
         } else if (chunk.type === 'tool-call' && chunk.toolName) {
           console.log(`\n🔧 Using tool: ${chunk.toolName}`);
+          toolsCalled.add(chunk.toolName);
         } else if (chunk.type === 'tool-result') {
-          console.log(`✓ Tool completed\n`);
+          // Check if tool result indicates an error
+          if (chunk.toolResult && typeof chunk.toolResult === 'object') {
+            if (chunk.toolResult.success === false || chunk.toolResult.error) {
+              lastError = chunk.toolResult.error || chunk.toolResult;
+              console.log(`✗ Tool failed: ${JSON.stringify(chunk.toolResult, null, 2)}\n`);
+            } else {
+              console.log(`✓ Tool completed\n`);
+            }
+          } else {
+            console.log(`✓ Tool completed\n`);
+          }
+        } else if (chunk.type === 'error') {
+          // Handle error chunks
+          lastError = chunk.error || 'Unknown error';
+          console.log(`\n✗ Error: ${chunk.error}\n`);
         }
       }
 
       console.log('\n');
+
+      // If there was a tool error, throw it
+      if (lastError) {
+        throw new Error(`Tool execution failed: ${JSON.stringify(lastError)}`);
+      }
+
+      // CRITICAL: Verify actual work was done
+      // For schema/api/page tasks, the agent MUST call generate_config
+      if (workItem.scope === 'schema' || workItem.scope === 'api' || workItem.scope === 'page') {
+        const calledFileCreation = toolsCalled.has('generate_config');
+        if (!calledFileCreation) {
+          throw new Error(
+            `Agent did not create any files! For ${workItem.scope} tasks, the agent MUST call generate_config. ` +
+            `Tools called: ${Array.from(toolsCalled).join(', ') || 'none'}`
+          );
+        }
+      }
 
       // Mark as completed
       workItem.status = 'completed';
@@ -261,9 +314,22 @@ class RequestProcessor {
       return true;
 
     } catch (error) {
-      console.error(`\n❌ Error processing task: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`\n❌ Error processing task:`);
+      console.error(`   ${errorMessage}`);
+
+      if (error instanceof Error && error.stack) {
+        logger.error('Task processing error', {
+          task: workTitle,
+          error: errorMessage,
+          stack: error.stack
+        });
+      }
+
       workItem.status = 'pending'; // Reset to pending on error
       await this.saveRequest();
+
+      console.log(`\n⚠️  Task reset to pending. Fix the error and retry later.\n`);
       return false;
     }
   }

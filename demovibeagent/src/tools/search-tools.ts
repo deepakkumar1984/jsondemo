@@ -21,7 +21,7 @@ import * as logger from '../utils/logger.js';
  */
 export const globTool = tool({
   description: 'Find files by glob pattern in the config directory. Supports patterns like "**/*.ts", "api/*.routes.ts", etc.',
-  parameters: z.object({
+  inputSchema: z.object({
     pattern: z.string().describe('Glob pattern (e.g., "**/*.ts", "api/*.routes.ts")'),
   }),
   execute: async ({ pattern }) => {
@@ -75,7 +75,7 @@ export const globTool = tool({
  */
 export const listDirectoryTool = tool({
   description: 'List files and directories in a path within the config directory. Returns structured list with file/directory indicators.',
-  parameters: z.object({
+  inputSchema: z.object({
     path: z.string().default('.').describe('Path to list (relative to config root, defaults to ".")'),
   }),
   execute: async ({ path }) => {

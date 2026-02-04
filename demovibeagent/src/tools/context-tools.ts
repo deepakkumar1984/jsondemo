@@ -17,14 +17,16 @@ import * as logger from '../utils/logger.js';
  * DSL format that's optimized for AI context. Use this before generating new
  * configs to understand what already exists and maintain consistency.
  */
+const getContextParams = z.object({
+  type: z.enum(['schema', 'api', 'page', 'app'])
+    .describe('Type of config to show context for'),
+  resourceName: z.string().optional()
+    .describe('Optional: specific resource name to focus on'),
+});
+
 export const getContextTool = tool({
   description: 'Get existing configs in DSL format to understand what exists',
-  parameters: z.object({
-    type: z.enum(['schema', 'api', 'page', 'app'])
-      .describe('Type of config to show context for'),
-    resourceName: z.string().optional()
-      .describe('Optional: specific resource name to focus on'),
-  }),
+  inputSchema: getContextParams,
   execute: async ({ type, resourceName }) => {
     try {
       logger.info(`Getting ${type} context${resourceName ? ` for ${resourceName}` : ''}`);

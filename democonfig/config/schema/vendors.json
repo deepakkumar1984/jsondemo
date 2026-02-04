@@ -1,0 +1,53 @@
+{
+  "table": "vendors",
+  "description": "Defines vendor information including name, website, and notes",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "notNull": true,
+      "defaultFn": "uuid",
+      "description": "Unique identifier for the vendor"
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "notNull": true,
+      "description": "Name of the vendor"
+    },
+    {
+      "name": "website",
+      "type": "text",
+      "notNull": false,
+      "description": "Website URL of the vendor"
+    },
+    {
+      "name": "notes",
+      "type": "text",
+      "notNull": false,
+      "description": "Additional notes about the vendor"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "notNull": true,
+      "description": "Timestamp when the vendor was created"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "notNull": true,
+      "description": "Timestamp when the vendor was last updated"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "vendors_name_unique",
+      "columns": [
+        "name"
+      ],
+      "unique": true
+    }
+  ]
+}
